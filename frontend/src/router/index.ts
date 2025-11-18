@@ -13,6 +13,8 @@ import AnalyticsView from '@/views/AnalyticsView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import SystemSettingsView from '@/views/SystemSettingsView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
+import AdminPerformanceView from '@/views/AdminPerformanceView.vue';
+import AdminOperationsView from '@/views/AdminOperationsView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -71,6 +73,18 @@ const router = createRouter({
       name: 'admin-console',
       component: AdminConsoleView,
       meta: { title: '四库同步', icon: '🔄', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/performance',
+      name: 'admin-performance',
+      component: AdminPerformanceView,
+      meta: { title: '性能监控', icon: '⚡', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/operations',
+      name: 'admin-operations',
+      component: AdminOperationsView,
+      meta: { title: '高级操作', icon: '⚙️', role: 'admin', requiresAdmin: true }
     },
     {
       path: '/admin/users',
