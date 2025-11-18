@@ -1,0 +1,1 @@
+"""CampuSwap backend applications package."""

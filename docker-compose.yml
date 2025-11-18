@@ -1,0 +1,235 @@
+services:
+  mysql:
+    image: docker.m.daocloud.io/library/mysql:8.0
+    container_name: campuswap-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: campuswap_root
+      MYSQL_DATABASE: campuswap
+      TZ: Asia/Shanghai
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: ["mysqld", "--default-authentication-plugin=mysql_native_password"]
+
+  mariadb:
+    image: docker.m.daocloud.io/library/mariadb:10.6
+    container_name: campuswap-mariadb
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: campuswap_root
+      MARIADB_DATABASE: campuswap
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+  postgres:
+    image: docker.m.daocloud.io/library/postgres:14
+    container_name: campuswap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: campuswap_root
+      POSTGRES_USER: campuswap
+      POSTGRES_DB: campuswap
+      TZ: Asia/Shanghai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7-alpine
+    container_name: campuswap-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  gateway:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-gateway
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - sqlite_data:/data/sqlite
+    command: ["uvicorn", "apps.api_gateway.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+
+  inventory_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-inventory
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    command: ["uvicorn", "apps.inventory_service.main:app", "--host", "0.0.0.0", "--port", "8010"]
+    ports:
+      - "8010:8010"
+
+  trade_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-trade
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    command: ["uvicorn", "apps.trade_service.main:app", "--host", "0.0.0.0", "--port", "8020"]
+    ports:
+      - "8020:8020"
+
+  sync_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-sync
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    command: ["uvicorn", "apps.sync_service.main:app", "--host", "0.0.0.0", "--port", "8030"]
+    ports:
+      - "8030:8030"
+
+  sync_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-sync-worker
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - sqlite_data:/data/sqlite
+    command: ["python", "-m", "apps.services.sync_worker"]
+
+  ai_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-ai
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    command: ["uvicorn", "apps.ai_service.main:app", "--host", "0.0.0.0", "--port", "8040"]
+    ports:
+      - "8040:8040"
+
+  monitoring_service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: campuswap-monitoring
+    depends_on:
+      - mysql
+      - mariadb
+      - postgres
+      - redis
+    environment:
+      PYTHONPATH: /app
+      CAMPUSWAP_ENV: docker
+      MYSQL_DSN: mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
+      MARIADB_DSN: mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
+      POSTGRES_DSN: postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
+      SQLITE_DSN: sqlite:////data/sqlite/campuswap.db
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+    command: ["uvicorn", "apps.monitoring_service.main:app", "--host", "0.0.0.0", "--port", "8050"]
+    ports:
+      - "8050:8050"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: campuswap-frontend
+    depends_on:
+      - gateway
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000/api/v1
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+
+volumes:
+  mysql_data:
+  mariadb_data:
+  postgres_data:
+  sqlite_data:
