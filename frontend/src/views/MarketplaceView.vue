@@ -367,72 +367,289 @@
     </n-modal>
 
     <!-- 商品详情对话框 -->
-    <n-modal v-model:show="showDetailModal" preset="card" :title="currentItem?.name" style="width: 800px">
-      <div v-if="currentItem" class="grid grid-cols-2 gap-6">
-        <!-- 左侧图片 -->
-        <div>
-          <div class="aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center mb-4">
-            <span class="text-9xl">{{ currentItem.emoji }}</span>
+    <n-modal 
+      v-model:show="showDetailModal" 
+      preset="card" 
+      :title="currentItem?.name" 
+      style="width: 1000px; max-height: 90vh"
+      :segmented="{ content: true }"
+    >
+      <div v-if="currentItem">
+        <n-tabs type="line" animated>
+          <!-- 商品详情标签页 -->
+          <n-tab-pane name="detail" tab="📦 商品详情">
+            <div class="grid grid-cols-2 gap-6">
+              <!-- 左侧图片 -->
+              <div>
+                <div class="aspect-square bg-gradient-to-br from-orange-100 to-pink-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
+                  <img 
+                    v-if="currentItem.images && currentItem.images[currentImageIndex]" 
+                    :src="currentItem.images[currentImageIndex]" 
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-9xl">{{ currentItem.emoji }}</span>
+                </div>
+                <div class="flex gap-2">
+                  <div 
+                    v-for="(img, idx) in (currentItem.images || [])" 
+                    :key="idx" 
+                    @click="currentImageIndex = idx"
+                    :class="[
+                      'w-20 h-20 rounded cursor-pointer border-2 overflow-hidden',
+                      currentImageIndex === idx ? 'border-orange-500' : 'border-gray-200'
+                    ]"
+                  >
+                    <img :src="img" class="w-full h-full object-cover" />
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 右侧信息 -->
+              <div>
+                <div class="mb-4">
+                  <span class="text-orange-600 font-bold text-3xl">¥{{ currentItem.price }}</span>
+                  <span v-if="currentItem.originalPrice" class="text-gray-400 text-lg line-through ml-2">
+                    ¥{{ currentItem.originalPrice }}
+                  </span>
+                </div>
+                
+                <div class="flex gap-2 mb-4">
+                  <n-tag :type="getConditionColor(currentItem.condition)" size="large">
+                    {{ getConditionText(currentItem.condition) }}
+                  </n-tag>
+                  <n-tag v-for="tag in currentItem.tags" :key="tag" size="large" :bordered="false">
+                    {{ tag }}
+                  </n-tag>
+                  <n-tag type="info" size="large">🎓 校内认证</n-tag>
+                </div>
+                
+                <n-divider />
+                
+                <div class="space-y-3 text-gray-700">
+                  <div class="flex items-start">
+                    <span class="font-bold w-24 flex-shrink-0">商品描述:</span>
+                    <span class="text-sm">{{ currentItem.description }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold w-24 flex-shrink-0">卖家:</span>
+                    <div class="flex items-center gap-2">
+                      <n-avatar size="small" round>{{ currentItem.seller[0] }}</n-avatar>
+                      <span>{{ currentItem.seller }}</span>
+                      <n-rate :value="currentItem.sellerLevel" size="small" readonly />
+                    </div>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold w-24 flex-shrink-0">交易地点:</span>
+                    <span>📍 {{ currentItem.location }}</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold w-24 flex-shrink-0">浏览量:</span>
+                    <span>👁️ {{ currentItem.views }} 次</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold w-24 flex-shrink-0">咨询量:</span>
+                    <span>💬 {{ currentItem.inquiries }} 次</span>
+                  </div>
+                  <div class="flex items-center">
+                    <span class="font-bold w-24 flex-shrink-0">发布时间:</span>
+                    <span>⏰ {{ currentItem.publishTime }}</span>
+                  </div>
+                </div>
+                
+                <n-divider />
+                
+                <div class="space-y-2">
+                  <n-button 
+                    type="warning" 
+                    size="large" 
+                    block 
+                    @click="handleWantToBuy"
+                    strong
+                  >
+                    � 我想要 - 联系卖家
+                  </n-button>
+                  <n-button size="large" block ghost>
+                    ❤️ 收藏
+                  </n-button>
+                </div>
+                
+                <n-alert type="warning" class="mt-4">
+                  <template #header>
+                    <span class="font-bold">⚠️ 交易流程说明</span>
+                  </template>
+                  <div class="text-xs space-y-1">
+                    <p>1. 点击"我想要"后,在评论区留言沟通</p>
+                    <p>2. 双方达成一致后,平台提供联系方式</p>
+                    <p>3. 线下当面交易,验货后付款</p>
+                    <p>4. 交易完成后,商品自动下架</p>
+                    <p class="text-red-600 font-bold mt-2">❌ 禁止线上支付!违规将封号处理!</p>
+                  </div>
+                </n-alert>
+              </div>
+            </div>
+          </n-tab-pane>
+          
+          <!-- 评论留言标签页 -->
+          <n-tab-pane name="comments" tab="💬 评论留言">
+            <div class="space-y-4">
+              <!-- 发表评论 -->
+              <div class="bg-gray-50 p-4 rounded-lg">
+                <div class="flex items-start gap-3">
+                  <n-avatar size="medium" round>我</n-avatar>
+                  <div class="flex-1">
+                    <n-input
+                      v-model:value="newComment"
+                      type="textarea"
+                      placeholder="对商品有疑问?想要购买?在这里留言和卖家沟通吧..."
+                      :rows="3"
+                      :maxlength="200"
+                      show-count
+                    />
+                    <div class="flex justify-between items-center mt-2">
+                      <span class="text-xs text-gray-500">💡 提示: 请文明交流,禁止发布违规信息</span>
+                      <n-button type="primary" @click="handlePostComment">
+                        发表留言
+                      </n-button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 评论列表 -->
+              <div class="space-y-4 max-h-96 overflow-y-auto">
+                <div 
+                  v-for="comment in comments" 
+                  :key="comment.id"
+                  class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
+                >
+                  <div class="flex items-start gap-3">
+                    <n-avatar :size="40" round>
+                      {{ comment.userName[0] }}
+                    </n-avatar>
+                    <div class="flex-1">
+                      <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                          <span class="font-bold">{{ comment.userName }}</span>
+                          <n-tag v-if="comment.isSeller" type="warning" size="small">卖家</n-tag>
+                          <n-tag v-if="comment.isVerified" type="success" size="small">🎓 已认证</n-tag>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ comment.time }}</span>
+                      </div>
+                      <p class="text-gray-700 mb-3">{{ comment.content }}</p>
+                      
+                      <!-- 回复按钮和回复列表 -->
+                      <div class="flex items-center gap-4 text-sm">
+                        <n-button 
+                          text 
+                          size="small"
+                          @click="handleReply(comment)"
+                        >
+                          💬 回复 ({{ comment.replies?.length || 0 }})
+                        </n-button>
+                        <n-button text size="small" type="error" v-if="!comment.isSeller">
+                          � 举报
+                        </n-button>
+                      </div>
+                      
+                      <!-- 回复列表 -->
+                      <div v-if="comment.replies && comment.replies.length > 0" class="mt-3 space-y-2 pl-4 border-l-2 border-gray-200">
+                        <div 
+                          v-for="reply in comment.replies" 
+                          :key="reply.id"
+                          class="bg-gray-50 p-3 rounded"
+                        >
+                          <div class="flex items-center gap-2 mb-1">
+                            <n-avatar :size="24" round>{{ reply.userName[0] }}</n-avatar>
+                            <span class="font-bold text-sm">{{ reply.userName }}</span>
+                            <n-tag v-if="reply.isSeller" type="warning" size="small">卖家</n-tag>
+                            <span class="text-xs text-gray-400">{{ reply.time }}</span>
+                          </div>
+                          <p class="text-sm text-gray-700">{{ reply.content }}</p>
+                        </div>
+                      </div>
+                      
+                      <!-- 回复输入框 -->
+                      <div v-if="replyingTo === comment.id" class="mt-3">
+                        <div class="flex gap-2">
+                          <n-input
+                            v-model:value="replyContent"
+                            placeholder="回复..."
+                            size="small"
+                          />
+                          <n-button size="small" type="primary" @click="handleSubmitReply(comment)">
+                            发送
+                          </n-button>
+                          <n-button size="small" @click="replyingTo = null">
+                            取消
+                          </n-button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- 空状态 -->
+                <div v-if="comments.length === 0" class="text-center py-12 text-gray-400">
+                  <span class="text-5xl block mb-3">💬</span>
+                  <p>暂无评论,快来抢沙发吧!</p>
+                </div>
+              </div>
+            </div>
+          </n-tab-pane>
+        </n-tabs>
+      </div>
+    </n-modal>
+    
+    <!-- 联系卖家确认对话框 -->
+    <n-modal 
+      v-model:show="showContactModal" 
+      preset="dialog"
+      title="📱 获取卖家联系方式"
+      positive-text="确认购买意向"
+      negative-text="取消"
+      @positive-click="handleConfirmContact"
+    >
+      <div class="space-y-4">
+        <n-alert type="warning">
+          <template #header>
+            <span class="font-bold">⚠️ 重要提醒</span>
+          </template>
+          <div class="space-y-2 text-sm">
+            <p>点击确认后,系统将:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+              <li>向卖家发送您的联系方式</li>
+              <li>向您显示卖家的联系方式</li>
+              <li>记录本次交易意向</li>
+            </ul>
           </div>
-          <div class="flex gap-2">
-            <div v-for="i in 4" :key="i" class="w-20 h-20 bg-gray-200 rounded cursor-pointer"></div>
-          </div>
-        </div>
+        </n-alert>
         
-        <!-- 右侧信息 -->
-        <div>
-          <div class="mb-4">
-            <span class="text-red-500 font-bold text-3xl">¥{{ currentItem.price }}</span>
-            <n-tag :type="currentItem.condition === 'new' ? 'success' : 'warning'" class="ml-2">
-              {{ currentItem.condition === 'new' ? '全新' : '二手' }}
-            </n-tag>
+        <n-alert type="error">
+          <template #header>
+            <span class="font-bold">❌ 交易规则</span>
+          </template>
+          <div class="space-y-1 text-sm">
+            <p class="font-bold text-red-600">严禁以下行为,违者封号:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+              <li>线上转账支付</li>
+              <li>未见面先付款</li>
+              <li>发布虚假商品</li>
+              <li>恶意欺诈</li>
+            </ul>
+            <p class="font-bold text-green-600 mt-3">✅ 正确流程:</p>
+            <ul class="list-disc list-inside space-y-1 ml-2">
+              <li>线下约见面地点</li>
+              <li>当面验货</li>
+              <li>验货后付款</li>
+            </ul>
           </div>
-          
-          <n-divider />
-          
-          <div class="space-y-3 text-gray-700">
-            <div class="flex items-start">
-              <span class="font-bold w-20">描述:</span>
-              <span>{{ currentItem.description }}</span>
-            </div>
-            <div class="flex items-center">
-              <span class="font-bold w-20">卖家:</span>
-              <span>{{ currentItem.seller }}</span>
-            </div>
-            <div class="flex items-center">
-              <span class="font-bold w-20">浏览量:</span>
-              <span>{{ currentItem.views }} 次</span>
-            </div>
-            <div class="flex items-center">
-              <span class="font-bold w-20">发布时间:</span>
-              <span>2小时前</span>
-            </div>
-          </div>
-          
-          <n-divider />
-          
-          <div class="flex gap-2">
-            <n-button type="primary" size="large" block>
-              💬 联系卖家
-            </n-button>
-            <n-button size="large" block>
-              ❤️ 收藏
-            </n-button>
-          </div>
-          
-          <n-alert type="info" class="mt-4">
-            <template #icon>
-              <span class="text-xl">💡</span>
-            </template>
-            <div class="text-sm">
-              <p class="font-bold mb-1">交易提示</p>
-              <ul class="list-disc list-inside space-y-1">
-                <li>建议当面交易，验货后付款</li>
-                <li>警惕过低价格，谨防诈骗</li>
-                <li>保留聊天记录作为凭证</li>
-              </ul>
-            </div>
-          </n-alert>
+        </n-alert>
+        
+        <div class="bg-blue-50 p-3 rounded">
+          <p class="text-sm text-gray-700">
+            <span class="font-bold">💡 温馨提示:</span>
+            建议选择校内公共场所交易,如图书馆门口、食堂等,确保安全。
+          </p>
         </div>
       </div>
     </n-modal>
@@ -441,7 +658,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { NInput, NButton, NTag, NModal, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NRadioButton, NUpload, NDivider, NAlert, NAvatar, NPagination, NInputGroup, useMessage } from 'naive-ui';
+import { NInput, NButton, NTag, NModal, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NRadioButton, NUpload, NDivider, NAlert, NAvatar, NPagination, NInputGroup, NTabs, NTabPane, NRate, useMessage } from 'naive-ui';
 
 const message = useMessage();
 
@@ -836,10 +1053,153 @@ const handlePublish = () => {
 // 商品详情
 const showDetailModal = ref(false);
 const currentItem = ref<any>(null);
+const currentImageIndex = ref(0);
+
+// 评论系统
+const newComment = ref('');
+const replyContent = ref('');
+const replyingTo = ref<number | null>(null);
+const comments = ref([
+  {
+    id: 1,
+    userName: '买家小王',
+    content: '这个还在吗?成色怎么样?有没有磕碰?',
+    time: '2小时前',
+    isSeller: false,
+    isVerified: true,
+    replies: [
+      {
+        id: 101,
+        userName: '张同学',
+        content: '在的!成色很好,无磕碰无划痕,可以当面验货',
+        time: '1小时前',
+        isSeller: true
+      },
+      {
+        id: 102,
+        userName: '买家小王',
+        content: '好的,那明天下午3点图书馆门口见面可以吗?',
+        time: '50分钟前',
+        isSeller: false
+      },
+      {
+        id: 103,
+        userName: '张同学',
+        content: '可以的,到时候见!记得带现金哦',
+        time: '45分钟前',
+        isSeller: true
+      }
+    ]
+  },
+  {
+    id: 2,
+    userName: '李同学',
+    content: '价格可以优惠吗?诚心要',
+    time: '5小时前',
+    isSeller: false,
+    isVerified: true,
+    replies: [
+      {
+        id: 201,
+        userName: '张同学',
+        content: '已经是最低价了,可以小刀50',
+        time: '4小时前',
+        isSeller: true
+      }
+    ]
+  },
+  {
+    id: 3,
+    userName: '赵同学',
+    content: '支持验机吗?',
+    time: '1天前',
+    isSeller: false,
+    isVerified: false,
+    replies: []
+  }
+]);
+
+// 联系卖家
+const showContactModal = ref(false);
 
 const viewItemDetail = (item: any) => {
   currentItem.value = item;
+  currentImageIndex.value = 0;
   showDetailModal.value = true;
+  
+  // 模拟加载该商品的评论
+  // 实际应该从API获取
+};
+
+const handleWantToBuy = () => {
+  showContactModal.value = true;
+};
+
+const handleConfirmContact = () => {
+  message.success('已向卖家发送购买意向!', {
+    duration: 3000
+  });
+  
+  // 显示联系方式
+  setTimeout(() => {
+    message.info(`卖家联系方式: 微信 zhang123456`, {
+      duration: 5000
+    });
+    message.info(`您的联系方式已发送给卖家`, {
+      duration: 3000
+    });
+  }, 500);
+  
+  showContactModal.value = false;
+};
+
+const handlePostComment = () => {
+  if (!newComment.value.trim()) {
+    message.warning('请输入留言内容');
+    return;
+  }
+  
+  // 添加新评论
+  comments.value.unshift({
+    id: Date.now(),
+    userName: '我',
+    content: newComment.value,
+    time: '刚刚',
+    isSeller: false,
+    isVerified: true,
+    replies: []
+  });
+  
+  message.success('留言成功!');
+  newComment.value = '';
+};
+
+const handleReply = (comment: any) => {
+  replyingTo.value = comment.id;
+  replyContent.value = '';
+};
+
+const handleSubmitReply = (comment: any) => {
+  if (!replyContent.value.trim()) {
+    message.warning('请输入回复内容');
+    return;
+  }
+  
+  if (!comment.replies) {
+    comment.replies = [];
+  }
+  
+  comment.replies.push({
+    id: Date.now(),
+    userName: '我',
+    content: replyContent.value,
+    time: '刚刚',
+    isSeller: false
+  });
+  
+  message.success('回复成功!');
+  replyContent.value = '';
+  replyingTo.value = null;
 };
 
 const handleSearch = () => {
