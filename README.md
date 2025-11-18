@@ -1,51 +1,52 @@
-# CampuSwap 全栈项目
+# 🎓 校园交易系统 - Campus Trading Platform
 
-此仓库实现《数据库系统实践》任务书指定的 CampuSwap 平台，包含：
+基于FastAPI + Vue3的校园二手交易系统,采用四数据库同步架构
 
-- 多数据库（MySQL、PostgreSQL、MariaDB、SQLite）同步架构
-- FastAPI 微服务（网关、库存、交易、同步、AI、监控）
-- Vue 3 + TypeScript 管理端界面与移动友好组件
-- Redis Streams + APScheduler 事件驱动同步
-- 34 张核心数据表设计（见 `docs/requirements-and-tech-selection.md`）
+## ✨ 核心功能
 
-## 目录
+### 用户端 - 淘宝风格交易市场
+- 📱 **商品浏览** - 8大分类、网格/列表双视图、分页浏览
+- 🔍 **高级筛选** - 成色筛选、价格区间、5种排序方式
+- 🖼️ **商品详情** - 多图轮播、卖家评分、标签系统
+- 💬 **评论互动** - 发表评论、楼中楼回复、买卖沟通
+- 🤝 **交易流程** - 获取联系方式、线下见面、安全交易
+- 📦 **我的商品** - 在售中/已售出/已下架管理
+- 💰 **订单记录** - 我买到的/我卖出的
 
-```
-backend/   # FastAPI + Poetry 微服务代码
-frontend/  # Vue3 + Vite + Pinia 前端代码
-docs/      # 需求、方案与答辩材料
-```
+### 管理员端 - 四库同步监控
+- 📊 **数据同步监控** - MySQL/PostgreSQL/MariaDB/SQLite实时同步
+- 🔄 **冲突处理** - 版本冲突检测、数据一致性校验
+- 📈 **数据分析** - 交易统计、用户活跃度
 
-## 快速开始
+## 🏗️ 技术架构
+
+**后端:** FastAPI + SQLAlchemy + Redis  
+**前端:** Vue 3.4 + TypeScript + Naive UI  
+**数据库:** MySQL/PostgreSQL/MariaDB/SQLite 四库同步
+
+## 📊 数据库设计
+
+**12张核心表:**
+users, items, categories, item_images, comments, transactions, messages, favorites, reports, audit_logs, conflict_records, system_configs
+
+详见: [SQL脚本文档](backend/sql/SQL_GUIDE.md)
+
+## 🚀 快速开始
 
 ```bash
-docker compose up --build
+# Docker启动
+docker-compose up -d
+
+# 访问系统
+# 前端: http://localhost:5174
+# API: http://localhost:8001/docs
 ```
 
-后端默认暴露 `http://localhost:8000`，前端运行在 `http://localhost:5173`。
+## 📚 文档
 
-## 开发模式
+- [交易流程说明](TRANSACTION_FLOW.md)
+- [数据库同步](backend/docs/4-DATABASE-SYNC.md)
+- [SQL脚本](backend/sql/SQL_GUIDE.md)
 
-后端：
-```bash
-cd backend
-poetry install
-poetry run uvicorn apps.api_gateway.main:app --reload
-```
-
-前端：
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-## 代码规范
-- Python：`black`、`isort`、`flake8`、`mypy`
-- TypeScript / Vue：`eslint`、`prettier`
-
-## 下一步
-- 实现真实数据库模型、Alembic 迁移与 34 张表
-- 完成 Redis Stream 消费者与冲突处理 UI
-- 补充 AI 训练脚本与移动端可视化
-# Campus_Trading_System
+---
+**版本:** 2.0 | **更新:** 2025-11-18
