@@ -53,7 +53,7 @@ class AuditLog(BaseModel):
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(64), nullable=False)
     resource_id: Mapped[int] = mapped_column(nullable=False)
-    metadata: Mapped[dict] = mapped_column(JSON, nullable=False, server_default="{}")
+    extra_data: Mapped[dict] = mapped_column(JSON, nullable=False, server_default="{}")
 
 
 class ConfigItem(BaseModel):

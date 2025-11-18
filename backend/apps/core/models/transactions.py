@@ -46,7 +46,7 @@ class TransactionLog(BaseModel):
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     old_status: Mapped[Optional[str]] = mapped_column(String(32))
     new_status: Mapped[Optional[str]] = mapped_column(String(32))
-    metadata: Mapped[dict] = mapped_column(JSON, nullable=False, server_default="{}")
+    extra_data: Mapped[dict] = mapped_column(JSON, nullable=False, server_default="{}")
 
 
 class Payment(BaseModel):

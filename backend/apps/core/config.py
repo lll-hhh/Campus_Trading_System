@@ -2,7 +2,8 @@
 from functools import lru_cache
 from typing import List
 
-from pydantic import AnyHttpUrl, BaseSettings, Field
+from pydantic import AnyHttpUrl, Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -11,6 +12,7 @@ class Settings(BaseSettings):
     app_name: str = "CampuSwap"
     environment: str = Field("local", alias="CAMPUSWAP_ENV")
     api_v1_prefix: str = "/api/v1"
+    debug: bool = Field(default=True)
 
     mysql_dsn: str = Field(..., alias="MYSQL_DSN")
     mariadb_dsn: str = Field(..., alias="MARIADB_DSN")
@@ -32,10 +34,12 @@ class Settings(BaseSettings):
     alert_sender: str | None = Field(default=None, alias="ALERT_SENDER")
     alert_recipients: List[str] = Field(default_factory=list, alias="ALERT_RECIPIENTS")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": True,
+        "extra": "ignore"
+    }
 
 
 @lru_cache

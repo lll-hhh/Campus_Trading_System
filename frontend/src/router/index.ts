@@ -1,61 +1,88 @@
 import { createRouter, createWebHistory } from 'vue-router';
 
+// 普通用户页面
+import MarketplaceView from '@/views/MarketplaceView.vue';
+import MessagesView from '@/views/MessagesView.vue';
+import MyItemsView from '@/views/MyItemsView.vue';
+import OrdersView from '@/views/OrdersView.vue';
+import ProfileCenterView from '@/views/ProfileCenterView.vue';
+
+// 管理员页面
 import AdminConsoleView from '@/views/AdminConsoleView.vue';
 import AnalyticsView from '@/views/AnalyticsView.vue';
 import DashboardView from '@/views/DashboardView.vue';
-import MarketSearchView from '@/views/MarketSearchView.vue';
-import ProfileCenterView from '@/views/ProfileCenterView.vue';
 import SystemSettingsView from '@/views/SystemSettingsView.vue';
 import UserManagementView from '@/views/UserManagementView.vue';
 
 const router = createRouter({
   history: createWebHistory(),
   routes: [
+    // 普通用户路由
     {
       path: '/',
-      redirect: '/dashboard'
+      redirect: '/marketplace'
     },
     {
-      path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
-      meta: { title: '数据仪表盘', icon: '📊' }
+      path: '/marketplace',
+      name: 'marketplace',
+      component: MarketplaceView,
+      meta: { title: '商品市场', icon: '🏪', role: 'user' }
     },
     {
-      path: '/analytics',
-      name: 'analytics',
-      component: AnalyticsView,
-      meta: { title: '数据分析', icon: '📈' }
+      path: '/messages',
+      name: 'messages',
+      component: MessagesView,
+      meta: { title: '消息', icon: '💬', role: 'user' }
     },
     {
-      path: '/market',
-      name: 'market-search',
-      component: MarketSearchView,
-      meta: { title: '市场搜索', icon: '🔍' }
+      path: '/my-items',
+      name: 'my-items',
+      component: MyItemsView,
+      meta: { title: '我的商品', icon: '�', role: 'user' }
     },
     {
-      path: '/admin',
-      name: 'admin-console',
-      component: AdminConsoleView,
-      meta: { title: '管理控制台', icon: '⚙️' }
-    },
-    {
-      path: '/users',
-      name: 'user-management',
-      component: UserManagementView,
-      meta: { title: '用户管理', icon: '👥', requiresAuth: true, requiresAdmin: true }
-    },
-    {
-      path: '/settings',
-      name: 'system-settings',
-      component: SystemSettingsView,
-      meta: { title: '系统设置', icon: '🔧', requiresAuth: true, requiresAdmin: true }
+      path: '/orders',
+      name: 'orders',
+      component: OrdersView,
+      meta: { title: '我的订单', icon: '📝', role: 'user' }
     },
     {
       path: '/profile',
-      name: 'profile-center',
+      name: 'profile',
       component: ProfileCenterView,
-      meta: { title: '个人中心', icon: '👤' }
+      meta: { title: '个人中心', icon: '�', role: 'user' }
+    },
+    
+    // 管理员路由
+    {
+      path: '/admin/dashboard',
+      name: 'admin-dashboard',
+      component: DashboardView,
+      meta: { title: '数据仪表盘', icon: '📊', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/analytics',
+      name: 'admin-analytics',
+      component: AnalyticsView,
+      meta: { title: '数据分析', icon: '�', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/console',
+      name: 'admin-console',
+      component: AdminConsoleView,
+      meta: { title: '四库同步', icon: '🔄', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: UserManagementView,
+      meta: { title: '用户管理', icon: '�', role: 'admin', requiresAdmin: true }
+    },
+    {
+      path: '/admin/settings',
+      name: 'admin-settings',
+      component: SystemSettingsView,
+      meta: { title: '系统设置', icon: '�', role: 'admin', requiresAdmin: true }
     }
   ]
 });

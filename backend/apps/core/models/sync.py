@@ -1,7 +1,7 @@
 """Synchronization and monitoring tables."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String
@@ -56,7 +56,7 @@ class DailyStat(BaseModel):
 
     __tablename__ = "daily_stats"
 
-    stat_date: Mapped[Date] = mapped_column(nullable=False, unique=True)
+    stat_date: Mapped[date] = mapped_column(Date, nullable=False, unique=True)
     sync_success_count: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default="0", default=0
     )
