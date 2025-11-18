@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from apps.api_gateway.routers import auth, dashboard, database, health, market, sync
+from apps.api_gateway.routers import analytics, auth, dashboard, database, health, market, sync
 from apps.core.config import get_settings
 from apps.services.db_initializer import initialize_databases
 
@@ -32,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(dashboard.router, prefix=settings.api_v1_prefix)
     app.include_router(market.router, prefix=settings.api_v1_prefix)
     app.include_router(database.router, prefix=settings.api_v1_prefix)
+    app.include_router(analytics.router, prefix=settings.api_v1_prefix)
 
     @app.on_event("startup")
     async def startup_event():
