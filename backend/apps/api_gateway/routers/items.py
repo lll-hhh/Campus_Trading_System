@@ -94,27 +94,66 @@ async def create_item(
     """
     发布新商品
     
-    需要登录后才能发布商品
+    需要登录，商品默认为草稿状态
     """
-    # TODO: 创建商品记录
-    # 这里需要Items模型，暂时返回模拟数据
+    from apps.core.models import Item, Category, ItemMedia
+    from sqlalchemy import select
+    
+    # 查找或创建分类
+    category = session.execute(
+        select(Category).where(Category.name == (payload.category or "其他"))
+    ).scalar_one_or_none()
+    
+    if not category:
+        category = Category(
+            name=payload.category or "其他",
+            description=f"{payload.category or '其他'}分类"
+        )
+        session.add(category)
+        session.flush()
+    
+    # 创建商品
+    new_item = Item(
+        seller_id=current_user.id,
+        category_id=category.id,
+        title=payload.title,
+        description=payload.description,
+        price=payload.price,
+        currency="CNY",
+        status="available" if payload.status == "published" else "draft",
+        condition=payload.condition or "good",
+        view_count=0
+    )
+    session.add(new_item)
+    session.flush()
+    
+    # 添加图片
+    if payload.images:
+        for img_url in payload.images:
+            media = ItemMedia(
+                item_id=new_item.id,
+                media_type="image",
+                url=img_url
+            )
+            session.add(media)
+    
+    session.commit()
+    session.refresh(new_item)
     
     return ItemResponse(
-        id=1,
-        title=payload.title,
-        category=payload.category,
-        condition=payload.condition,
-        price=payload.price,
-        original_price=payload.original_price,
-        description=payload.description,
-        location=payload.location,
-        status="在售",
-        views=0,
-        likes=0,
-        seller_id=current_user.id,
+        id=new_item.id,
+        title=new_item.title,
+        description=new_item.description,
+        price=float(new_item.price),
+        category=category.name,
+        images=[m.url for m in new_item.medias],
+        status=new_item.status,
+        seller_id=new_item.seller_id,
         seller_name=current_user.username,
-        images=payload.images,
-        created_at=datetime.utcnow()
+        view_count=new_item.view_count,
+        favorite_count=0,
+        created_at=new_item.created_at,
+        updated_at=new_item.updated_at
     )
 
 

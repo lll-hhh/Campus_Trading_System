@@ -23,10 +23,10 @@ class DatabaseInitializer:
         self.settings = get_settings()
         self.engines = get_all_engines()
         self.sql_files: Dict[str, Path] = {
-            "mysql": SQL_DIR / "mysql_schema.sql",
-            "mariadb": SQL_DIR / "mariadb_schema.sql",
-            "postgres": SQL_DIR / "postgres_schema.sql",
-            "sqlite": SQL_DIR / "sqlite_schema.sql",
+            "mysql": SQL_DIR / "mysql_complete_schema.sql",
+            "mariadb": SQL_DIR / "mariadb_complete_schema.sql",
+            "postgres": SQL_DIR / "postgres_complete_schema.sql",
+            "sqlite": SQL_DIR / "sqlite_complete_schema.sql",
         }
 
     def _read_sql_file(self, file_path: Path) -> str:
@@ -110,8 +110,43 @@ class DatabaseInitializer:
 
         try:
             sql_content = self._read_sql_file(sql_file)
-            statements = self._split_sql_statements(sql_content, db_type)
+            
+            # SQLite使用特殊处理
+            if db_type == "sqlite":
+                with engine.raw_connection() as conn:
+                    cursor = conn.cursor()
+                    try:
+                        cursor.executescript(sql_content)
+                        result["executed"] = 1
+                        logger.info(f"{db_type} 初始化完成: SQL脚本执行成功")
+                    except Exception as e:
+                        result["failed"] = 1
+                        result["errors"].append(str(e)[:200])
+                        logger.error(f"{db_type} 初始化失败: {e}")
+                return result
 
+            # PostgreSQL使用psycopg的execute
+            if db_type == "postgres":
+                try:
+                    with engine.raw_connection() as raw_conn:
+                        cursor = raw_conn.cursor()
+                        try:
+                            cursor.execute(sql_content)
+                            raw_conn.commit()
+                            result["executed"] = 1
+                            logger.info(f"{db_type} 初始化完成: SQL脚本执行成功")
+                        except Exception as e:
+                            result["failed"] = 1
+                            result["errors"].append(str(e)[:500])
+                            logger.error(f"{db_type} 初始化失败: {e}")
+                except Exception as e:
+                    result["failed"] = 1
+                    result["errors"].append(str(e)[:200])
+                    logger.error(f"{db_type} 连接失败: {e}")
+                return result
+
+            # MySQL/MariaDB使用逐语句执行
+            statements = self._split_sql_statements(sql_content, db_type)
             logger.info(f"{db_type} 共解析出 {len(statements)} 条 SQL 语句")
 
             with engine.begin() as conn:
