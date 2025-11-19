@@ -1,16 +1,15 @@
 """
-商品管理路由模块
-处理商品的增删改查、搜索、分类等功能
+实现完整的商品路由 - 使用业务逻辑服务
 """
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from pydantic import BaseModel, Field
-from sqlalchemy import select, desc, or_, and_
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
 from apps.core.models import User
+from apps.services.business_logic import ItemService, FavoriteService
 
 router = APIRouter(prefix="/items", tags=["商品管理"])
 
@@ -19,55 +18,38 @@ router = APIRouter(prefix="/items", tags=["商品管理"])
 
 class ItemCreateRequest(BaseModel):
     """创建商品请求"""
-    title: str = Field(..., min_length=5, max_length=100, description="商品标题")
-    category: str = Field(..., description="商品分类")
-    condition: str = Field(..., description="商品成色")
-    price: float = Field(..., gt=0, description="商品价格")
-    original_price: Optional[float] = Field(None, description="原价")
-    description: str = Field(..., min_length=10, description="商品描述")
-    location: str = Field(..., description="交易地点")
-    contact_method: str = Field(default="chat", description="联系方式")
-    phone: Optional[str] = Field(None, description="手机号")
-    wechat: Optional[str] = Field(None, description="微信号")
-    allow_bargain: bool = Field(default=True, description="是否支持议价")
-    accept_return: bool = Field(default=False, description="是否支持退换")
-    images: List[str] = Field(default=[], description="商品图片URL列表")
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1)
+    price: float = Field(..., gt=0)
+    category: str = Field(default="其他")
+    images: List[str] = Field(default_factory=list)
+    status: str = Field(default="draft")
+    condition: str = Field(default="good")
 
 
 class ItemUpdateRequest(BaseModel):
     """更新商品请求"""
-    title: Optional[str] = Field(None, min_length=5, max_length=100)
-    category: Optional[str] = None
-    condition: Optional[str] = None
-    price: Optional[float] = Field(None, gt=0)
-    original_price: Optional[float] = None
-    description: Optional[str] = Field(None, min_length=10)
-    location: Optional[str] = None
-    contact_method: Optional[str] = None
-    phone: Optional[str] = None
-    wechat: Optional[str] = None
-    allow_bargain: Optional[bool] = None
-    accept_return: Optional[bool] = None
-    images: Optional[List[str]] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
     status: Optional[str] = None
+    condition: Optional[str] = None
 
 
 class ItemResponse(BaseModel):
     """商品响应"""
     id: int
     title: str
-    category: str
-    condition: str
-    price: float
-    original_price: Optional[float] = None
     description: str
-    location: str
+    price: float
+    category: str
+    images: List[str]
     status: str
-    views: int
-    likes: int
+    condition: str = "good"
     seller_id: int
     seller_name: str
-    images: List[str]
+    view_count: int
+    favorite_count: int
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -91,116 +73,100 @@ async def create_item(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
-    """
-    发布新商品
+    """发布新商品"""
+    from apps.core.models import Category, ItemMedia
     
-    需要登录，商品默认为草稿状态
-    """
-    from apps.core.models import Item, Category, ItemMedia
-    from sqlalchemy import select
-    
-    # 查找或创建分类
-    category = session.execute(
-        select(Category).where(Category.name == (payload.category or "其他"))
-    ).scalar_one_or_none()
-    
-    if not category:
-        category = Category(
-            name=payload.category or "其他",
-            description=f"{payload.category or '其他'}分类"
-        )
-        session.add(category)
-        session.flush()
-    
-    # 创建商品
-    new_item = Item(
+    item = ItemService.create_item(
+        session=session,
         seller_id=current_user.id,
-        category_id=category.id,
         title=payload.title,
         description=payload.description,
         price=payload.price,
-        currency="CNY",
-        status="available" if payload.status == "published" else "draft",
-        condition=payload.condition or "good",
-        view_count=0
+        category_name=payload.category,
+        images=payload.images,
+        status=payload.status,
+        condition=payload.condition
     )
-    session.add(new_item)
-    session.flush()
     
-    # 添加图片
-    if payload.images:
-        for img_url in payload.images:
-            media = ItemMedia(
-                item_id=new_item.id,
-                media_type="image",
-                url=img_url
-            )
-            session.add(media)
-    
-    session.commit()
-    session.refresh(new_item)
+    # 构建响应
+    category = session.get(Category, item.category_id)
+    medias = session.execute(
+        select(ItemMedia).where(ItemMedia.item_id == item.id)
+    ).scalars().all()
     
     return ItemResponse(
-        id=new_item.id,
-        title=new_item.title,
-        description=new_item.description,
-        price=float(new_item.price),
-        category=category.name,
-        images=[m.url for m in new_item.medias],
-        status=new_item.status,
-        seller_id=new_item.seller_id,
+        id=item.id,
+        title=item.title,
+        description=item.description,
+        price=float(item.price),
+        category=category.name if category else "其他",
+        images=[m.url for m in medias],
+        status=item.status,
+        condition=item.condition,
+        seller_id=item.seller_id,
         seller_name=current_user.username,
-        view_count=new_item.view_count,
+        view_count=item.view_count,
         favorite_count=0,
-        created_at=new_item.created_at,
-        updated_at=new_item.updated_at
+        created_at=item.created_at,
+        updated_at=item.updated_at
     )
 
 
 @router.get("/", response_model=ItemListResponse)
 async def get_items(
-    page: int = Query(1, ge=1, description="页码"),
-    page_size: int = Query(20, ge=1, le=100, description="每页数量"),
-    category: Optional[str] = Query(None, description="分类筛选"),
-    keyword: Optional[str] = Query(None, description="关键词搜索"),
-    min_price: Optional[float] = Query(None, ge=0, description="最低价格"),
-    max_price: Optional[float] = Query(None, ge=0, description="最高价格"),
-    sort_by: str = Query("created_at", description="排序字段"),
-    sort_order: str = Query("desc", description="排序方向"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    category: Optional[str] = None,
+    keyword: Optional[str] = None,
+    min_price: Optional[float] = None,
+    max_price: Optional[float] = None,
+    status: str = "available",
     session: Session = Depends(get_db_session)
 ):
-    """
-    获取商品列表
+    """获取商品列表"""
+    from apps.core.models import Category, ItemMedia
+    from sqlalchemy import select
     
-    支持分页、筛选、搜索、排序
-    """
-    # TODO: 从数据库查询商品列表
-    # 这里返回模拟数据
+    items, total = ItemService.get_items(
+        session=session,
+        page=page,
+        page_size=page_size,
+        category=category,
+        min_price=min_price,
+        max_price=max_price,
+        keyword=keyword,
+        status=status
+    )
     
-    mock_items = [
-        ItemResponse(
-            id=i,
-            title=f"商品 {i}",
-            category="数码产品",
-            condition="全新",
-            price=999.99 + i * 100,
-            original_price=1999.99 + i * 100,
-            description="这是一个测试商品",
-            location="北京大学",
-            status="在售",
-            views=100 + i * 10,
-            likes=10 + i,
-            seller_id=1,
-            seller_name="测试用户",
-            images=["https://picsum.photos/200/200?random=" + str(i)],
-            created_at=datetime.utcnow()
-        )
-        for i in range(1, min(page_size + 1, 11))
-    ]
+    # 转换为响应格式
+    items_data = []
+    for item in items:
+        cat = session.get(Category, item.category_id)
+        seller = session.get(User, item.seller_id)
+        medias = session.execute(
+            select(ItemMedia).where(ItemMedia.item_id == item.id)
+        ).scalars().all()
+        
+        items_data.append(ItemResponse(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            price=float(item.price),
+            category=cat.name if cat else "其他",
+            images=[m.url for m in medias],
+            status=item.status,
+            condition=item.condition,
+            seller_id=item.seller_id,
+            seller_name=seller.username if seller else "未知",
+            view_count=item.view_count,
+            favorite_count=0,
+            created_at=item.created_at,
+            updated_at=item.updated_at
+        ))
     
     return ItemListResponse(
-        items=mock_items,
-        total=100,
+        items=items_data,
+        total=total,
         page=page,
         page_size=page_size
     )
@@ -211,31 +177,35 @@ async def get_item(
     item_id: int,
     session: Session = Depends(get_db_session)
 ):
-    """
-    获取商品详情
-    """
-    # TODO: 从数据库查询商品详情
-    # 这里返回模拟数据
+    """获取商品详情"""
+    from apps.core.models import Category, ItemMedia
+    from sqlalchemy import select
+    
+    item = ItemService.get_item_detail(session, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="商品不存在")
+    
+    cat = session.get(Category, item.category_id)
+    seller = session.get(User, item.seller_id)
+    medias = session.execute(
+        select(ItemMedia).where(ItemMedia.item_id == item.id)
+    ).scalars().all()
     
     return ItemResponse(
-        id=item_id,
-        title="全新iPad Pro 2024款 11英寸",
-        category="数码产品",
-        condition="全新",
-        price=4999,
-        original_price=6999,
-        description="全新未拆封的iPad Pro 2024款",
-        location="北京大学 学生公寓1号楼",
-        status="在售",
-        views=1258,
-        likes=89,
-        seller_id=1,
-        seller_name="张同学",
-        images=[
-            "https://picsum.photos/800/600?random=1",
-            "https://picsum.photos/800/600?random=2"
-        ],
-        created_at=datetime.utcnow()
+        id=item.id,
+        title=item.title,
+        description=item.description,
+        price=float(item.price),
+        category=cat.name if cat else "其他",
+        images=[m.url for m in medias],
+        status=item.status,
+        condition=item.condition,
+        seller_id=item.seller_id,
+        seller_name=seller.username if seller else "未知",
+        view_count=item.view_count,
+        favorite_count=0,
+        created_at=item.created_at,
+        updated_at=item.updated_at
     )
 
 
@@ -246,29 +216,36 @@ async def update_item(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
-    """
-    更新商品信息
+    """更新商品信息"""
+    from apps.core.models import Category, ItemMedia
+    from sqlalchemy import select
     
-    只有商品发布者可以更新
-    """
-    # TODO: 查询商品并验证所有权
-    # TODO: 更新商品信息
+    update_data = payload.dict(exclude_unset=True)
+    item = ItemService.update_item(session, item_id, current_user.id, **update_data)
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="商品不存在或无权限")
+    
+    cat = session.get(Category, item.category_id)
+    medias = session.execute(
+        select(ItemMedia).where(ItemMedia.item_id == item.id)
+    ).scalars().all()
     
     return ItemResponse(
-        id=item_id,
-        title=payload.title or "商品标题",
-        category=payload.category or "数码产品",
-        condition=payload.condition or "全新",
-        price=payload.price or 999,
-        description=payload.description or "商品描述",
-        location=payload.location or "北京大学",
-        status=payload.status or "在售",
-        views=100,
-        likes=10,
-        seller_id=current_user.id,
+        id=item.id,
+        title=item.title,
+        description=item.description,
+        price=float(item.price),
+        category=cat.name if cat else "其他",
+        images=[m.url for m in medias],
+        status=item.status,
+        condition=item.condition,
+        seller_id=item.seller_id,
         seller_name=current_user.username,
-        images=payload.images or [],
-        created_at=datetime.utcnow()
+        view_count=item.view_count,
+        favorite_count=0,
+        created_at=item.created_at,
+        updated_at=item.updated_at
     )
 
 
@@ -278,14 +255,10 @@ async def delete_item(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
-    """
-    删除商品
-    
-    只有商品发布者可以删除
-    """
-    # TODO: 查询商品并验证所有权
-    # TODO: 删除商品
-    
+    """删除商品"""
+    success = ItemService.delete_item(session, item_id, current_user.id)
+    if not success:
+        raise HTTPException(status_code=404, detail="商品不存在或无权限")
     return None
 
 
@@ -295,118 +268,56 @@ async def toggle_favorite(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
-    """
-    收藏/取消收藏商品
-    """
-    # TODO: 切换收藏状态
-    
-    return {"message": "收藏成功", "is_favorited": True}
+    """切换收藏状态"""
+    result = FavoriteService.toggle_favorite(session, current_user.id, item_id)
+    if not result["success"]:
+        raise HTTPException(status_code=404, detail=result["message"])
+    return result
 
 
-@router.post("/{item_id}/view")
-async def increment_view(
-    item_id: int,
-    session: Session = Depends(get_db_session)
-):
-    """
-    增加商品浏览次数
-    """
-    # TODO: 增加浏览计数
-    
-    return {"message": "浏览次数已更新"}
-
-
-@router.get("/{item_id}/similar", response_model=List[ItemResponse])
-async def get_similar_items(
-    item_id: int,
-    limit: int = Query(4, ge=1, le=20, description="返回数量"),
-    session: Session = Depends(get_db_session)
-):
-    """
-    获取相似商品推荐
-    """
-    # TODO: 基于分类、价格等推荐相似商品
-    
-    mock_items = [
-        ItemResponse(
-            id=i,
-            title=f"相似商品 {i}",
-            category="数码产品",
-            condition="全新",
-            price=999.99 + i * 100,
-            description="相似商品描述",
-            location="北京大学",
-            status="在售",
-            views=100,
-            likes=10,
-            seller_id=1,
-            seller_name="测试用户",
-            images=["https://picsum.photos/200/200?random=" + str(i + 100)],
-            created_at=datetime.utcnow()
-        )
-        for i in range(1, limit + 1)
-    ]
-    
-    return mock_items
-
-
-@router.get("/categories/list")
-async def get_categories():
-    """
-    获取所有商品分类
-    """
-    return {
-        "categories": [
-            {"label": "📱 数码产品", "value": "digital", "count": 125},
-            {"label": "📚 教材书籍", "value": "books", "count": 89},
-            {"label": "👕 服装鞋帽", "value": "clothing", "count": 67},
-            {"label": "🏀 运动器材", "value": "sports", "count": 45},
-            {"label": "🎮 娱乐休闲", "value": "entertainment", "count": 56},
-            {"label": "🛏️ 生活用品", "value": "daily", "count": 78},
-            {"label": "🎨 文具办公", "value": "stationery", "count": 34},
-            {"label": "🎸 乐器设备", "value": "music", "count": 23},
-            {"label": "🚲 自行车", "value": "bicycle", "count": 12},
-            {"label": "📦 其他", "value": "other", "count": 91}
-        ]
-    }
-
-
-@router.get("/my-items", response_model=ItemListResponse)
-async def get_my_items(
+@router.get("/my/favorites", response_model=ItemListResponse)
+async def get_my_favorites(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    status: Optional[str] = Query(None, description="商品状态筛选"),
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
-    """
-    获取当前用户发布的商品
-    """
-    # TODO: 查询用户的商品
+    """获取我的收藏"""
+    from apps.core.models import Category, ItemMedia
+    from sqlalchemy import select
     
-    mock_items = [
-        ItemResponse(
-            id=i,
-            title=f"我的商品 {i}",
-            category="数码产品",
-            condition="全新",
-            price=999.99,
-            description="我发布的商品",
-            location="北京大学",
-            status="在售" if i % 2 == 0 else "已售出",
-            views=100 + i * 10,
-            likes=10 + i,
-            seller_id=current_user.id,
-            seller_name=current_user.username,
-            images=["https://picsum.photos/200/200?random=" + str(i)],
-            created_at=datetime.utcnow()
-        )
-        for i in range(1, min(page_size + 1, 6))
-    ]
+    items, total = FavoriteService.get_user_favorites(
+        session, current_user.id, page, page_size
+    )
+    
+    items_data = []
+    for item in items:
+        cat = session.get(Category, item.category_id)
+        seller = session.get(User, item.seller_id)
+        medias = session.execute(
+            select(ItemMedia).where(ItemMedia.item_id == item.id)
+        ).scalars().all()
+        
+        items_data.append(ItemResponse(
+            id=item.id,
+            title=item.title,
+            description=item.description,
+            price=float(item.price),
+            category=cat.name if cat else "其他",
+            images=[m.url for m in medias],
+            status=item.status,
+            condition=item.condition,
+            seller_id=item.seller_id,
+            seller_name=seller.username if seller else "未知",
+            view_count=item.view_count,
+            favorite_count=0,
+            created_at=item.created_at,
+            updated_at=item.updated_at
+        ))
     
     return ItemListResponse(
-        items=mock_items,
-        total=20,
+        items=items_data,
+        total=total,
         page=page,
         page_size=page_size
     )
