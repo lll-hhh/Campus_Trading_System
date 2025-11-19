@@ -3,7 +3,7 @@
 提供手动触发数据库脚本执行和验证的 API
 """
 from fastapi import APIRouter, Depends, HTTPException
-from typing import Dict
+from typing import Dict, Any
 
 from apps.api_gateway.dependencies import require_roles
 from apps.core.models.users import User
@@ -29,11 +29,11 @@ def initialize_all_databases(
         raise HTTPException(status_code=500, detail=f"数据库初始化失败: {str(e)}")
 
 
-@router.post("/initialize/{db_name}", response_model=Dict[str, any])
+@router.post("/initialize/{db_name}", response_model=Dict[str, Any])
 def initialize_single_database(
     db_name: str,
     _: User = Depends(require_roles("market_admin"))
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     初始化单个数据库
     
@@ -57,11 +57,11 @@ def initialize_single_database(
         raise HTTPException(status_code=500, detail=f"初始化失败: {str(e)}")
 
 
-@router.get("/verify/{db_name}", response_model=Dict[str, any])
+@router.get("/verify/{db_name}", response_model=Dict[str, Any])
 def verify_database_objects(
     db_name: str,
     _: User = Depends(require_roles("market_admin"))
-) -> Dict[str, any]:
+) -> Dict[str, Any]:
     """
     验证数据库对象（触发器、存储过程、函数、视图）是否创建成功
     

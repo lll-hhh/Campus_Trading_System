@@ -10,6 +10,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx,vue}\""
   },
   "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
     "axios": "^1.6.8",
     "echarts": "^5.5.0",
     "naive-ui": "^2.37.3",

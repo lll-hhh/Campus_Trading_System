@@ -7,7 +7,6 @@
         抱歉，您访问的页面不存在或已被删除
       </div>
       <div class="error-illustration">
-        <img src="/404.svg" alt="404" v-if="false" />
         <div class="illustration-placeholder">🔍</div>
       </div>
       <n-space class="error-actions">

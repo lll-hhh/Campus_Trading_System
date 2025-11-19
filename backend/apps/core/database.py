@@ -106,3 +106,18 @@ class DatabaseManager:
 
 
 db_manager = DatabaseManager()
+
+
+def get_all_engines() -> Dict[str, Engine]:
+    """Return all database engines."""
+    return db_manager._engines
+
+
+def get_engine(name: str) -> Engine:
+    """Return the engine for the given database name."""
+    return db_manager.get_engine(name)
+
+
+def get_session_scope(name: str):
+    """Get a session scope for the given database name."""
+    return db_manager.session_scope(name)

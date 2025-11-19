@@ -225,7 +225,7 @@ async def notify_order_status_change(user_id: int, order_id: int, status: str, i
     await send_notification(user_id, {
         "type": "order_update",
         "title": "订单状态更新",
-        "content": f"订单"{item_title}"状态已更新为：{status_text}",
+        "content": f"订单「{item_title}」状态已更新为：{status_text}",
         "link": f"/orders?id={order_id}",
         "data": {
             "order_id": order_id,
@@ -239,7 +239,7 @@ async def notify_new_comment(seller_id: int, commenter_id: int, item_id: int, it
     await send_notification(seller_id, {
         "type": "new_comment",
         "title": "新评价",
-        "content": f"您的商品"{item_title}"收到了{rating}星评价",
+        "content": f"您的商品「{item_title}」收到了{rating}星评价",
         "link": f"/item/{item_id}",
         "data": {
             "commenter_id": commenter_id,
@@ -254,7 +254,7 @@ async def notify_item_favorited(seller_id: int, user_id: int, item_id: int, item
     await send_notification(seller_id, {
         "type": "item_favorited",
         "title": "商品被收藏",
-        "content": f"您的商品"{item_title}"被收藏了",
+        "content": f"您的商品「{item_title}」被收藏了",
         "link": f"/item/{item_id}",
         "data": {
             "user_id": user_id,
