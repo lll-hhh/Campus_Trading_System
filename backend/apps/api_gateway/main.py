@@ -4,7 +4,11 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from apps.api_gateway.routers import analytics, auth, dashboard, database, health, market, sync
+from apps.api_gateway.routers import (
+    analytics, auth, dashboard, database, health, market, sync,
+    items, cart, orders, messages, favorites, comments, search, sync_api
+)
+from apps.services import websocket
 from apps.core.config import get_settings
 from apps.services.db_initializer import initialize_databases
 
@@ -33,6 +37,15 @@ def create_app() -> FastAPI:
     app.include_router(market.router, prefix=settings.api_v1_prefix)
     app.include_router(database.router, prefix=settings.api_v1_prefix)
     app.include_router(analytics.router, prefix=settings.api_v1_prefix)
+    app.include_router(items.router, prefix=settings.api_v1_prefix)
+    app.include_router(cart.router, prefix=settings.api_v1_prefix)
+    app.include_router(orders.router, prefix=settings.api_v1_prefix)
+    app.include_router(messages.router, prefix=settings.api_v1_prefix)
+    app.include_router(favorites.router, prefix=settings.api_v1_prefix)
+    app.include_router(comments.router, prefix=settings.api_v1_prefix)
+    app.include_router(search.router, prefix=settings.api_v1_prefix)
+    app.include_router(sync_api.router, prefix=settings.api_v1_prefix)
+    app.include_router(websocket.router, prefix=settings.api_v1_prefix)
 
     @app.on_event("startup")
     async def startup_event():

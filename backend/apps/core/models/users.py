@@ -15,7 +15,9 @@ class User(BaseModel):
 
     __tablename__ = "users"
 
+    username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    student_id: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="active")
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
