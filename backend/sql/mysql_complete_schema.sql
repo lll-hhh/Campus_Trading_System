@@ -301,7 +301,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_user (user_id),
     INDEX idx_table (table_name, operation),
     INDEX idx_created (created_at),
-    INDEX idx_record (table_name, record_id)
+    INDEX idx_record (table_name, record_id),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
 
 -- 同步冲突表
@@ -322,7 +324,10 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     
     INDEX idx_resolved (resolved),
     INDEX idx_table_record (table_name, record_id),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_resolved_by (resolved_by),
+    
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='同步冲突表';
 
 -- 系统配置表
@@ -647,6 +652,250 @@ LEFT JOIN items i ON i.seller_id = u.id AND i.status = 'available'
 LEFT JOIN comments c ON c.user_id = u.id
 LEFT JOIN messages m ON m.sender_id = u.id
 WHERE u.is_active = TRUE AND u.is_banned = FALSE
+GROUP BY u.id;
+
+-- ============================================
+-- 7. 扩展关联表 (体现复杂数据库关系)
+-- ============================================
+
+-- 用户关注表 (多对多关系)
+CREATE TABLE IF NOT EXISTS user_follows (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    follower_id BIGINT NOT NULL COMMENT '关注者ID',
+    following_id BIGINT NOT NULL COMMENT '被关注者ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    UNIQUE KEY uk_follower_following (follower_id, following_id),
+    INDEX idx_follower (follower_id),
+    INDEX idx_following (following_id),
+    
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
+    
+    CHECK (follower_id != following_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
+
+-- 商品浏览历史表
+CREATE TABLE IF NOT EXISTS item_view_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    item_id BIGINT NOT NULL,
+    view_duration INT DEFAULT 0 COMMENT '浏览时长(秒)',
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_user (user_id),
+    INDEX idx_item (item_id),
+    INDEX idx_viewed_at (viewed_at),
+    INDEX idx_user_item (user_id, item_id),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品浏览历史表';
+
+-- 用户地址表 (一对多关系)
+CREATE TABLE IF NOT EXISTS user_addresses (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    address_type ENUM('dormitory', 'home', 'other') DEFAULT 'dormitory',
+    building VARCHAR(50) COMMENT '楼栋',
+    room VARCHAR(20) COMMENT '房间号',
+    detail_address VARCHAR(200) COMMENT '详细地址',
+    contact_name VARCHAR(50) COMMENT '联系人',
+    contact_phone VARCHAR(20) COMMENT '联系电话',
+    is_default BOOLEAN DEFAULT FALSE COMMENT '是否默认地址',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_user (user_id),
+    INDEX idx_default (user_id, is_default),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户地址表';
+
+-- 商品价格历史表 (记录价格变动)
+CREATE TABLE IF NOT EXISTS item_price_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    item_id BIGINT NOT NULL,
+    old_price DECIMAL(10, 2),
+    new_price DECIMAL(10, 2) NOT NULL,
+    change_reason VARCHAR(200) COMMENT '改价原因',
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_item (item_id),
+    INDEX idx_changed_at (changed_at),
+    
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品价格历史表';
+
+-- 评论点赞表 (多对多关系)
+CREATE TABLE IF NOT EXISTS comment_likes (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    comment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    UNIQUE KEY uk_comment_user (comment_id, user_id),
+    INDEX idx_comment (comment_id),
+    INDEX idx_user (user_id),
+    
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论点赞表';
+
+-- 消息附件表 (一对多关系)
+CREATE TABLE IF NOT EXISTS message_attachments (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    message_id BIGINT NOT NULL,
+    file_type ENUM('image', 'video', 'document', 'other') DEFAULT 'image',
+    file_url VARCHAR(500) NOT NULL,
+    file_name VARCHAR(200),
+    file_size BIGINT COMMENT '文件大小(字节)',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_message (message_id),
+    
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息附件表';
+
+-- 举报处理记录表 (一对多关系)
+CREATE TABLE IF NOT EXISTS report_actions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    report_id BIGINT NOT NULL,
+    admin_id BIGINT NOT NULL COMMENT '处理管理员',
+    action_type ENUM('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject') NOT NULL,
+    action_note TEXT COMMENT '处理说明',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_report (report_id),
+    INDEX idx_admin (admin_id),
+    INDEX idx_created (created_at),
+    
+    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='举报处理记录表';
+
+-- 交易评价图片表 (补充交易评价的图片证明)
+CREATE TABLE IF NOT EXISTS transaction_review_images (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    transaction_id BIGINT NOT NULL,
+    reviewer_type ENUM('buyer', 'seller') NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_transaction (transaction_id),
+    
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易评价图片表';
+
+-- 系统通知表
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    type ENUM('system', 'transaction', 'message', 'comment', 'follow', 'like') NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    related_id BIGINT COMMENT '关联对象ID',
+    related_type VARCHAR(50) COMMENT '关联对象类型',
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_user (user_id),
+    INDEX idx_read (user_id, is_read),
+    INDEX idx_created (created_at),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知表';
+
+-- 商品搜索记录表 (用于推荐算法)
+CREATE TABLE IF NOT EXISTS search_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT,
+    keyword VARCHAR(200) NOT NULL,
+    result_count INT DEFAULT 0,
+    clicked_item_id BIGINT COMMENT '点击的商品ID',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_user (user_id),
+    INDEX idx_keyword (keyword),
+    INDEX idx_created (created_at),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搜索历史表';
+
+-- 用户信用分变更记录表
+CREATE TABLE IF NOT EXISTS credit_score_history (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    old_score INT NOT NULL,
+    new_score INT NOT NULL,
+    change_amount INT NOT NULL COMMENT '变化量(+/-)',
+    change_reason VARCHAR(200) NOT NULL COMMENT '变更原因',
+    related_transaction_id BIGINT COMMENT '关联交易',
+    related_report_id BIGINT COMMENT '关联举报',
+    admin_id BIGINT COMMENT '操作管理员',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    
+    INDEX idx_user (user_id),
+    INDEX idx_created (created_at),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分变更记录表';
+
+-- 数据库同步任务表
+CREATE TABLE IF NOT EXISTS sync_tasks (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    task_type ENUM('full_sync', 'incremental_sync', 'conflict_resolution') NOT NULL,
+    source_db VARCHAR(50) NOT NULL,
+    target_db VARCHAR(50) NOT NULL,
+    table_name VARCHAR(100),
+    status ENUM('pending', 'running', 'completed', 'failed') DEFAULT 'pending',
+    total_records INT DEFAULT 0,
+    synced_records INT DEFAULT 0,
+    failed_records INT DEFAULT 0,
+    error_message TEXT,
+    started_at TIMESTAMP NULL,
+    completed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_status (status),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库同步任务表';
+
+-- 系统性能监控表
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    metric_type ENUM('query_time', 'connection_pool', 'sync_latency', 'error_rate') NOT NULL,
+    db_name VARCHAR(50) NOT NULL,
+    metric_value DECIMAL(10, 2) NOT NULL,
+    threshold_value DECIMAL(10, 2) COMMENT '阈值',
+    is_alert BOOLEAN DEFAULT FALSE COMMENT '是否告警',
+    details JSON,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    INDEX idx_type (metric_type),
+    INDEX idx_db (db_name),
+    INDEX idx_recorded (recorded_at),
+    INDEX idx_alert (is_alert, recorded_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='性能监控表';
+
+-- 完成
+SELECT 'MySQL schema with complete relationships created successfully!' AS message;
+
+
 GROUP BY u.id;
 
 -- 完成

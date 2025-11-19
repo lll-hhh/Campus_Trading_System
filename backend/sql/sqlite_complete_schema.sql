@@ -281,7 +281,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     new_value TEXT, -- JSON as text
     ip_address TEXT,
     user_agent TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (datetime('now')),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
@@ -303,12 +305,15 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     resolved_by INTEGER,
     resolution_strategy TEXT,
     resolved_at TEXT,
-    created_at TEXT DEFAULT (datetime('now'))
+    created_at TEXT DEFAULT (datetime('now')),
+    
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_conflict_records_resolved ON conflict_records(resolved);
 CREATE INDEX idx_conflict_records_table ON conflict_records(table_name, record_id);
 CREATE INDEX idx_conflict_records_created ON conflict_records(created_at);
+CREATE INDEX idx_conflict_records_resolved_by ON conflict_records(resolved_by);
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS system_configs (
@@ -515,3 +520,214 @@ GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.tot
 
 -- 完成
 SELECT 'SQLite schema created successfully!' AS message;
+
+-- ============================================
+-- 7. 扩展关联表 (SQLite版本)
+-- ============================================
+
+-- 用户关注表
+CREATE TABLE IF NOT EXISTS user_follows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    follower_id INTEGER NOT NULL,
+    following_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    UNIQUE (follower_id, following_id),
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (follower_id != following_id)
+);
+CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
+CREATE INDEX idx_user_follows_following ON user_follows(following_id);
+
+-- 商品浏览历史表
+CREATE TABLE IF NOT EXISTS item_view_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    item_id INTEGER NOT NULL,
+    view_duration INTEGER DEFAULT 0,
+    viewed_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_item_view_history_user ON item_view_history(user_id);
+CREATE INDEX idx_item_view_history_item ON item_view_history(item_id);
+
+-- 用户地址表
+CREATE TABLE IF NOT EXISTS user_addresses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    address_type TEXT DEFAULT 'dormitory' CHECK (address_type IN ('dormitory', 'home', 'other')),
+    building TEXT,
+    room TEXT,
+    detail_address TEXT,
+    contact_name TEXT,
+    contact_phone TEXT,
+    is_default INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_user_addresses_user ON user_addresses(user_id);
+
+-- 商品价格历史表
+CREATE TABLE IF NOT EXISTS item_price_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    item_id INTEGER NOT NULL,
+    old_price REAL,
+    new_price REAL NOT NULL,
+    change_reason TEXT,
+    changed_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_item_price_history_item ON item_price_history(item_id);
+
+-- 评论点赞表
+CREATE TABLE IF NOT EXISTS comment_likes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comment_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    UNIQUE (comment_id, user_id),
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_comment_likes_comment ON comment_likes(comment_id);
+CREATE INDEX idx_comment_likes_user ON comment_likes(user_id);
+
+-- 消息附件表
+CREATE TABLE IF NOT EXISTS message_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id INTEGER NOT NULL,
+    file_type TEXT DEFAULT 'image' CHECK (file_type IN ('image', 'video', 'document', 'other')),
+    file_url TEXT NOT NULL,
+    file_name TEXT,
+    file_size INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_message_attachments_message ON message_attachments(message_id);
+
+-- 举报处理记录表
+CREATE TABLE IF NOT EXISTS report_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    report_id INTEGER NOT NULL,
+    admin_id INTEGER NOT NULL,
+    action_type TEXT NOT NULL CHECK (action_type IN ('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject')),
+    action_note TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+CREATE INDEX idx_report_actions_report ON report_actions(report_id);
+
+-- 交易评价图片表
+CREATE TABLE IF NOT EXISTS transaction_review_images (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    transaction_id INTEGER NOT NULL,
+    reviewer_type TEXT NOT NULL CHECK (reviewer_type IN ('buyer', 'seller')),
+    image_url TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_transaction_review_images_transaction ON transaction_review_images(transaction_id);
+
+-- 系统通知表
+CREATE TABLE IF NOT EXISTS notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('system', 'transaction', 'message', 'comment', 'follow', 'like')),
+    title TEXT NOT NULL,
+    content TEXT,
+    related_id INTEGER,
+    related_type TEXT,
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+
+-- 搜索历史表
+CREATE TABLE IF NOT EXISTS search_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    keyword TEXT NOT NULL,
+    result_count INTEGER DEFAULT 0,
+    clicked_item_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_search_history_user ON search_history(user_id);
+
+-- 信用分历史表
+CREATE TABLE IF NOT EXISTS credit_score_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    old_score INTEGER NOT NULL,
+    new_score INTEGER NOT NULL,
+    change_amount INTEGER NOT NULL,
+    change_reason TEXT NOT NULL,
+    related_transaction_id INTEGER,
+    related_report_id INTEGER,
+    admin_id INTEGER,
+    created_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_credit_score_history_user ON credit_score_history(user_id);
+
+-- 同步任务表
+CREATE TABLE IF NOT EXISTS sync_tasks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    task_type TEXT NOT NULL CHECK (task_type IN ('full_sync', 'incremental_sync', 'conflict_resolution')),
+    source_db TEXT NOT NULL,
+    target_db TEXT NOT NULL,
+    table_name TEXT,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+    total_records INTEGER DEFAULT 0,
+    synced_records INTEGER DEFAULT 0,
+    failed_records INTEGER DEFAULT 0,
+    error_message TEXT,
+    started_at TEXT,
+    completed_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX idx_sync_tasks_status ON sync_tasks(status);
+
+-- 性能监控表
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    metric_type TEXT NOT NULL CHECK (metric_type IN ('query_time', 'connection_pool', 'sync_latency', 'error_rate')),
+    db_name TEXT NOT NULL,
+    metric_value REAL NOT NULL,
+    threshold_value REAL,
+    is_alert INTEGER DEFAULT 0,
+    details TEXT,
+    recorded_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX idx_performance_metrics_type ON performance_metrics(metric_type);
+
+SELECT 'SQLite schema with complete relationships created!' AS message;

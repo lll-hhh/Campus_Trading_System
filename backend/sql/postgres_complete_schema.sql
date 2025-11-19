@@ -265,7 +265,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     new_value JSONB,
     ip_address VARCHAR(45),
     user_agent TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
@@ -287,12 +289,15 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     resolved_by BIGINT,
     resolution_strategy VARCHAR(50),
     resolved_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX idx_conflict_records_resolved ON conflict_records(resolved);
 CREATE INDEX idx_conflict_records_table ON conflict_records(table_name, record_id);
 CREATE INDEX idx_conflict_records_created ON conflict_records(created_at);
+CREATE INDEX idx_conflict_records_resolved_by ON conflict_records(resolved_by);
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS system_configs (
@@ -643,3 +648,227 @@ GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.tot
 
 -- 完成
 SELECT 'PostgreSQL schema created successfully!' AS message;
+
+-- ============================================
+-- 7. 扩展关联表 (PostgreSQL版本)
+-- ============================================
+
+-- 用户关注表
+CREATE TABLE IF NOT EXISTS user_follows (
+    id BIGSERIAL PRIMARY KEY,
+    follower_id BIGINT NOT NULL,
+    following_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    UNIQUE (follower_id, following_id),
+    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
+    CHECK (follower_id != following_id)
+);
+CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
+CREATE INDEX idx_user_follows_following ON user_follows(following_id);
+
+-- 商品浏览历史表
+CREATE TABLE IF NOT EXISTS item_view_history (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    item_id BIGINT NOT NULL,
+    view_duration INTEGER DEFAULT 0,
+    viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_item_view_history_user ON item_view_history(user_id);
+CREATE INDEX idx_item_view_history_item ON item_view_history(item_id);
+CREATE INDEX idx_item_view_history_viewed_at ON item_view_history(viewed_at);
+
+-- 用户地址表
+CREATE TABLE IF NOT EXISTS user_addresses (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    address_type VARCHAR(20) DEFAULT 'dormitory' CHECK (address_type IN ('dormitory', 'home', 'other')),
+    building VARCHAR(50),
+    room VARCHAR(20),
+    detail_address VARCHAR(200),
+    contact_name VARCHAR(50),
+    contact_phone VARCHAR(20),
+    is_default BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_user_addresses_user ON user_addresses(user_id);
+CREATE INDEX idx_user_addresses_default ON user_addresses(user_id, is_default);
+
+-- 商品价格历史表
+CREATE TABLE IF NOT EXISTS item_price_history (
+    id BIGSERIAL PRIMARY KEY,
+    item_id BIGINT NOT NULL,
+    old_price DECIMAL(10, 2),
+    new_price DECIMAL(10, 2) NOT NULL,
+    change_reason VARCHAR(200),
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_item_price_history_item ON item_price_history(item_id);
+CREATE INDEX idx_item_price_history_changed_at ON item_price_history(changed_at);
+
+-- 评论点赞表
+CREATE TABLE IF NOT EXISTS comment_likes (
+    id BIGSERIAL PRIMARY KEY,
+    comment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    UNIQUE (comment_id, user_id),
+    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_comment_likes_comment ON comment_likes(comment_id);
+CREATE INDEX idx_comment_likes_user ON comment_likes(user_id);
+
+-- 消息附件表
+CREATE TABLE IF NOT EXISTS message_attachments (
+    id BIGSERIAL PRIMARY KEY,
+    message_id BIGINT NOT NULL,
+    file_type VARCHAR(20) DEFAULT 'image' CHECK (file_type IN ('image', 'video', 'document', 'other')),
+    file_url VARCHAR(500) NOT NULL,
+    file_name VARCHAR(200),
+    file_size BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_message_attachments_message ON message_attachments(message_id);
+
+-- 举报处理记录表
+CREATE TABLE IF NOT EXISTS report_actions (
+    id BIGSERIAL PRIMARY KEY,
+    report_id BIGINT NOT NULL,
+    admin_id BIGINT NOT NULL,
+    action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject')),
+    action_note TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+CREATE INDEX idx_report_actions_report ON report_actions(report_id);
+CREATE INDEX idx_report_actions_admin ON report_actions(admin_id);
+
+-- 交易评价图片表
+CREATE TABLE IF NOT EXISTS transaction_review_images (
+    id BIGSERIAL PRIMARY KEY,
+    transaction_id BIGINT NOT NULL,
+    reviewer_type VARCHAR(10) NOT NULL CHECK (reviewer_type IN ('buyer', 'seller')),
+    image_url VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_transaction_review_images_transaction ON transaction_review_images(transaction_id);
+
+-- 系统通知表
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(20) NOT NULL CHECK (type IN ('system', 'transaction', 'message', 'comment', 'follow', 'like')),
+    title VARCHAR(200) NOT NULL,
+    content TEXT,
+    related_id BIGINT,
+    related_type VARCHAR(50),
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_notifications_user ON notifications(user_id);
+CREATE INDEX idx_notifications_read ON notifications(user_id, is_read);
+CREATE INDEX idx_notifications_created ON notifications(created_at);
+
+-- 商品搜索记录表
+CREATE TABLE IF NOT EXISTS search_history (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT,
+    keyword VARCHAR(200) NOT NULL,
+    result_count INTEGER DEFAULT 0,
+    clicked_item_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_search_history_user ON search_history(user_id);
+CREATE INDEX idx_search_history_keyword ON search_history(keyword);
+CREATE INDEX idx_search_history_created ON search_history(created_at);
+
+-- 用户信用分变更记录表
+CREATE TABLE IF NOT EXISTS credit_score_history (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    old_score INTEGER NOT NULL,
+    new_score INTEGER NOT NULL,
+    change_amount INTEGER NOT NULL,
+    change_reason VARCHAR(200) NOT NULL,
+    related_transaction_id BIGINT,
+    related_report_id BIGINT,
+    admin_id BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (related_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
+    FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX idx_credit_score_history_user ON credit_score_history(user_id);
+CREATE INDEX idx_credit_score_history_created ON credit_score_history(created_at);
+
+-- 数据库同步任务表
+CREATE TABLE IF NOT EXISTS sync_tasks (
+    id BIGSERIAL PRIMARY KEY,
+    task_type VARCHAR(30) NOT NULL CHECK (task_type IN ('full_sync', 'incremental_sync', 'conflict_resolution')),
+    source_db VARCHAR(50) NOT NULL,
+    target_db VARCHAR(50) NOT NULL,
+    table_name VARCHAR(100),
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed')),
+    total_records INTEGER DEFAULT 0,
+    synced_records INTEGER DEFAULT 0,
+    failed_records INTEGER DEFAULT 0,
+    error_message TEXT,
+    started_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_sync_tasks_status ON sync_tasks(status);
+CREATE INDEX idx_sync_tasks_created ON sync_tasks(created_at);
+
+-- 系统性能监控表
+CREATE TABLE IF NOT EXISTS performance_metrics (
+    id BIGSERIAL PRIMARY KEY,
+    metric_type VARCHAR(30) NOT NULL CHECK (metric_type IN ('query_time', 'connection_pool', 'sync_latency', 'error_rate')),
+    db_name VARCHAR(50) NOT NULL,
+    metric_value DECIMAL(10, 2) NOT NULL,
+    threshold_value DECIMAL(10, 2),
+    is_alert BOOLEAN DEFAULT FALSE,
+    details JSONB,
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_performance_metrics_type ON performance_metrics(metric_type);
+CREATE INDEX idx_performance_metrics_db ON performance_metrics(db_name);
+CREATE INDEX idx_performance_metrics_recorded ON performance_metrics(recorded_at);
+CREATE INDEX idx_performance_metrics_alert ON performance_metrics(is_alert, recorded_at);
+
+SELECT 'PostgreSQL schema with complete relationships created!' AS message;
