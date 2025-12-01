@@ -1,7 +1,7 @@
 import type { AxiosError } from 'axios';
 import { defineStore } from 'pinia';
 
-import api from '@/lib/http';
+import  { http as api } from '@/lib/http';
 
 interface DailyStat {
   date: string | null;

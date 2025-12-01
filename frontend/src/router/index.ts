@@ -34,13 +34,23 @@ import AdminOperationsView from '@/views/AdminOperationsView.vue';
 import AdminTablesView from '@/views/AdminTablesView.vue';
 import SyncMonitorView from '@/views/SyncMonitorView.vue';
 
+// 1. 引入注册组件
+import RegisterView from '@/views/RegisterView.vue';
+
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    // 根路径重定向
+    // ✅ 修改根路径：根据角色重定向
     {
       path: '/',
-      redirect: '/marketplace'
+      name: 'home',
+      redirect: () => {
+        const authStore = useAuthStore();
+        if (authStore.isAdmin) {
+          return '/admin/dashboard';  // 管理员进入后台
+        }
+        return '/marketplace';  // 普通用户进入市场
+      }
     },
     
     // ========== 登录/注册页面（无布局） ==========
@@ -49,6 +59,13 @@ const router = createRouter({
       name: 'login',
       component: LoginView,
       meta: { title: '登录', public: true }
+    },
+    // 2. 添加注册路由
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
+      meta: { title: '注册', public: true }
     },
     
     // ========== 普通用户路由（使用 UserLayout） ==========
@@ -221,35 +238,96 @@ const router = createRouter({
   ]
 });
 
-// 路由守卫 - 权限控制
+// 🔥 修复后的路由守卫
 router.beforeEach(async (to, from, next) => {
-  console.info('[router] navigating', { from: from.fullPath, to: to.fullPath });
+  // 👇 3. 更新白名单
+  const whiteList = ['/login', '/register', '/403', '/500', '/not-found'];
   
-  const authStore = useAuthStore();
-  const isAuthenticated = authStore.isAuthenticated;
-  const isAdmin = authStore.isAdmin;
+  console.group(`🚦 [Router] ${from.path} → ${to.path}`);
   
-  // 公开页面直接通过
-  if (to.meta.public) {
+  try {
+    const authStore = useAuthStore();
+    // 确保 authStore 已初始化
+    if (!authStore.token && localStorage.getItem('token')) {
+      authStore.init();
+    }
+    
+    const isAuthenticated = authStore.isAuthenticated;
+    const isAdmin = authStore.isAdmin;
+    
+    console.log('状态:', { 
+      isAuthenticated, 
+      isAdmin, 
+      requiresAuth: to.meta.requiresAuth,
+      public: to.meta.public 
+    });
+
+    // ============ 规则 1: 访问登录页 ============
+    if (to.path === '/login' || to.name === 'login') {
+      if (isAuthenticated) {
+        console.log('✅ 已登录，重定向到市场');
+        next('/marketplace');
+      } else {
+        console.log('✅ 访问登录页，放行');
+        next();
+      }
+      console.groupEnd();
+      return;
+    }
+
+    // ============ 规则 2: 白名单页面 ============
+    if (whiteList.includes(to.path) || to.meta.public === true) {
+      console.log('✅ 白名单/公开页面，放行');
+      next();
+      console.groupEnd();
+      return;
+    }
+
+    // ============ 规则 3: 需要登录但未登录 ============
+    // 注意：这里我们假设所有非白名单页面默认都需要登录，除非明确标记 public: true
+    // 或者你也可以只检查 meta.requiresAuth
+    const requiresAuth = to.meta.requiresAuth !== false; // 默认为 true，除非明确设为 false
+    
+    if (requiresAuth && !isAuthenticated) {
+      console.warn('❌ 未登录，重定向到登录页');
+      // 避免无限循环：如果已经在登录页，不要再推送到登录页
+      if (from.path === '/login') {
+        console.error('⚠️ 检测到重定向循环，强制停止');
+        return; 
+      }
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath }
+      });
+      console.groupEnd();
+      return;
+    }
+
+    // ============ 规则 4: 需要管理员权限 ============
+    if (to.meta.requiresAdmin === true) {
+      if (!isAdmin) {
+        console.warn('❌ 权限不足，拒绝访问');
+        next('/403');
+        console.groupEnd();
+        return;
+      }
+    }
+
+    // ============ 规则 5: 放行所有其他情况 ============
+    console.log('✅ 检查通过，放行');
     next();
-    return;
+
+  } catch (error) {
+    console.error('❌ 路由守卫异常:', error);
+    // 发生错误时，为了避免死循环，可以尝试跳转到错误页或放行到登录页
+    if (to.path !== '/login') {
+      next('/login');
+    } else {
+      next();
+    }
+  } finally {
+    console.groupEnd();
   }
-  
-  // 检查是否需要登录
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    console.warn('[router] 需要登录');
-    next('/login');
-    return;
-  }
-  
-  // 检查管理员权限
-  if (to.meta.requiresAdmin && !isAdmin) {
-    console.warn('[router] 需要管理员权限');
-    next('/403');
-    return;
-  }
-  
-  next();
 });
 
 // 获取用户路由（用于导航菜单）

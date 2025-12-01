@@ -1,407 +1,112 @@
-<script setup lang="ts">
-import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import { 
-  NCard, 
-  NForm, 
-  NFormItem, 
-  NInput, 
-  NButton, 
-  NCheckbox, 
-  NSpace,
-  NTabs,
-  NTabPane,
-  useMessage 
-} from 'naive-ui'
-import { useAuthStore } from '@/stores/auth'
-
-const router = useRouter()
-const message = useMessage()
-const authStore = useAuthStore()
-
-const loading = ref(false)
-
-// 登录表单
-const loginForm = reactive({
-  username: '',
-  password: '',
-  remember: false
-})
-
-// 注册表单
-const registerForm = reactive({
-  username: '',
-  email: '',
-  studentId: '',
-  password: '',
-  confirmPassword: '',
-  agreeTerms: false
-})
-
-// 表单校验规则
-const loginRules = {
-  username: [
-    { required: true, message: '请输入用户名或学号', trigger: 'blur' }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' }
-  ]
-}
-
-const registerRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 3, max: 20, message: '用户名长度为3-20个字符', trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ],
-  studentId: [
-    { required: true, message: '请输入学号', trigger: 'blur' },
-    { 
-      pattern: /^[0-9]{8,12}$/, 
-      message: '学号应为8-12位数字', 
-      trigger: 'blur' 
-    }
-  ],
-  password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
-    {
-      validator: (rule: any, value: string) => {
-        return value === registerForm.password
-      },
-      message: '两次输入的密码不一致',
-      trigger: 'blur'
-    }
-  ],
-  agreeTerms: [
-    {
-      validator: (rule: any, value: boolean) => {
-        return value === true
-      },
-      message: '请阅读并同意服务协议',
-      trigger: 'change'
-    }
-  ]
-}
-
-// 登录处理
-const handleLogin = async () => {
-  loading.value = true
-  try {
-    // TODO: 调用后端登录API
-    await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟API调用
-    
-    authStore.login({
-      username: loginForm.username,
-      token: 'mock-token-' + Date.now()
-    })
-    
-    message.success('登录成功！')
-    router.push('/marketplace')
-  } catch (error: any) {
-    message.error(error.message || '登录失败，请重试')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 注册处理
-const handleRegister = async () => {
-  loading.value = true
-  try {
-    // TODO: 调用后端注册API
-    await new Promise(resolve => setTimeout(resolve, 1000)) // 模拟API调用
-    
-    message.success('注册成功！请登录')
-    // 切换到登录标签
-  } catch (error: any) {
-    message.error(error.message || '注册失败，请重试')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 忘记密码
-const handleForgotPassword = () => {
-  router.push('/forgot-password')
-}
-</script>
-
 <template>
-  <div class="login-view">
-    <div class="login-container">
-      <!-- 左侧装饰 -->
-      <div class="login-decoration">
-        <div class="decoration-content">
-          <h1>🎓 校园交易平台</h1>
-          <p>安全、便捷、高效的校园二手交易平台</p>
-          <div class="features">
-            <div class="feature-item">
-              <span class="icon">✅</span>
-              <span>实名认证 安全可靠</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">💬</span>
-              <span>即时聊天 高效沟通</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">📦</span>
-              <span>丰富商品 应有尽有</span>
-            </div>
-            <div class="feature-item">
-              <span class="icon">⚡</span>
-              <span>快速交易 便捷支付</span>
-            </div>
+  <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
+      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
+        登录您的账户
+      </h2>
+    </div>
+
+    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+      <div class="space-y-6">
+        <!-- 错误提示 -->
+        <div v-if="errorMessage" class="rounded-md bg-red-50 p-4">
+          <div class="text-sm text-red-700">{{ errorMessage }}</div>
+        </div>
+
+        <div>
+          <label for="username" class="block text-sm font-medium leading-6 text-gray-900">用户名</label>
+          <div class="mt-2">
+            <input 
+              v-model="form.username" 
+              id="username" 
+              type="text" 
+              required 
+              placeholder="请输入用户名"
+              class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" 
+            />
           </div>
+        </div>
+
+        <div>
+          <label for="password" class="block text-sm font-medium leading-6 text-gray-900">密码</label>
+          <div class="mt-2">
+            <input 
+              v-model="form.password" 
+              id="password" 
+              type="password" 
+              required 
+              placeholder="请输入密码"
+              class="block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" 
+            />
+          </div>
+        </div>
+
+        <div>
+          <button 
+            @click="handleLogin" 
+            :disabled="isLoading"
+            type="button" 
+            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+          >
+            {{ isLoading ? '登录中...' : '登录' }}
+          </button>
         </div>
       </div>
 
-      <!-- 右侧表单 -->
-      <div class="login-form-wrapper">
-        <n-card class="login-card" :bordered="false">
-          <n-tabs type="line" animated size="large">
-            <!-- 登录 -->
-            <n-tab-pane name="login" tab="登录">
-              <n-form
-                :model="loginForm"
-                :rules="loginRules"
-                size="large"
-                label-placement="left"
-              >
-                <n-form-item path="username">
-                  <n-input
-                    v-model:value="loginForm.username"
-                    placeholder="用户名/学号"
-                    clearable
-                  >
-                    <template #prefix>
-                      <span>👤</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="password">
-                  <n-input
-                    v-model:value="loginForm.password"
-                    type="password"
-                    show-password-on="click"
-                    placeholder="密码"
-                  >
-                    <template #prefix>
-                      <span>🔒</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-space justify="space-between" style="width: 100%">
-                  <n-checkbox v-model:checked="loginForm.remember">
-                    记住我
-                  </n-checkbox>
-                  <n-button text type="primary" @click="handleForgotPassword">
-                    忘记密码？
-                  </n-button>
-                </n-space>
-
-                <n-button
-                  type="primary"
-                  block
-                  size="large"
-                  :loading="loading"
-                  @click="handleLogin"
-                  style="margin-top: 24px"
-                >
-                  登录
-                </n-button>
-              </n-form>
-            </n-tab-pane>
-
-            <!-- 注册 -->
-            <n-tab-pane name="register" tab="注册">
-              <n-form
-                :model="registerForm"
-                :rules="registerRules"
-                size="large"
-                label-placement="left"
-              >
-                <n-form-item path="username">
-                  <n-input
-                    v-model:value="registerForm.username"
-                    placeholder="用户名"
-                    clearable
-                  >
-                    <template #prefix>
-                      <span>👤</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="email">
-                  <n-input
-                    v-model:value="registerForm.email"
-                    placeholder="邮箱"
-                    clearable
-                  >
-                    <template #prefix>
-                      <span>📧</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="studentId">
-                  <n-input
-                    v-model:value="registerForm.studentId"
-                    placeholder="学号"
-                    clearable
-                  >
-                    <template #prefix>
-                      <span>🎓</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="password">
-                  <n-input
-                    v-model:value="registerForm.password"
-                    type="password"
-                    show-password-on="click"
-                    placeholder="密码"
-                  >
-                    <template #prefix>
-                      <span>🔒</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="confirmPassword">
-                  <n-input
-                    v-model:value="registerForm.confirmPassword"
-                    type="password"
-                    show-password-on="click"
-                    placeholder="确认密码"
-                  >
-                    <template #prefix>
-                      <span>🔒</span>
-                    </template>
-                  </n-input>
-                </n-form-item>
-
-                <n-form-item path="agreeTerms">
-                  <n-checkbox v-model:checked="registerForm.agreeTerms">
-                    我已阅读并同意
-                    <n-button text type="primary">《服务协议》</n-button>
-                    和
-                    <n-button text type="primary">《隐私政策》</n-button>
-                  </n-checkbox>
-                </n-form-item>
-
-                <n-button
-                  type="primary"
-                  block
-                  size="large"
-                  :loading="loading"
-                  @click="handleRegister"
-                  style="margin-top: 16px"
-                >
-                  注册
-                </n-button>
-              </n-form>
-            </n-tab-pane>
-          </n-tabs>
-        </n-card>
-      </div>
+      <p class="mt-10 text-center text-sm text-gray-500">
+        还没有账号？
+        <RouterLink to="/register" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
+          立即注册
+        </RouterLink>
+      </p>
     </div>
   </div>
 </template>
 
-<style scoped>
-.login-view {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
-.login-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 40px;
-  max-width: 1200px;
-  width: 100%;
-}
+const router = useRouter()
+const authStore = useAuthStore()
 
-.login-decoration {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-}
+const form = ref({
+  username: '',
+  password: ''
+})
 
-.decoration-content h1 {
-  font-size: 48px;
-  margin-bottom: 16px;
-  font-weight: bold;
-}
+const errorMessage = ref('')
+const isLoading = computed(() => authStore.loading)
 
-.decoration-content > p {
-  font-size: 20px;
-  margin-bottom: 48px;
-  opacity: 0.9;
-}
-
-.features {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 18px;
-}
-
-.feature-item .icon {
-  font-size: 32px;
-  width: 50px;
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-}
-
-.login-form-wrapper {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.login-card {
-  width: 100%;
-  max-width: 480px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border-radius: 16px;
-}
-
-/* 响应式设计 */
-@media (max-width: 968px) {
-  .login-container {
-    grid-template-columns: 1fr;
-  }
+const handleLogin = async () => {
+  errorMessage.value = ''
   
-  .login-decoration {
-    display: none;
+  if (!form.value.username || !form.value.password) {
+    errorMessage.value = '请输入用户名和密码'
+    return
+  }
+
+  try {
+    const result = await authStore.login({
+      username: form.value.username,
+      password: form.value.password
+    })
+    
+    console.log('登录成功，用户角色:', result.user.roles)
+    
+    // ✅ 根据角色重定向到不同首页
+    if (result.isAdmin) {
+      console.log('管理员用户，跳转到管理后台')
+      router.push('/admin/dashboard')
+    } else {
+      console.log('普通用户，跳转到商品市场')
+      router.push('/marketplace')
+    }
+
+  } catch (error: any) {
+    console.error('登录失败:', error)
+    errorMessage.value = error.message || '登录失败'
   }
 }
-</style>
+</script>

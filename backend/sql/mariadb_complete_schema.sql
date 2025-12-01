@@ -1,8 +1,8 @@
 -- ============================================
 -- MariaDB 校园交易系统完整数据库脚本
 -- ============================================
--- 版本: 2.0
--- 日期: 2025-11-18
+-- 版本: 2.1
+-- 日期: 2025-12-01
 -- 说明: MariaDB专用特性,与MySQL基本兼容但有优化
 
 SET NAMES utf8mb4;
@@ -40,9 +40,6 @@ CREATE TABLE IF NOT EXISTS users (
     
     sync_version INT DEFAULT 0 COMMENT '同步版本号',
     
-    -- MariaDB特性:动态列存储扩展数据
-    extra_data BLOB COMMENT '动态列数据',
-    
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_student_id (student_id),
@@ -66,7 +63,7 @@ CREATE TABLE IF NOT EXISTS categories (
     INDEX idx_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品分类表';
 
--- 商品表 (使用MariaDB的列存储引擎优化查询)
+-- 商品表
 CREATE TABLE IF NOT EXISTS items (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     seller_id BIGINT NOT NULL COMMENT '卖家ID',
@@ -102,7 +99,7 @@ CREATE TABLE IF NOT EXISTS items (
     INDEX idx_status (status),
     INDEX idx_created (created_at),
     INDEX idx_price (price),
-    FULLTEXT idx_title_desc (title, description) WITH PARSER ngram,
+    FULLTEXT idx_title_desc (title, description),
     
     FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
@@ -150,7 +147,7 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
--- 交易表 (使用MariaDB的系统版本化表)
+-- ✅ 修复：交易表 - 移除分区，保留外键
 CREATE TABLE IF NOT EXISTS transactions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     item_id BIGINT NOT NULL,
@@ -188,14 +185,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (item_id) REFERENCES items(id),
     FOREIGN KEY (buyer_id) REFERENCES users(id),
     FOREIGN KEY (seller_id) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易表'
-WITH SYSTEM VERSIONING -- MariaDB特性:系统版本化,自动保留历史记录
-PARTITION BY RANGE (YEAR(created_at)) (
-    PARTITION p2024 VALUES LESS THAN (2025),
-    PARTITION p2025 VALUES LESS THAN (2026),
-    PARTITION p2026 VALUES LESS THAN (2027),
-    PARTITION p_future VALUES LESS THAN MAXVALUE
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易表';
 
 -- 消息表
 CREATE TABLE IF NOT EXISTS messages (
@@ -273,7 +263,7 @@ CREATE TABLE IF NOT EXISTS reports (
 -- 2. 系统管理表
 -- ============================================
 
--- 审计日志表 (使用MariaDB的ARCHIVE引擎压缩存储)
+-- 审计日志表
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT,
@@ -289,8 +279,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_user (user_id),
     INDEX idx_table (table_name, operation),
     INDEX idx_created (created_at),
-    INDEX idx_record (table_name, record_id)
-) ENGINE=ARCHIVE DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
+    INDEX idx_record (table_name, record_id),
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
 
 -- 同步冲突表
 CREATE TABLE IF NOT EXISTS conflict_records (
@@ -310,7 +302,10 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     
     INDEX idx_resolved (resolved),
     INDEX idx_table_record (table_name, record_id),
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_resolved_by (resolved_by),
+    
+    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='同步冲突表';
 
 -- 系统配置表
@@ -327,10 +322,18 @@ CREATE TABLE IF NOT EXISTS system_configs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
 -- ============================================
--- 3. 触发器 (与MySQL相同)
+-- 3. 触发器 (先删除再创建)
 -- ============================================
 
+DROP TRIGGER IF EXISTS trg_after_user_insert;
+DROP TRIGGER IF EXISTS trg_after_comment_insert;
+DROP TRIGGER IF EXISTS trg_after_favorite_insert;
+DROP TRIGGER IF EXISTS trg_after_favorite_delete;
+DROP TRIGGER IF EXISTS trg_after_transaction_complete;
+DROP TRIGGER IF EXISTS trg_after_transaction_rating;
+
 DELIMITER //
+
 CREATE TRIGGER trg_after_user_insert
 AFTER INSERT ON users
 FOR EACH ROW
@@ -398,13 +401,19 @@ BEGIN
         WHERE id = NEW.buyer_id;
     END IF;
 END//
+
 DELIMITER ;
 
 -- ============================================
--- 4. 存储过程
+-- 4. 存储过程 (先删除再创建)
 -- ============================================
 
+DROP PROCEDURE IF EXISTS sp_create_transaction;
+DROP PROCEDURE IF EXISTS sp_get_user_stats;
+DROP PROCEDURE IF EXISTS sp_search_items;
+
 DELIMITER //
+
 CREATE PROCEDURE sp_create_transaction(
     IN p_item_id BIGINT,
     IN p_buyer_id BIGINT,
@@ -462,7 +471,7 @@ BEGIN
     LEFT JOIN favorites f ON f.user_id = u.id
     LEFT JOIN transactions t ON (t.buyer_id = u.id OR t.seller_id = u.id)
     WHERE u.id = p_user_id
-    GROUP BY u.id;
+    GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.buyer_rating, u.total_sales, u.total_purchases;
 END//
 
 CREATE PROCEDURE sp_search_items(
@@ -491,6 +500,7 @@ BEGIN
     ORDER BY i.created_at DESC
     LIMIT p_offset, p_limit;
 END//
+
 DELIMITER ;
 
 -- ============================================
@@ -505,6 +515,7 @@ INSERT INTO categories (name, slug, description, sort_order) VALUES
 ('运动装备', 'sports', '运动器材、健身用品', 4),
 ('服装鞋包', 'fashion', '衣服、鞋子、包包', 5),
 ('美妆护肤', 'beauty', '化妆品、护肤品', 6),
+('票券卡劵', 'tickets', '优惠券、会员卡等', 7),
 ('其他', 'other', '其他商品', 99)
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
@@ -545,7 +556,30 @@ SELECT
 FROM transactions
 GROUP BY DATE(created_at);
 
-SELECT 'MariaDB schema created successfully!' AS message;
+CREATE OR REPLACE VIEW v_user_activity AS
+SELECT 
+    u.id,
+    u.username,
+    u.credit_score,
+    u.seller_rating,
+    u.total_sales,
+    u.total_purchases,
+    COUNT(DISTINCT i.id) AS active_items,
+    COUNT(DISTINCT c.id) AS comment_count,
+    COUNT(DISTINCT m.id) AS message_count,
+    MAX(u.last_login_at) AS last_active
+FROM users u
+LEFT JOIN items i ON i.seller_id = u.id AND i.status = 'available'
+LEFT JOIN comments c ON c.user_id = u.id
+LEFT JOIN messages m ON m.sender_id = u.id
+WHERE u.is_active = TRUE AND u.is_banned = FALSE
+GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.total_purchases;
+
+-- ============================================
+-- 7. 扩展关联表
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS user_follows (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     follower_id BIGINT NOT NULL COMMENT '关注者ID',
     following_id BIGINT NOT NULL COMMENT '被关注者ID',
@@ -557,12 +591,9 @@ SELECT 'MariaDB schema created successfully!' AS message;
     INDEX idx_following (following_id),
     
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
-    
-    CHECK (follower_id != following_id)
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
 
--- 商品浏览历史表
 CREATE TABLE IF NOT EXISTS item_view_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -574,13 +605,11 @@ CREATE TABLE IF NOT EXISTS item_view_history (
     INDEX idx_user (user_id),
     INDEX idx_item (item_id),
     INDEX idx_viewed_at (viewed_at),
-    INDEX idx_user_item (user_id, item_id),
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品浏览历史表';
 
--- 用户地址表 (一对多关系)
 CREATE TABLE IF NOT EXISTS user_addresses (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -601,7 +630,6 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户地址表';
 
--- 商品价格历史表 (记录价格变动)
 CREATE TABLE IF NOT EXISTS item_price_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     item_id BIGINT NOT NULL,
@@ -617,7 +645,6 @@ CREATE TABLE IF NOT EXISTS item_price_history (
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品价格历史表';
 
--- 评论点赞表 (多对多关系)
 CREATE TABLE IF NOT EXISTS comment_likes (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     comment_id BIGINT NOT NULL,
@@ -626,14 +653,11 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     sync_version INT DEFAULT 0,
     
     UNIQUE KEY uk_comment_user (comment_id, user_id),
-    INDEX idx_comment (comment_id),
-    INDEX idx_user (user_id),
     
     FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论点赞表';
 
--- 消息附件表 (一对多关系)
 CREATE TABLE IF NOT EXISTS message_attachments (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     message_id BIGINT NOT NULL,
@@ -649,7 +673,6 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息附件表';
 
--- 举报处理记录表 (一对多关系)
 CREATE TABLE IF NOT EXISTS report_actions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     report_id BIGINT NOT NULL,
@@ -661,13 +684,11 @@ CREATE TABLE IF NOT EXISTS report_actions (
     
     INDEX idx_report (report_id),
     INDEX idx_admin (admin_id),
-    INDEX idx_created (created_at),
     
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
     FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='举报处理记录表';
 
--- 交易评价图片表 (补充交易评价的图片证明)
 CREATE TABLE IF NOT EXISTS transaction_review_images (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     transaction_id BIGINT NOT NULL,
@@ -681,7 +702,6 @@ CREATE TABLE IF NOT EXISTS transaction_review_images (
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易评价图片表';
 
--- 系统通知表
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -696,12 +716,10 @@ CREATE TABLE IF NOT EXISTS notifications (
     
     INDEX idx_user (user_id),
     INDEX idx_read (user_id, is_read),
-    INDEX idx_created (created_at),
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知表';
 
--- 商品搜索记录表 (用于推荐算法)
 CREATE TABLE IF NOT EXISTS search_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT,
@@ -712,13 +730,11 @@ CREATE TABLE IF NOT EXISTS search_history (
     
     INDEX idx_user (user_id),
     INDEX idx_keyword (keyword),
-    INDEX idx_created (created_at),
     
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搜索历史表';
 
--- 用户信用分变更记录表
 CREATE TABLE IF NOT EXISTS credit_score_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
@@ -741,7 +757,6 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分变更记录表';
 
--- 数据库同步任务表
 CREATE TABLE IF NOT EXISTS sync_tasks (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     task_type ENUM('full_sync', 'incremental_sync', 'conflict_resolution') NOT NULL,
@@ -757,11 +772,9 @@ CREATE TABLE IF NOT EXISTS sync_tasks (
     completed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
-    INDEX idx_status (status),
-    INDEX idx_created (created_at)
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库同步任务表';
 
--- 系统性能监控表
 CREATE TABLE IF NOT EXISTS performance_metrics (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     metric_type ENUM('query_time', 'connection_pool', 'sync_latency', 'error_rate') NOT NULL,
@@ -773,6 +786,8 @@ CREATE TABLE IF NOT EXISTS performance_metrics (
     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     INDEX idx_type (metric_type),
-    INDEX idx_db (db_name),
-    INDEX idx_recorded (recorded_at),
-    INDEX idx_alert (is_alert, recorded_at)
+    INDEX idx_db (db_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='性能监控表';
+
+-- 完成
+SELECT 'MariaDB schema created successfully!' AS message;

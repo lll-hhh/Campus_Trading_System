@@ -1,655 +1,367 @@
 <template>
-  <div class="marketplace min-h-screen bg-gray-100">
-    <!-- 顶部搜索栏 - 淘宝风格 -->
-    <div class="bg-gradient-to-r from-orange-500 to-pink-500 shadow-lg sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-4 py-3">
-        <div class="flex items-center gap-4">
-          <!-- Logo -->
-          <div class="text-white font-bold text-xl flex-shrink-0">
-            🎓 校园淘
-          </div>
-          
-          <!-- 搜索框 -->
-          <div class="flex-1 max-w-3xl">
-            <div class="flex">
-              <n-input
-                v-model:value="searchKeyword"
-                placeholder="搜索宝贝、店铺..."
-                size="large"
-                class="rounded-r-none"
-                @keyup.enter="handleSearch"
-              >
-                <template #prefix>
-                  <span class="text-gray-400">🔍</span>
-                </template>
-              </n-input>
-              <n-button 
-                type="error" 
-                size="large" 
-                class="rounded-l-none px-8"
-                @click="handleSearch"
-                strong
-              >
-                搜索
-              </n-button>
-            </div>
-            
-            <!-- 热门搜索 -->
-            <div class="flex gap-2 mt-2 text-xs">
-              <span class="text-white/80">热门:</span>
-              <span 
-                v-for="hot in hotSearches" 
-                :key="hot"
-                class="text-white hover:underline cursor-pointer"
-                @click="searchKeyword = hot; handleSearch()"
-              >
-                {{ hot }}
-              </span>
-            </div>
-          </div>
-          
-          <!-- 右侧按钮 -->
-          <n-button 
-            size="large" 
-            @click="showPublishModal = true" 
-            type="warning"
-            class="flex-shrink-0"
-            strong
+  <div class="marketplace-view">
+    <!-- 搜索栏 -->
+    <div class="search-bar bg-gradient-to-r from-orange-400 to-orange-500 p-4 rounded-lg mb-4">
+      <div class="flex items-center gap-4 max-w-4xl mx-auto">
+        <div class="flex-1">
+          <n-input
+            v-model:value="searchKeyword"
+            placeholder="搜索宝贝、店铺..."
+            size="large"
+            round
+            clearable
+            @keyup.enter="handleSearch"
           >
-            <template #icon>
-              <span class="text-lg">📤</span>
+            <template #prefix>
+              <span>🔍</span>
             </template>
-            我要卖
+          </n-input>
+        </div>
+        <n-button type="warning" size="large" @click="handleSearch">
+          搜索
+        </n-button>
+        <n-button 
+          v-if="authStore.isAuthenticated"
+          type="primary" 
+          size="large" 
+          @click="showPublishModal = true"
+        >
+          ✏️ 我要卖
+        </n-button>
+      </div>
+      
+      <!-- 热门搜索 -->
+      <div class="flex items-center gap-2 mt-2 max-w-4xl mx-auto text-white text-sm">
+        <span>热门:</span>
+        <span 
+          v-for="keyword in ['iPhone', '自行车', '教材', '显示器', '二手书']" 
+          :key="keyword"
+          class="cursor-pointer hover:underline"
+          @click="searchKeyword = keyword; handleSearch()"
+        >
+          {{ keyword }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 分类导航 -->
+    <div class="categories-bar bg-white p-4 rounded-lg mb-4 shadow-sm">
+      <div class="flex flex-wrap gap-2">
+        <n-button
+          v-for="cat in categories"
+          :key="cat.id ?? 'all'"
+          :type="selectedCategory === cat.id ? 'warning' : 'default'"
+          :tertiary="selectedCategory !== cat.id"
+          round
+          @click="selectCategory(cat.id)"
+        >
+          {{ cat.icon }} {{ cat.name }}
+          <n-tag v-if="cat.count > 0" size="small" round class="ml-1">
+            {{ cat.count }}
+          </n-tag>
+        </n-button>
+      </div>
+    </div>
+
+    <!-- 筛选栏 -->
+    <div class="filter-bar bg-white p-4 rounded-lg mb-4 shadow-sm">
+      <div class="flex flex-wrap items-center gap-4">
+        <!-- 成色筛选 -->
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">成色:</span>
+          <n-button
+            v-for="opt in conditionOptions"
+            :key="opt.value ?? 'all'"
+            :type="selectedCondition === opt.value ? 'primary' : 'default'"
+            :tertiary="selectedCondition !== opt.value"
+            size="small"
+            @click="handleConditionChange(opt.value)"
+          >
+            {{ opt.label }}
           </n-button>
         </div>
-      </div>
-    </div>
-    
-    <!-- 分类导航栏 -->
-    <div class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4">
-        <div class="flex items-center gap-6 py-3 overflow-x-auto">
-          <div
-            v-for="cat in categories"
-            :key="cat.id"
-            @click="selectedCategory = cat.id"
-            :class="[
-              'flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer transition-all whitespace-nowrap',
-              selectedCategory === cat.id 
-                ? 'bg-orange-500 text-white shadow-lg transform scale-105' 
-                : 'hover:bg-orange-50 text-gray-700'
-            ]"
-          >
-            <span class="text-xl">{{ cat.icon }}</span>
-            <span class="font-medium">{{ cat.name }}</span>
-            <span v-if="selectedCategory === cat.id" class="text-xs bg-white/20 px-2 py-0.5 rounded-full">
-              {{ cat.count }}
-            </span>
-          </div>
+        
+        <!-- 价格区间 -->
+        <div class="flex items-center gap-2">
+          <span class="text-gray-500">价格:</span>
+          <n-input-number
+            v-model:value="priceRange.min"
+            placeholder="最低价"
+            size="small"
+            :min="0"
+            style="width: 100px"
+            @blur="handleSearch"
+          />
+          <span>-</span>
+          <n-input-number
+            v-model:value="priceRange.max"
+            placeholder="最高价"
+            size="small"
+            :min="0"
+            style="width: 100px"
+            @blur="handleSearch"
+          />
         </div>
-      </div>
-    </div>
-    
-    <!-- 筛选栏 -->
-    <div class="bg-white shadow-sm border-b">
-      <div class="max-w-7xl mx-auto px-4 py-3">
-        <div class="flex items-center gap-6 text-sm">
-          <div class="flex items-center gap-3">
-            <span class="text-gray-600">成色:</span>
-            <n-radio-group v-model:value="filterCondition" size="small">
-              <n-radio-button value="all">全部</n-radio-button>
-              <n-radio-button value="new">全新</n-radio-button>
-              <n-radio-button value="like-new">99新</n-radio-button>
-              <n-radio-button value="used">二手</n-radio-button>
-            </n-radio-group>
-          </div>
-          
-          <n-divider vertical />
-          
-          <div class="flex items-center gap-3">
-            <span class="text-gray-600">价格:</span>
-            <n-input-group>
-              <n-input-number v-model:value="priceRange[0]" placeholder="最低价" size="small" style="width: 100px" :show-button="false" />
-              <n-input-number v-model:value="priceRange[1]" placeholder="最高价" size="small" style="width: 100px" :show-button="false" />
-            </n-input-group>
-          </div>
-          
-          <n-divider vertical />
-          
-          <div class="flex items-center gap-3">
-            <span class="text-gray-600">排序:</span>
-            <n-select v-model:value="sortBy" :options="sortOptions" size="small" style="width: 150px" />
-          </div>
-          
-          <div class="ml-auto flex items-center gap-2">
-            <span class="text-gray-500">共 {{ totalCount }} 件宝贝</span>
-            <n-divider vertical />
-            <div class="flex gap-1">
-              <n-button size="small" :type="viewMode === 'grid' ? 'primary' : 'default'" @click="viewMode = 'grid'">
-                <template #icon>⊞</template>
-              </n-button>
-              <n-button size="small" :type="viewMode === 'list' ? 'primary' : 'default'" @click="viewMode = 'list'">
-                <template #icon>☰</template>
-              </n-button>
-            </div>
-          </div>
+        
+        <!-- 排序 -->
+        <div class="flex items-center gap-2 ml-auto">
+          <span class="text-gray-500">排序:</span>
+          <n-select
+            v-model:value="sortBy"
+            :options="sortOptions"
+            size="small"
+            style="width: 140px"
+            @update:value="handleSortChange"
+          />
         </div>
       </div>
     </div>
 
-    <!-- 商品列表 - 淘宝风格 -->
-    <div class="max-w-7xl mx-auto px-4 py-6">
-      <!-- 网格视图 -->
-      <div v-if="viewMode === 'grid'" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-        <div
-          v-for="item in paginatedItems"
+    <!-- 商品列表 -->
+    <n-spin :show="loading">
+      <div v-if="items.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <n-card
+          v-for="item in items"
           :key="item.id"
-          class="bg-white rounded-lg overflow-hidden cursor-pointer transition-all hover:shadow-xl border border-transparent hover:border-orange-400"
-          @click="viewItemDetail(item)"
+          hoverable
+          class="item-card cursor-pointer"
+          @click="goToItemDetail(item.id)"
         >
           <!-- 商品图片 -->
-          <div class="relative aspect-square bg-gray-100">
-            <img 
-              v-if="item.images && item.images[0]" 
-              :src="item.images[0]" 
-              :alt="item.name" 
-              class="w-full h-full object-cover"
+          <div class="relative">
+            <img
+              :src="item.images[0]"
+              :alt="item.title"
+              class="w-full h-48 object-cover rounded-t-lg"
             />
-            <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-pink-100">
-              <span class="text-6xl">{{ item.emoji }}</span>
+            <!-- 标签 -->
+            <div class="absolute top-2 left-2 flex gap-1">
+              <n-tag v-if="item.condition_type === '全新'" type="success" size="small">全新</n-tag>
+              <n-tag v-if="item.is_shipped" type="info" size="small">包邮</n-tag>
             </div>
-            
-            <!-- 成色标签 -->
-            <div class="absolute top-2 left-2">
-              <n-tag 
-                :type="getConditionColor(item.condition)" 
-                size="small"
-                :bordered="false"
-                class="shadow-lg"
-              >
-                {{ getConditionText(item.condition) }}
-              </n-tag>
-            </div>
-            
-            <!-- 校园认证标签 -->
-            <div class="absolute top-2 right-2">
-              <n-tag type="info" size="small" :bordered="false" class="shadow-lg">
-                🎓 校内
-              </n-tag>
-            </div>
-            
-            <!-- 多图标识 -->
-            <div v-if="item.images && item.images.length > 1" class="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+            <!-- 图片数量 -->
+            <div v-if="item.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
               📷 {{ item.images.length }}
             </div>
           </div>
-          
+
           <!-- 商品信息 -->
           <div class="p-3">
             <!-- 价格 -->
-            <div class="mb-2">
-              <span class="text-orange-600 font-bold text-xl">¥{{ item.price }}</span>
-              <span v-if="item.originalPrice" class="text-gray-400 text-sm line-through ml-2">
-                ¥{{ item.originalPrice }}
+            <div class="flex items-baseline gap-2 mb-2">
+              <span class="text-red-500 text-xl font-bold">¥{{ item.price }}</span>
+              <span v-if="item.original_price && item.original_price > item.price" class="text-gray-400 text-sm line-through">
+                ¥{{ item.original_price }}
               </span>
             </div>
-            
+
             <!-- 标题 -->
-            <h3 class="text-sm mb-2 line-clamp-2 h-10 leading-5">{{ item.name }}</h3>
-            
+            <h3 class="text-sm font-medium mb-2 line-clamp-2">
+              {{ item.emoji }} {{ item.title }}
+            </h3>
+
             <!-- 标签 -->
             <div class="flex flex-wrap gap-1 mb-2">
-              <n-tag 
-                v-for="tag in item.tags" 
-                :key="tag"
-                size="small"
-                :bordered="false"
-                class="text-xs"
-              >
+              <n-tag v-for="tag in item.tags?.slice(0, 3)" :key="tag" size="small" round>
                 {{ tag }}
               </n-tag>
             </div>
-            
-            <!-- 底部信息 -->
-            <div class="flex items-center justify-between text-xs text-gray-500 pt-2 border-t">
-              <div class="flex items-center gap-1">
-                <n-avatar :size="20" round>
-                  {{ item.seller[0] }}
-                </n-avatar>
-                <span>{{ item.seller }}</span>
-              </div>
-              <div class="flex items-center gap-2">
-                <span>💬 {{ item.inquiries || 0 }}</span>
-                <span>👁 {{ item.views }}</span>
-              </div>
+
+            <!-- 卖家和统计 -->
+            <div class="flex items-center justify-between text-xs text-gray-500">
+              <span>👤 {{ item.seller_name }}</span>
+              <span>👁️ {{ item.view_count }}</span>
             </div>
             
-            <!-- 位置 -->
-            <div class="text-xs text-gray-400 mt-1">
-              📍 {{ item.location || '东区宿舍' }}
+            <!-- 位置和时间 -->
+            <div class="flex items-center justify-between text-xs text-gray-400 mt-1">
+              <span v-if="item.location">📍 {{ item.location }}</span>
+              <span>{{ formatTime(item.created_at) }}</span>
             </div>
           </div>
-        </div>
-      </div>
-      
-      <!-- 列表视图 -->
-      <div v-else class="space-y-3">
-        <div
-          v-for="item in paginatedItems"
-          :key="item.id"
-          class="bg-white rounded-lg p-4 cursor-pointer hover:shadow-lg transition-shadow border"
-          @click="viewItemDetail(item)"
-        >
-          <div class="flex gap-4">
-            <!-- 缩略图 -->
-            <div class="w-40 h-40 bg-gray-100 rounded-lg flex-shrink-0 overflow-hidden">
-              <img 
-                v-if="item.images && item.images[0]" 
-                :src="item.images[0]" 
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-100 to-pink-100">
-                <span class="text-5xl">{{ item.emoji }}</span>
-              </div>
-            </div>
-            
-            <!-- 详细信息 -->
-            <div class="flex-1">
-              <div class="flex items-start justify-between mb-2">
-                <div>
-                  <h3 class="text-lg font-bold mb-1">{{ item.name }}</h3>
-                  <p class="text-gray-600 text-sm line-clamp-2">{{ item.description }}</p>
-                </div>
-                <div class="text-right">
-                  <div class="text-orange-600 font-bold text-2xl">¥{{ item.price }}</div>
-                  <div v-if="item.originalPrice" class="text-gray-400 text-sm line-through">
-                    ¥{{ item.originalPrice }}
-                  </div>
-                </div>
-              </div>
-              
-              <div class="flex items-center gap-2 mb-3">
-                <n-tag :type="getConditionColor(item.condition)" size="small">
-                  {{ getConditionText(item.condition) }}
-                </n-tag>
-                <n-tag v-for="tag in item.tags" :key="tag" size="small" :bordered="false">
-                  {{ tag }}
-                </n-tag>
-                <n-tag type="info" size="small">🎓 校内认证</n-tag>
-              </div>
-              
-              <div class="flex items-center justify-between text-sm text-gray-500">
-                <div class="flex items-center gap-4">
-                  <div class="flex items-center gap-1">
-                    <n-avatar :size="24" round>{{ item.seller[0] }}</n-avatar>
-                    <span>{{ item.seller }}</span>
-                  </div>
-                  <span>� {{ item.location || '东区宿舍' }}</span>
-                </div>
-                <div class="flex items-center gap-4">
-                  <span>💬 {{ item.inquiries || 0 }} 咨询</span>
-                  <span>👁 {{ item.views }} 浏览</span>
-                  <span>⏰ {{ item.publishTime || '2小时前' }}</span>
-                </div>
-              </div>
-            </div>
+
+          <!-- 快捷操作 -->
+          <div class="px-3 pb-3 flex gap-2">
+            <n-button 
+              size="small" 
+              type="primary"
+              @click.stop="handleAddToCart(item)"
+            >
+              🛒 加购
+            </n-button>
+            <n-button 
+              size="small"
+              :type="item.isFavorited ? 'error' : 'default'"
+              @click.stop="handleToggleFavorite(item)"
+            >
+              {{ item.isFavorited ? '❤️' : '🤍' }}
+            </n-button>
           </div>
-        </div>
+        </n-card>
       </div>
 
-      <!-- 分页 -->
-      <div class="flex justify-center mt-8">
-        <n-pagination
-          v-model:page="currentPage"
-          :page-count="totalPages"
-          :page-size="pageSize"
-          show-size-picker
-          :page-sizes="[20, 40, 60, 100]"
-          @update:page-size="handlePageSizeChange"
-        />
-      </div>
+      <!-- 空状态 -->
+      <n-empty v-else-if="!loading" description="暂无商品，快来发布第一件吧~">
+        <template #extra>
+          <n-button type="primary" @click="showPublishModal = true">
+            ✏️ 立即发布
+          </n-button>
+        </template>
+      </n-empty>
+    </n-spin>
+
+    <!-- 分页 -->
+    <div v-if="totalCount > 0" class="flex justify-center mt-8">
+      <n-pagination
+        v-model:page="currentPage"
+        :page-count="totalPages"
+        :page-size="pageSize"
+        show-size-picker
+        :page-sizes="[20, 40, 60, 100]"
+        @update:page="handlePageChange"
+        @update:page-size="handlePageSizeChange"
+      />
     </div>
 
     <!-- 发布商品对话框 -->
-    <n-modal v-model:show="showPublishModal" preset="card" title="📤 发布商品" style="width: 600px">
+    <n-modal 
+      v-model:show="showPublishModal" 
+      preset="card" 
+      title="📤 发布商品" 
+      style="width: 600px"
+    >
       <n-form :model="newItem" label-placement="left" label-width="80">
         <n-form-item label="商品名称">
-          <n-input v-model:value="newItem.name" placeholder="例如：二手自行车" />
+          <n-input v-model:value="newItem.name" placeholder="例如：二手iPhone 13 Pro" />
         </n-form-item>
         
         <n-form-item label="分类">
-          <n-select v-model:value="newItem.category_id" :options="categoryOptions" />
+          <n-select v-model:value="newItem.category_id" :options="categoryOptions" placeholder="请选择分类" />
         </n-form-item>
         
         <n-form-item label="价格">
-          <n-input-number v-model:value="newItem.price" :min="0" :precision="2" style="width: 100%">
+          <n-input-number v-model:value="newItem.price" :min="0" placeholder="输入价格" style="width: 100%">
             <template #prefix>¥</template>
           </n-input-number>
         </n-form-item>
         
         <n-form-item label="成色">
-          <n-radio-group v-model:value="newItem.condition">
-            <n-radio value="new">全新</n-radio>
-            <n-radio value="used">二手</n-radio>
-          </n-radio-group>
+          <n-select
+            v-model:value="newItem.condition"
+            :options="[
+              { label: '全新', value: '全新' },
+              { label: '99新', value: '99新' },
+              { label: '95新', value: '95新' },
+              { label: '9成新', value: '9成新' },
+              { label: '二手', value: '二手' }
+            ]"
+          />
         </n-form-item>
         
-        <n-form-item label="商品描述">
+        <n-form-item label="描述">
           <n-input
             v-model:value="newItem.description"
             type="textarea"
-            placeholder="详细描述商品的状况、购买时间、使用情况等..."
+            placeholder="详细描述商品情况..."
             :rows="4"
           />
         </n-form-item>
         
-        <n-form-item label="联系方式">
-          <n-input v-model:value="newItem.contact" placeholder="微信、QQ或手机号" />
-        </n-form-item>
-        
-        <n-form-item label="上传图片">
-          <n-upload
-            :max="5"
-            list-type="image-card"
-            accept="image/*"
-          >
-            点击上传
-          </n-upload>
+        <n-form-item label="交易地点">
+          <n-input v-model:value="newItem.location" placeholder="例如：东区2号楼" />
         </n-form-item>
       </n-form>
       
       <template #footer>
         <div class="flex justify-end gap-2">
           <n-button @click="showPublishModal = false">取消</n-button>
-          <n-button type="primary" @click="handlePublish">发布</n-button>
+          <n-button type="primary" @click="handlePublish">发布商品</n-button>
         </div>
       </template>
     </n-modal>
 
     <!-- 商品详情对话框 -->
-    <n-modal 
-      v-model:show="showDetailModal" 
-      preset="card" 
-      :title="currentItem?.name" 
-      style="width: 1000px; max-height: 90vh"
-      :segmented="{ content: true }"
+    <n-modal
+      v-model:show="showDetailModal"
+      preset="card"
+      :title="currentItem?.title"
+      style="width: 900px; max-height: 90vh"
     >
-      <div v-if="currentItem">
-        <n-tabs type="line" animated>
-          <!-- 商品详情标签页 -->
-          <n-tab-pane name="detail" tab="📦 商品详情">
-            <div class="grid grid-cols-2 gap-6">
-              <!-- 左侧图片 -->
+      <div v-if="currentItem" class="flex gap-6">
+        <!-- 左侧图片 -->
+        <div class="w-1/2">
+          <n-carousel show-arrow>
+            <img
+              v-for="(img, idx) in currentItem.images"
+              :key="idx"
+              :src="img"
+              class="w-full h-80 object-cover rounded"
+            />
+          </n-carousel>
+        </div>
+
+        <!-- 右侧信息 -->
+        <div class="w-1/2 space-y-4">
+          <!-- 价格 -->
+          <div class="flex items-baseline gap-2">
+            <span class="text-red-500 text-3xl font-bold">¥{{ currentItem.price }}</span>
+            <span v-if="currentItem.original_price" class="text-gray-400 line-through">
+              ¥{{ currentItem.original_price }}
+            </span>
+          </div>
+
+          <!-- 标签 -->
+          <div class="flex flex-wrap gap-2">
+            <n-tag v-for="tag in currentItem.tags" :key="tag" type="info">
+              {{ tag }}
+            </n-tag>
+          </div>
+
+          <!-- 描述 -->
+          <p class="text-gray-600">{{ currentItem.description }}</p>
+
+          <!-- 卖家信息 -->
+          <div class="bg-gray-50 p-4 rounded">
+            <div class="flex items-center gap-3">
+              <n-avatar :size="48">{{ currentItem.seller_name?.[0] }}</n-avatar>
               <div>
-                <div class="aspect-square bg-gradient-to-br from-orange-100 to-pink-100 rounded-lg flex items-center justify-center mb-4 overflow-hidden">
-                  <img 
-                    v-if="currentItem.images && currentItem.images[currentImageIndex]" 
-                    :src="currentItem.images[currentImageIndex]" 
-                    class="w-full h-full object-cover"
-                  />
-                  <span v-else class="text-9xl">{{ currentItem.emoji }}</span>
-                </div>
-                <div class="flex gap-2">
-                  <div 
-                    v-for="(img, idx) in (currentItem.images || [])" 
-                    :key="idx" 
-                    @click="currentImageIndex = idx"
-                    :class="[
-                      'w-20 h-20 rounded cursor-pointer border-2 overflow-hidden',
-                      currentImageIndex === idx ? 'border-orange-500' : 'border-gray-200'
-                    ]"
-                  >
-                    <img :src="img" class="w-full h-full object-cover" />
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 右侧信息 -->
-              <div>
-                <div class="mb-4">
-                  <span class="text-orange-600 font-bold text-3xl">¥{{ currentItem.price }}</span>
-                  <span v-if="currentItem.originalPrice" class="text-gray-400 text-lg line-through ml-2">
-                    ¥{{ currentItem.originalPrice }}
-                  </span>
-                </div>
-                
-                <div class="flex gap-2 mb-4">
-                  <n-tag :type="getConditionColor(currentItem.condition)" size="large">
-                    {{ getConditionText(currentItem.condition) }}
-                  </n-tag>
-                  <n-tag v-for="tag in currentItem.tags" :key="tag" size="large" :bordered="false">
-                    {{ tag }}
-                  </n-tag>
-                  <n-tag type="info" size="large">🎓 校内认证</n-tag>
-                </div>
-                
-                <n-divider />
-                
-                <div class="space-y-3 text-gray-700">
-                  <div class="flex items-start">
-                    <span class="font-bold w-24 flex-shrink-0">商品描述:</span>
-                    <span class="text-sm">{{ currentItem.description }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold w-24 flex-shrink-0">卖家:</span>
-                    <div class="flex items-center gap-2">
-                      <n-avatar size="small" round>{{ currentItem.seller[0] }}</n-avatar>
-                      <span>{{ currentItem.seller }}</span>
-                      <n-rate :value="currentItem.sellerLevel" size="small" readonly />
-                    </div>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold w-24 flex-shrink-0">交易地点:</span>
-                    <span>📍 {{ currentItem.location }}</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold w-24 flex-shrink-0">浏览量:</span>
-                    <span>👁️ {{ currentItem.views }} 次</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold w-24 flex-shrink-0">咨询量:</span>
-                    <span>💬 {{ currentItem.inquiries }} 次</span>
-                  </div>
-                  <div class="flex items-center">
-                    <span class="font-bold w-24 flex-shrink-0">发布时间:</span>
-                    <span>⏰ {{ currentItem.publishTime }}</span>
-                  </div>
-                </div>
-                
-                <n-divider />
-                
-                <div class="space-y-2">
-                  <n-button 
-                    type="warning" 
-                    size="large" 
-                    block 
-                    @click="handleWantToBuy"
-                    strong
-                  >
-                    � 我想要 - 联系卖家
-                  </n-button>
-                  <n-button size="large" block ghost>
-                    ❤️ 收藏
-                  </n-button>
-                </div>
-                
-                <n-alert type="warning" class="mt-4">
-                  <template #header>
-                    <span class="font-bold">⚠️ 交易流程说明</span>
-                  </template>
-                  <div class="text-xs space-y-1">
-                    <p>1. 点击"我想要"后,在评论区留言沟通</p>
-                    <p>2. 双方达成一致后,平台提供联系方式</p>
-                    <p>3. 线下当面交易,验货后付款</p>
-                    <p>4. 交易完成后,商品自动下架</p>
-                    <p class="text-red-600 font-bold mt-2">❌ 禁止线上支付!违规将封号处理!</p>
-                  </div>
-                </n-alert>
+                <div class="font-bold">{{ currentItem.seller_name }}</div>
+                <n-rate :value="4.5" readonly size="small" />
               </div>
             </div>
-          </n-tab-pane>
-          
-          <!-- 评论留言标签页 -->
-          <n-tab-pane name="comments" tab="💬 评论留言">
-            <div class="space-y-4">
-              <!-- 发表评论 -->
-              <div class="bg-gray-50 p-4 rounded-lg">
-                <div class="flex items-start gap-3">
-                  <n-avatar size="medium" round>我</n-avatar>
-                  <div class="flex-1">
-                    <n-input
-                      v-model:value="newComment"
-                      type="textarea"
-                      placeholder="对商品有疑问?想要购买?在这里留言和卖家沟通吧..."
-                      :rows="3"
-                      :maxlength="200"
-                      show-count
-                    />
-                    <div class="flex justify-between items-center mt-2">
-                      <span class="text-xs text-gray-500">💡 提示: 请文明交流,禁止发布违规信息</span>
-                      <n-button type="primary" @click="handlePostComment">
-                        发表留言
-                      </n-button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- 评论列表 -->
-              <div class="space-y-4 max-h-96 overflow-y-auto">
-                <div 
-                  v-for="comment in comments" 
-                  :key="comment.id"
-                  class="bg-white border rounded-lg p-4 hover:shadow-md transition-shadow"
-                >
-                  <div class="flex items-start gap-3">
-                    <n-avatar :size="40" round>
-                      {{ comment.userName[0] }}
-                    </n-avatar>
-                    <div class="flex-1">
-                      <div class="flex items-center justify-between mb-2">
-                        <div class="flex items-center gap-2">
-                          <span class="font-bold">{{ comment.userName }}</span>
-                          <n-tag v-if="comment.isSeller" type="warning" size="small">卖家</n-tag>
-                          <n-tag v-if="comment.isVerified" type="success" size="small">🎓 已认证</n-tag>
-                        </div>
-                        <span class="text-xs text-gray-400">{{ comment.time }}</span>
-                      </div>
-                      <p class="text-gray-700 mb-3">{{ comment.content }}</p>
-                      
-                      <!-- 回复按钮和回复列表 -->
-                      <div class="flex items-center gap-4 text-sm">
-                        <n-button 
-                          text 
-                          size="small"
-                          @click="handleReply(comment)"
-                        >
-                          💬 回复 ({{ comment.replies?.length || 0 }})
-                        </n-button>
-                        <n-button text size="small" type="error" v-if="!comment.isSeller">
-                          � 举报
-                        </n-button>
-                      </div>
-                      
-                      <!-- 回复列表 -->
-                      <div v-if="comment.replies && comment.replies.length > 0" class="mt-3 space-y-2 pl-4 border-l-2 border-gray-200">
-                        <div 
-                          v-for="reply in comment.replies" 
-                          :key="reply.id"
-                          class="bg-gray-50 p-3 rounded"
-                        >
-                          <div class="flex items-center gap-2 mb-1">
-                            <n-avatar :size="24" round>{{ reply.userName[0] }}</n-avatar>
-                            <span class="font-bold text-sm">{{ reply.userName }}</span>
-                            <n-tag v-if="reply.isSeller" type="warning" size="small">卖家</n-tag>
-                            <span class="text-xs text-gray-400">{{ reply.time }}</span>
-                          </div>
-                          <p class="text-sm text-gray-700">{{ reply.content }}</p>
-                        </div>
-                      </div>
-                      
-                      <!-- 回复输入框 -->
-                      <div v-if="replyingTo === comment.id" class="mt-3">
-                        <div class="flex gap-2">
-                          <n-input
-                            v-model:value="replyContent"
-                            placeholder="回复..."
-                            size="small"
-                          />
-                          <n-button size="small" type="primary" @click="handleSubmitReply(comment)">
-                            发送
-                          </n-button>
-                          <n-button size="small" @click="replyingTo = null">
-                            取消
-                          </n-button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- 空状态 -->
-                <div v-if="comments.length === 0" class="text-center py-12 text-gray-400">
-                  <span class="text-5xl block mb-3">💬</span>
-                  <p>暂无评论,快来抢沙发吧!</p>
-                </div>
-              </div>
-            </div>
-          </n-tab-pane>
-        </n-tabs>
-      </div>
-    </n-modal>
-    
-    <!-- 联系卖家确认对话框 -->
-    <n-modal 
-      v-model:show="showContactModal" 
-      preset="dialog"
-      title="📱 获取卖家联系方式"
-      positive-text="确认购买意向"
-      negative-text="取消"
-      @positive-click="handleConfirmContact"
-    >
-      <div class="space-y-4">
-        <n-alert type="warning">
-          <template #header>
-            <span class="font-bold">⚠️ 重要提醒</span>
-          </template>
-          <div class="space-y-2 text-sm">
-            <p>点击确认后,系统将:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2">
-              <li>向卖家发送您的联系方式</li>
-              <li>向您显示卖家的联系方式</li>
-              <li>记录本次交易意向</li>
-            </ul>
           </div>
-        </n-alert>
-        
-        <n-alert type="error">
-          <template #header>
-            <span class="font-bold">❌ 交易规则</span>
-          </template>
-          <div class="space-y-1 text-sm">
-            <p class="font-bold text-red-600">严禁以下行为,违者封号:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2">
-              <li>线上转账支付</li>
-              <li>未见面先付款</li>
-              <li>发布虚假商品</li>
-              <li>恶意欺诈</li>
-            </ul>
-            <p class="font-bold text-green-600 mt-3">✅ 正确流程:</p>
-            <ul class="list-disc list-inside space-y-1 ml-2">
-              <li>线下约见面地点</li>
-              <li>当面验货</li>
-              <li>验货后付款</li>
-            </ul>
+
+          <!-- 统计 -->
+          <div class="flex gap-4 text-sm text-gray-500">
+            <span>👁️ {{ currentItem.view_count }} 浏览</span>
+            <span>❤️ {{ currentItem.favorite_count }} 收藏</span>
+            <span v-if="currentItem.location">📍 {{ currentItem.location }}</span>
           </div>
-        </n-alert>
-        
-        <div class="bg-blue-50 p-3 rounded">
-          <p class="text-sm text-gray-700">
-            <span class="font-bold">💡 温馨提示:</span>
-            建议选择校内公共场所交易,如图书馆门口、食堂等,确保安全。
-          </p>
+
+          <n-divider />
+
+          <!-- 操作按钮 -->
+          <div class="space-y-2">
+            <n-button type="warning" size="large" block @click="handleContactSeller(currentItem!)">
+              💬 联系卖家
+            </n-button>
+            <n-button type="primary" size="large" block @click="handleAddToCart(currentItem!)">
+              🛒 加入购物车
+            </n-button>
+            <n-button 
+              size="large" 
+              block 
+              :type="currentItem.isFavorited ? 'error' : 'default'"
+              @click="handleToggleFavorite(currentItem!)"
+            >
+              {{ currentItem.isFavorited ? '❤️ 已收藏' : '🤍 收藏' }}
+            </n-button>
+          </div>
+
+          <n-alert type="warning" class="mt-4">
+            <template #header>⚠️ 交易提示</template>
+            <p class="text-sm">请线下当面交易，验货后付款。禁止线上转账！</p>
+          </n-alert>
         </div>
       </div>
     </n-modal>
@@ -657,566 +369,435 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { NInput, NButton, NTag, NModal, NForm, NFormItem, NSelect, NInputNumber, NRadioGroup, NRadio, NRadioButton, NUpload, NDivider, NAlert, NAvatar, NPagination, NInputGroup, NTabs, NTabPane, NRate, useMessage } from 'naive-ui';
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import {
+  NCard,
+  NSpace,
+  NButton,
+  NInput,
+  NSelect,
+  NTag,
+  NModal,
+  NForm,
+  NFormItem,
+  NInputNumber,
+  NCarousel,
+  NTabs,
+  NTabPane,
+  NAvatar,
+  NPagination,
+  NEmpty,
+  NSpin,
+  NRate,
+  NDivider,
+  NAlert,
+  useMessage
+} from 'naive-ui'
+import { useAuthStore } from '@/stores/auth'
+import { http } from '@/lib/http'
 
-const message = useMessage();
+const router = useRouter()
+const message = useMessage()
+const authStore = useAuthStore()
 
-// 搜索和筛选
-const searchKeyword = ref('');
-const selectedCategory = ref<number | null>(null);
-const filterCondition = ref('all');
-const priceRange = ref([null, null] as [number | null, number | null]);
-const sortBy = ref('default');
-const viewMode = ref<'grid' | 'list'>('grid');
+// ========== 状态定义 ==========
+const loading = ref(false)
+const searchKeyword = ref('')
+const selectedCategory = ref<number | null>(null)
+const selectedCondition = ref<string | null>(null)
+const priceRange = ref({ min: null as number | null, max: null as number | null })
+const sortBy = ref('default')
+const currentPage = ref(1)
+const pageSize = ref(20)
+const totalCount = ref(0)
 
-// 热门搜索
-const hotSearches = ref(['iPhone', '自行车', '教材', '显示器', '二手书']);
+// 商品列表 - 改为响应式数据
+const items = ref<any[]>([])
+const totalItems = ref(0)
 
-// 分类数据 (扩展版)
+// 分类数据
 const categories = ref([
-  { id: null, name: '全部分类', icon: '🏪', count: 156 },
-  { id: 1, name: '数码产品', icon: '📱', count: 45 },
-  { id: 2, name: '图书教材', icon: '📚', count: 38 },
-  { id: 3, name: '生活用品', icon: '🛋️', count: 28 },
-  { id: 4, name: '运动器材', icon: '⚽', count: 15 },
-  { id: 5, name: '服装鞋包', icon: '👔', count: 12 },
-  { id: 6, name: '美妆护肤', icon: '💄', count: 8 },
-  { id: 7, name: '其他闲置', icon: '📦', count: 10 }
-]);
+  { id: null, name: '全部分类', icon: '🏪', count: 0 },
+  { id: 1, name: '数码产品', icon: '📱', count: 0 },
+  { id: 2, name: '图书教材', icon: '📚', count: 0 },
+  { id: 3, name: '生活用品', icon: '🛋️', count: 0 },
+  { id: 4, name: '运动器材', icon: '⚽', count: 0 },
+  { id: 5, name: '服装鞋包', icon: '👔', count: 0 },
+  { id: 6, name: '美妆护肤', icon: '💄', count: 0 },
+  { id: 7, name: '其他闲置', icon: '📦', count: 0 }
+])
+
+// 成色选项
+const conditionOptions = [
+  { label: '全部', value: null },
+  { label: '全新', value: '全新' },
+  { label: '99新', value: '99新' },
+  { label: '95新', value: '95新' },
+  { label: '9成新', value: '9成新' },
+  { label: '二手', value: '二手' }
+]
 
 // 排序选项
 const sortOptions = [
   { label: '综合排序', value: 'default' },
   { label: '最新发布', value: 'newest' },
-  { label: '价格从低到高', value: 'price-asc' },
-  { label: '价格从高到低', value: 'price-desc' },
+  { label: '价格从低到高', value: 'price_asc' },
+  { label: '价格从高到低', value: 'price_desc' },
   { label: '浏览最多', value: 'views' }
-];
+]
 
-// 完整商品数据 (淘宝风格,包含多图、标签、位置等)
-const items = ref([
-  { 
-    id: 1, 
-    name: 'iPhone 13 Pro 128G 远峰蓝 99新', 
-    description: '去年双11购入,使用3个月,无磕碰无划痕,原装充电器+数据线+耳机全套,还有11个月官方保修,支持验机,诚心要可小刀', 
-    price: 4999, 
-    originalPrice: 7999,
-    category_id: 1, 
-    condition: 'like-new', 
-    seller: '张同学', 
-    sellerLevel: 5,
-    views: 1234, 
-    inquiries: 89,
-    emoji: '📱',
-    images: [
-      'https://picsum.photos/400/400?random=1',
-      'https://picsum.photos/400/400?random=2',
-      'https://picsum.photos/400/400?random=3'
-    ],
-    tags: ['可小刀', '包邮', '支持验机'],
-    location: '东区7号楼',
-    publishTime: '2小时前'
-  },
-  { 
-    id: 2, 
-    name: '高等数学同济第七版上下册+习题详解 笔记齐全', 
-    description: '高数上下册+配套习题详解,保存完好,笔记齐全,重点都标注了,期末必备!当面交易', 
-    price: 25, 
-    originalPrice: 89,
-    category_id: 2, 
-    condition: 'used', 
-    seller: '李学霸', 
-    sellerLevel: 4,
-    views: 456, 
-    inquiries: 23,
-    emoji: '📚',
-    images: [
-      'https://picsum.photos/400/400?random=4',
-      'https://picsum.photos/400/400?random=5'
-    ],
-    tags: ['当面交易', '笔记齐全'],
-    location: '图书馆门口',
-    publishTime: '5小时前'
-  },
-  { 
-    id: 3, 
-    name: '捷安特山地自行车 ATX770 9成新', 
-    description: '大二买的,骑了一年,车况良好,刚换了新轮胎,变速流畅,刹车灵敏,毕业甩卖急出,可试骑', 
-    price: 800, 
-    originalPrice: 1899,
-    category_id: 4, 
-    condition: 'like-new', 
-    seller: '王骑士', 
-    sellerLevel: 3,
-    views: 789, 
-    inquiries: 45,
-    emoji: '🚲',
-    images: [
-      'https://picsum.photos/400/400?random=6',
-      'https://picsum.photos/400/400?random=7',
-      'https://picsum.photos/400/400?random=8',
-      'https://picsum.photos/400/400?random=9'
-    ],
-    tags: ['急出', '可试骑', '包邮'],
-    location: '西区操场',
-    publishTime: '1天前'
-  },
-  { 
-    id: 4, 
-    name: 'LG 27寸2K 144Hz电竞显示器 完美屏', 
-    description: '今年618入手,IPS面板,完美屏无亮点坏点,HDR400,响应时间1ms,打游戏超爽,原包装齐全,支持上门自提', 
-    price: 1200, 
-    originalPrice: 1899,
-    category_id: 1, 
-    condition: 'new', 
-    seller: '赵电竞', 
-    sellerLevel: 5,
-    views: 1567, 
-    inquiries: 112,
-    emoji: '🖥️',
-    images: [
-      'https://picsum.photos/400/400?random=10',
-      'https://picsum.photos/400/400?random=11'
-    ],
-    tags: ['全新', '完美屏', '支持自提'],
-    location: '南区宿舍',
-    publishTime: '3小时前'
-  },
-  { 
-    id: 5, 
-    name: 'YONEX尤尼克斯羽毛球拍 天斧77 全新未拆封', 
-    description: '朋友送的,自己已经有一支了,全新未拆封,送球和拍包,线已穿好,到手就能打,比官方便宜500', 
-    price: 680, 
-    originalPrice: 1180,
-    category_id: 4, 
-    condition: 'new', 
-    seller: '钱羽毛', 
-    sellerLevel: 4,
-    views: 345, 
-    inquiries: 28,
-    emoji: '🏸',
-    images: [
-      'https://picsum.photos/400/400?random=12'
-    ],
-    tags: ['全新未拆', '包邮'],
-    location: '体育馆',
-    publishTime: '6小时前'
-  },
-  { 
-    id: 6, 
-    name: '小米米家LED智能台灯 Pro 护眼台灯', 
-    description: '用了一学期,功能完好,无频闪护眼,支持App控制,冷暖光可调,学习必备,搬家甩卖', 
-    price: 129, 
-    originalPrice: 299,
-    category_id: 3, 
-    condition: 'used', 
-    seller: '孙明灯', 
-    sellerLevel: 3,
-    views: 234, 
-    inquiries: 15,
-    emoji: '💡',
-    images: [
-      'https://picsum.photos/400/400?random=13',
-      'https://picsum.photos/400/400?random=14'
-    ],
-    tags: ['护眼', '智能'],
-    location: '东区2号楼',
-    publishTime: '8小时前'
-  },
-  { 
-    id: 7, 
-    name: '樱桃Cherry MX青轴机械键盘 RGB背光', 
-    description: '德国原厂青轴,段落感强,打字贼爽,RGB灯效可调,PBT键帽,用了半年,9成新', 
-    price: 450, 
-    originalPrice: 799,
-    category_id: 1, 
-    condition: 'like-new', 
-    seller: '周码农', 
-    sellerLevel: 5,
-    views: 567, 
-    inquiries: 34,
-    emoji: '⌨️',
-    images: [
-      'https://picsum.photos/400/400?random=15',
-      'https://picsum.photos/400/400?random=16',
-      'https://picsum.photos/400/400?random=17'
-    ],
-    tags: ['原厂轴', 'RGB'],
-    location: '西区5号楼',
-    publishTime: '12小时前'
-  },
-  { 
-    id: 8, 
-    name: 'Nike Air Max 270 耐克气垫运动鞋 42码', 
-    description: '正品保证,专柜购入,42码,穿过2次,鞋盒齐全,洗干净了,支持闲鱼验货', 
-    price: 399, 
-    originalPrice: 899,
-    category_id: 5, 
-    condition: 'like-new', 
-    seller: '吴跑步', 
-    sellerLevel: 4,
-    views: 445, 
-    inquiries: 38,
-    emoji: '👟',
-    images: [
-      'https://picsum.photos/400/400?random=18',
-      'https://picsum.photos/400/400?random=19'
-    ],
-    tags: ['正品', '支持验货'],
-    location: '南区6号楼',
-    publishTime: '1天前'
-  },
-  { 
-    id: 9, 
-    name: '罗技MX Master 3无线鼠标 办公神器', 
-    description: '人体工学设计,电磁滚轮,多设备连接,续航2个月,办公设计必备,8成新', 
-    price: 380, 
-    originalPrice: 699,
-    category_id: 1, 
-    condition: 'used', 
-    seller: '郑设计', 
-    sellerLevel: 4,
-    views: 389, 
-    inquiries: 22,
-    emoji: '🖱️',
-    images: [
-      'https://picsum.photos/400/400?random=20'
-    ],
-    tags: ['无线', '多设备'],
-    location: '北区3号楼',
-    publishTime: '2天前'
-  },
-  { 
-    id: 10, 
-    name: '小爱同学音箱 Pro 智能音箱 白色', 
-    description: '闲置音箱,声音清晰,智能语音控制,可以控制宿舍小米设备,95新', 
-    price: 199, 
-    originalPrice: 299,
-    category_id: 3, 
-    condition: 'like-new', 
-    seller: '冯智能', 
-    sellerLevel: 3,
-    views: 267, 
-    inquiries: 18,
-    emoji: '🔊',
-    images: [
-      'https://picsum.photos/400/400?random=21',
-      'https://picsum.photos/400/400?random=22'
-    ],
-    tags: ['智能音箱', '95新'],
-    location: '东区9号楼',
-    publishTime: '3天前'
-  },
-  // 再添加更多商品...
-  { id: 11, name: 'iPad 2021款 64G WiFi版', description: '学习娱乐两不误', price: 1899, originalPrice: 2499, category_id: 1, condition: 'like-new', seller: '陈平板', sellerLevel: 5, views: 890, inquiries: 67, emoji: '📱', images: ['https://picsum.photos/400/400?random=23'], tags: ['Apple Pencil', '键盘套'], location: '西区', publishTime: '4小时前' },
-  { id: 12, name: '线性代数教材+配套练习册', description: '同济版,笔记详细', price: 30, originalPrice: 78, category_id: 2, condition: 'used', seller: '林数学', sellerLevel: 4, views: 156, inquiries: 12, emoji: '📚', images: ['https://picsum.photos/400/400?random=24'], tags: ['包邮'], location: '图书馆', publishTime: '1天前' },
-  { id: 13, name: '宜家书桌 白色 可升降', description: '搬家处理,9成新', price: 350, originalPrice: 599, category_id: 3, condition: 'like-new', seller: '黄搬家', sellerLevel: 3, views: 234, inquiries: 19, emoji: '🪑', images: ['https://picsum.photos/400/400?random=25', 'https://picsum.photos/400/400?random=26'], tags: ['急出', '自提'], location: '南区', publishTime: '6小时前' },
-  { id: 14, name: '网球拍Wilson威尔逊 送球包', description: '大一买的,用了一学期', price: 280, originalPrice: 580, category_id: 4, condition: 'used', seller: '蒋网球', sellerLevel: 3, views: 123, inquiries: 8, emoji: '🎾', images: ['https://picsum.photos/400/400?random=27'], tags: ['送球包'], location: '网球场', publishTime: '2天前' },
-  { id: 15, name: 'Adidas运动裤 L码 黑色', description: '正品,洗过一次', price: 150, originalPrice: 399, category_id: 5, condition: 'new', seller: '韩运动', sellerLevel: 4, views: 189, inquiries: 14, emoji: '👖', images: ['https://picsum.photos/400/400?random=28'], tags: ['正品', '全新'], location: '东区', publishTime: '1天前' },
-  { id: 16, name: '雅诗兰黛小棕瓶眼霜 15ml', description: '专柜小样,全新未开封', price: 188, originalPrice: 390, category_id: 6, condition: 'new', seller: '杨美妆', sellerLevel: 5, views: 456, inquiries: 35, emoji: '💄', images: ['https://picsum.photos/400/400?random=29'], tags: ['专柜正品', '全新'], location: '西区', publishTime: '5小时前' },
-  { id: 17, name: '宿舍收纳箱 3个装 透明', description: '搬家不要了,很新', price: 50, originalPrice: 99, category_id: 3, condition: 'like-new', seller: '沈收纳', sellerLevel: 2, views: 78, inquiries: 5, emoji: '📦', images: ['https://picsum.photos/400/400?random=30'], tags: ['打包价'], location: '北区', publishTime: '3天前' },
-  { id: 18, name: 'Switch游戏卡 健身环大冒险', description: '已通关,9成新卡带', price: 280, originalPrice: 399, category_id: 1, condition: 'like-new', seller: '吴游戏', sellerLevel: 4, views: 567, inquiries: 43, emoji: '🎮', images: ['https://picsum.photos/400/400?random=31'], tags: ['可刀'], location: '东区', publishTime: '8小时前' },
-  { id: 19, name: '戴尔显示器支架 双屏', description: '质量很好,承重15kg', price: 180, originalPrice: 299, category_id: 1, condition: 'used', seller: '冯支架', sellerLevel: 3, views: 234, inquiries: 16, emoji: '�️', images: ['https://picsum.photos/400/400?random=32'], tags: ['双屏'], location: '南区', publishTime: '2天前' },
-  { id: 20, name: '吉他Yamaha雅马哈F310', description: '练习琴,音色不错', price: 550, originalPrice: 899, category_id: 4, condition: 'used', seller: '谢音乐', sellerLevel: 4, views: 345, inquiries: 27, emoji: '🎸', images: ['https://picsum.photos/400/400?random=33', 'https://picsum.photos/400/400?random=34'], tags: ['送琴包', '包邮'], location: '西区', publishTime: '1天前' },
-]);
+// 分类 slug 映射
+const categorySlugMap: Record<number, string> = {
+  1: 'electronics',
+  2: 'books',
+  3: 'daily',
+  4: 'sports',
+  5: 'fashion',
+  6: 'beauty',
+  7: 'other'
+}
 
-// 计算总数
-const totalCount = computed(() => filteredItems.value.length);
+// 分类 emoji 映射
+const categoryEmojiMap: Record<string, string> = {
+  'electronics': '📱',
+  'books': '📚',
+  'daily': '🛋️',
+  'sports': '⚽',
+  'fashion': '👔',
+  'beauty': '💄',
+  'other': '📦'
+}
 
-// 筛选后的商品
-const filteredItems = computed(() => {
-  let filtered = items.value;
-  
-  // 分类筛选
-  if (selectedCategory.value !== null) {
-    filtered = filtered.filter(item => item.category_id === selectedCategory.value);
+// ========== API 调用 ==========
+
+// 加载商品列表
+const loadItems = async () => {
+  loading.value = true
+  try {
+    const params: Record<string, any> = {
+      page: currentPage.value,
+      page_size: pageSize.value,
+      status: 'available'
+    }
+    
+    // 分类筛选
+    if (selectedCategory.value) {
+      params.category = categorySlugMap[selectedCategory.value] || ''
+    }
+    
+    // 关键词搜索
+    if (searchKeyword.value.trim()) {
+      params.keyword = searchKeyword.value.trim()
+    }
+    
+    // 价格区间
+    if (priceRange.value.min !== null) {
+      params.min_price = priceRange.value.min
+    }
+    if (priceRange.value.max !== null) {
+      params.max_price = priceRange.value.max
+    }
+    
+    const response = await http.get('/items', { params })
+    
+    // 处理返回数据
+    items.value = response.data.items.map((item: any) => ({
+      ...item,
+      original_price: item.original_price || Math.round(item.price * 1.3),
+      emoji: categoryEmojiMap[item.category] || '📦',
+      images: item.images?.length > 0 ? item.images : [`https://picsum.photos/400/400?random=${item.id}`],
+      tags: parseTags(item),
+      isFavorited: false
+    }))
+    
+    totalCount.value = response.data.total
+    
+    // 如果用户已登录，检查收藏状态
+    if (authStore.isAuthenticated) {
+      await checkFavoriteStatus()
+    }
+    
+  } catch (error: any) {
+    console.error('加载商品失败:', error)
+    message.error(error.response?.data?.detail || '加载商品失败')
+  } finally {
+    loading.value = false
   }
-  
-  // 成色筛选
-  if (filterCondition.value !== 'all') {
-    filtered = filtered.filter(item => item.condition === filterCondition.value);
-  }
-  
-  // 价格筛选
-  if (priceRange.value[0] !== null) {
-    filtered = filtered.filter(item => item.price >= (priceRange.value[0] || 0));
-  }
-  if (priceRange.value[1] !== null) {
-    filtered = filtered.filter(item => item.price <= (priceRange.value[1] || 999999));
-  }
-  
-  // 搜索
-  if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase();
-    filtered = filtered.filter(item => 
-      item.name.toLowerCase().includes(keyword) || 
-      item.description.toLowerCase().includes(keyword) ||
-      item.tags.some(tag => tag.toLowerCase().includes(keyword))
-    );
-  }
-  
-  // 排序
-  switch (sortBy.value) {
-    case 'newest':
-      // 按发布时间排序 (这里简化为按id倒序)
-      filtered = [...filtered].sort((a, b) => b.id - a.id);
-      break;
-    case 'price-asc':
-      filtered = [...filtered].sort((a, b) => a.price - b.price);
-      break;
-    case 'price-desc':
-      filtered = [...filtered].sort((a, b) => b.price - a.price);
-      break;
-    case 'views':
-      filtered = [...filtered].sort((a, b) => b.views - a.views);
-      break;
-  }
-  
-  return filtered;
-});
+}
 
-// 分页
-const currentPage = ref(1);
-const pageSize = ref(20);
+// 解析标签
+const parseTags = (item: any): string[] => {
+  const tags: string[] = []
+  if (item.condition_type) tags.push(item.condition_type)
+  if (item.is_negotiable) tags.push('可议价')
+  if (item.is_shipped) tags.push('包邮')
+  if (item.tags) {
+    try {
+      const parsed = typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags
+      if (Array.isArray(parsed)) tags.push(...parsed)
+    } catch { }
+  }
+  return tags.slice(0, 4) // 最多显示4个标签
+}
 
-const totalPages = computed(() => Math.ceil(filteredItems.value.length / pageSize.value));
+// 检查收藏状态
+const checkFavoriteStatus = async () => {
+  try {
+    const response = await http.get('/favorites')
+    const favoriteIds = new Set(response.data.map((f: any) => f.item_id))
+    items.value.forEach(item => {
+      item.isFavorited = favoriteIds.has(item.id)
+    })
+  } catch (error) {
+    console.error('检查收藏状态失败:', error)
+  }
+}
 
-const paginatedItems = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value;
-  const end = start + pageSize.value;
-  return filteredItems.value.slice(start, end);
-});
+// 加载分类统计
+const loadCategoryStats = async () => {
+  try {
+    // 获取各分类商品数量
+    for (const cat of categories.value) {
+      if (cat.id === null) {
+        // 全部分类
+        const res = await http.get('/items', { params: { page_size: 1, status: 'available' } })
+        cat.count = res.data.total
+      } else {
+        const slug = categorySlugMap[cat.id]
+        if (slug) {
+          const res = await http.get('/items', { params: { page_size: 1, category: slug, status: 'available' } })
+          cat.count = res.data.total
+        }
+      }
+    }
+  } catch (error) {
+    console.error('加载分类统计失败:', error)
+  }
+}
 
+// ========== 用户操作 ==========
+
+// 搜索
+const handleSearch = () => {
+  currentPage.value = 1
+  loadItems()
+}
+
+// 选择分类
+const selectCategory = (categoryId: number | null) => {
+  selectedCategory.value = categoryId
+  currentPage.value = 1
+  loadItems()
+}
+
+// 选择成色
+const handleConditionChange = (value: string | null) => {
+  selectedCondition.value = value
+  currentPage.value = 1
+  loadItems()
+}
+
+// 排序变更
+const handleSortChange = (value: string) => {
+  sortBy.value = value
+  currentPage.value = 1
+  loadItems()
+}
+
+// 页码变更
+const handlePageChange = (page: number) => {
+  currentPage.value = page
+  loadItems()
+}
+
+// 每页数量变更
 const handlePageSizeChange = (size: number) => {
-  pageSize.value = size;
-  currentPage.value = 1;
-};
+  pageSize.value = size
+  currentPage.value = 1
+  loadItems()
+}
 
-// 成色相关
-const getConditionText = (condition: string) => {
-  const map: Record<string, string> = {
-    'new': '全新',
-    'like-new': '99新',
-    'used': '二手'
-  };
-  return map[condition] || condition;
-};
+// 计算总页数
+const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
-const getConditionColor = (condition: string) => {
-  const map: Record<string, any> = {
-    'new': 'success',
-    'like-new': 'warning',
-    'used': 'default'
-  };
-  return map[condition] || 'default';
-};
+// ========== 商品详情弹窗 ==========
+const showDetailModal = ref(false)
+const currentItem = ref<ItemData | null>(null)
+const currentImageIndex = ref(0)
 
-// 发布商品
-const showPublishModal = ref(false);
+const viewItemDetail = (item: ItemData) => {
+  currentItem.value = item
+  currentImageIndex.value = 0
+  showDetailModal.value = true
+}
+
+// 跳转到商品详情页
+const goToItemDetail = (itemId: number) => {
+  router.push(`/item/${itemId}`)
+}
+
+// ========== 购物车 & 收藏 ==========
+
+// 加入购物车
+const handleAddToCart = async (item: ItemData) => {
+  if (!authStore.isAuthenticated) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  try {
+    await http.post('/cart', {
+      item_id: item.id,
+      quantity: 1
+    })
+    message.success(`"${item.title}" 已加入购物车`)
+  } catch (error: any) {
+    const detail = error.response?.data?.detail
+    if (detail === '不能购买自己发布的商品') {
+      message.warning('不能购买自己的商品哦~')
+    } else if (detail?.includes('已下架') || detail?.includes('已售出')) {
+      message.warning('该商品已下架或已售出')
+    } else {
+      message.error(detail || '加入购物车失败')
+    }
+  }
+}
+
+// 收藏/取消收藏
+const handleToggleFavorite = async (item: ItemData) => {
+  if (!authStore.isAuthenticated) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  try {
+    if (item.isFavorited) {
+      await http.delete(`/favorites/${item.id}`)
+      item.isFavorited = false
+      message.success('已取消收藏')
+    } else {
+      await http.post(`/favorites/${item.id}`)
+      item.isFavorited = true
+      message.success('收藏成功')
+    }
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '操作失败')
+  }
+}
+
+// 联系卖家
+const handleContactSeller = (item: ItemData) => {
+  if (!authStore.isAuthenticated) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push(`/messages?userId=${item.seller_id}`)
+}
+
+// ========== 发布商品弹窗 ==========
+const showPublishModal = ref(false)
 const newItem = ref({
   name: '',
   category_id: null as number | null,
   price: 0,
-  condition: 'used',
+  condition: '二手',
   description: '',
-  contact: ''
-});
+  location: ''
+})
 
 const categoryOptions = computed(() => 
-  categories.value.filter(c => c.id !== null).map(c => ({
-    label: `${c.icon} ${c.name}`,
-    value: c.id
-  }))
-);
+  categories.value
+    .filter(c => c.id !== null)
+    .map(c => ({ label: `${c.icon} ${c.name}`, value: c.id }))
+)
 
-const handlePublish = () => {
-  if (!newItem.value.name || !newItem.value.category_id) {
-    message.warning('请填写完整信息');
-    return;
+const handlePublish = async () => {
+  if (!newItem.value.name || !newItem.value.category_id || !newItem.value.price) {
+    message.warning('请填写完整信息')
+    return
   }
   
-  message.success('发布成功!商品正在审核中');
-  showPublishModal.value = false;
-  
-  // 重置表单
-  newItem.value = {
-    name: '',
-    category_id: null,
-    price: 0,
-    condition: 'used',
-    description: '',
-    contact: ''
-  };
-};
-
-// 商品详情
-const showDetailModal = ref(false);
-const currentItem = ref<any>(null);
-const currentImageIndex = ref(0);
-
-// 评论系统
-const newComment = ref('');
-const replyContent = ref('');
-const replyingTo = ref<number | null>(null);
-const comments = ref([
-  {
-    id: 1,
-    userName: '买家小王',
-    content: '这个还在吗?成色怎么样?有没有磕碰?',
-    time: '2小时前',
-    isSeller: false,
-    isVerified: true,
-    replies: [
-      {
-        id: 101,
-        userName: '张同学',
-        content: '在的!成色很好,无磕碰无划痕,可以当面验货',
-        time: '1小时前',
-        isSeller: true
-      },
-      {
-        id: 102,
-        userName: '买家小王',
-        content: '好的,那明天下午3点图书馆门口见面可以吗?',
-        time: '50分钟前',
-        isSeller: false
-      },
-      {
-        id: 103,
-        userName: '张同学',
-        content: '可以的,到时候见!记得带现金哦',
-        time: '45分钟前',
-        isSeller: true
-      }
-    ]
-  },
-  {
-    id: 2,
-    userName: '李同学',
-    content: '价格可以优惠吗?诚心要',
-    time: '5小时前',
-    isSeller: false,
-    isVerified: true,
-    replies: [
-      {
-        id: 201,
-        userName: '张同学',
-        content: '已经是最低价了,可以小刀50',
-        time: '4小时前',
-        isSeller: true
-      }
-    ]
-  },
-  {
-    id: 3,
-    userName: '赵同学',
-    content: '支持验机吗?',
-    time: '1天前',
-    isSeller: false,
-    isVerified: false,
-    replies: []
+  try {
+    const categorySlug = categorySlugMap[newItem.value.category_id] || 'other'
+    await http.post('/items', {
+      title: newItem.value.name,
+      description: newItem.value.description || newItem.value.name,
+      price: newItem.value.price,
+      category: categorySlug,
+      condition: newItem.value.condition,
+      status: 'available',
+      images: []
+    })
+    
+    message.success('发布成功!')
+    showPublishModal.value = false
+    
+    // 重置表单
+    newItem.value = {
+      name: '',
+      category_id: null,
+      price: 0,
+      condition: '二手',
+      description: '',
+      location: ''
+    }
+    
+    // 刷新列表
+    await loadItems()
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '发布失败')
   }
-]);
+}
 
-// 联系卖家
-const showContactModal = ref(false);
-
-const viewItemDetail = (item: any) => {
-  currentItem.value = item;
-  currentImageIndex.value = 0;
-  showDetailModal.value = true;
+// 格式化时间
+const formatTime = (dateStr: string) => {
+  if (!dateStr) return '刚刚'
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
   
-  // 模拟加载该商品的评论
-  // 实际应该从API获取
-};
-
-const handleWantToBuy = () => {
-  showContactModal.value = true;
-};
-
-const handleConfirmContact = () => {
-  message.success('已向卖家发送购买意向!', {
-    duration: 3000
-  });
+  const minutes = Math.floor(diff / 60000)
+  if (minutes < 60) return `${minutes}分钟前`
   
-  // 显示联系方式
-  setTimeout(() => {
-    message.info(`卖家联系方式: 微信 zhang123456`, {
-      duration: 5000
-    });
-    message.info(`您的联系方式已发送给卖家`, {
-      duration: 3000
-    });
-  }, 500);
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}小时前`
   
-  showContactModal.value = false;
-};
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days}天前`
+  
+  return date.toLocaleDateString()
+}
 
-const handlePostComment = () => {
-  if (!newComment.value.trim()) {
-    message.warning('请输入留言内容');
-    return;
-  }
-  
-  // 添加新评论
-  comments.value.unshift({
-    id: Date.now(),
-    userName: '我',
-    content: newComment.value,
-    time: '刚刚',
-    isSeller: false,
-    isVerified: true,
-    replies: []
-  });
-  
-  message.success('留言成功!');
-  newComment.value = '';
-};
-
-const handleReply = (comment: any) => {
-  replyingTo.value = comment.id;
-  replyContent.value = '';
-};
-
-const handleSubmitReply = (comment: any) => {
-  if (!replyContent.value.trim()) {
-    message.warning('请输入回复内容');
-    return;
-  }
-  
-  if (!comment.replies) {
-    comment.replies = [];
-  }
-  
-  comment.replies.push({
-    id: Date.now(),
-    userName: '我',
-    content: replyContent.value,
-    time: '刚刚',
-    isSeller: false
-  });
-  
-  message.success('回复成功!');
-  replyContent.value = '';
-  replyingTo.value = null;
-};
-
-const handleSearch = () => {
-  currentPage.value = 1; // 重置到第一页
-  console.log('搜索:', searchKeyword.value);
-};
-
+// 页面加载时获取数据
 onMounted(() => {
-  console.log('淘宝风格商品市场加载完成');
-});
+  loadItems()
+  loadCategoryStats()
+})
 </script>
 
 <style scoped>
+.marketplace-view {
+  padding: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.item-card {
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.item-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
-  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

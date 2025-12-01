@@ -1,299 +1,376 @@
 """
-数据库初始化服务 - 执行 SQL 脚本创建触发器、存储过程、函数等
+Database initializer for multiple database engines.
 """
 import logging
+import os
+import re
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, Any, Optional
 
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
-
-from apps.core.config import get_settings
-from apps.core.database import get_all_engines
 
 logger = logging.getLogger(__name__)
 
-SQL_DIR = Path(__file__).parent.parent.parent / "sql"
+# 全局初始化器实例（懒加载）
+_initializer_instance: Optional["DatabaseInitializer"] = None
 
 
 class DatabaseInitializer:
-    """数据库初始化器 - 执行各数据库专用脚本"""
-
-    def __init__(self):
-        self.settings = get_settings()
-        self.engines = get_all_engines()
-        self.sql_files: Dict[str, Path] = {
-            "mysql": SQL_DIR / "mysql_complete_schema.sql",
-            "mariadb": SQL_DIR / "mariadb_complete_schema.sql",
-            "postgres": SQL_DIR / "postgres_complete_schema.sql",
-            "sqlite": SQL_DIR / "sqlite_complete_schema.sql",
-        }
-
-    def _read_sql_file(self, file_path: Path) -> str:
-        """读取 SQL 文件内容"""
-        if not file_path.exists():
-            raise FileNotFoundError(f"SQL 文件不存在: {file_path}")
-        return file_path.read_text(encoding="utf-8")
-
-    def _split_sql_statements(self, sql_content: str, db_type: str) -> List[str]:
-        """
-        分割 SQL 语句
-        - MySQL/MariaDB: 处理 DELIMITER
-        - PostgreSQL/SQLite: 按分号分割
-        """
+    """多数据库初始化器"""
+    
+    SQL_DIR = Path(__file__).parent.parent.parent / "sql"
+    
+    # 数据库类型到脚本的映射 - 添加 inserts 文件
+    DB_SCRIPTS = {
+        "mysql": ["mysql_complete_schema.sql", "mysql_complete_inserts.sql"],
+        "mariadb": ["mariadb_complete_schema.sql"],  # MariaDB 可共用 MySQL inserts
+        "postgres": ["postgres_complete_schema.sql"],
+        "sqlite": ["sqlite_complete_schema.sql"],
+    }
+    
+    def __init__(self, engines: Dict[str, Engine]):
+        self.engines = engines
+    
+    def initialize_all_databases(self) -> Dict[str, Any]:
+        """初始化所有数据库"""
+        results = {}
+        
+        for db_name, engine in self.engines.items():
+            try:
+                result = self.initialize_database(db_name, engine)
+                results[db_name] = result
+                
+                # 打印简要结果
+                if result.get("success"):
+                    logger.info(f"✅ {db_name} 初始化成功: {result.get('executed', 0)} 条语句")
+                else:
+                    logger.warning(f"⚠️ {db_name} 初始化有错误: {result.get('failed', 0)} 条失败")
+                    for err in result.get("errors", [])[:3]:
+                        logger.warning(f"   {db_name} 错误: {err}")
+                        
+            except Exception as e:
+                logger.error(f"❌ {db_name} 初始化失败: {e}")
+                results[db_name] = {"success": False, "error": str(e)}
+        
+        return results
+    
+    def initialize_database(self, db_name: str, engine: Engine) -> Dict[str, Any]:
+        """初始化单个数据库"""
+        db_type = self._detect_db_type(db_name, engine)
+        script_names = self.DB_SCRIPTS.get(db_type, [])
+        
+        if not script_names:
+            return {"success": False, "error": f"不支持的数据库类型: {db_type}"}
+        
+        # 确保是列表
+        if isinstance(script_names, str):
+            script_names = [script_names]
+        
+        total_result = {"success": True, "executed": 0, "failed": 0, "errors": []}
+        
+        for script_name in script_names:
+            script_path = self.SQL_DIR / script_name
+            
+            if not script_path.exists():
+                logger.warning(f"{db_name}: 脚本不存在 {script_path}")
+                continue
+            
+            logger.info(f"{db_name}: 执行脚本 {script_name}")
+            result = self.execute_sql_for_engine(db_name, engine, script_path, db_type)
+            
+            total_result["executed"] += result.get("executed", 0)
+            total_result["failed"] += result.get("failed", 0)
+            total_result["errors"].extend(result.get("errors", []))
+            
+            if not result.get("success"):
+                total_result["success"] = False
+        
+        return total_result
+    
+    def _detect_db_type(self, db_name: str, engine: Engine) -> str:
+        """检测数据库类型"""
+        dsn = str(engine.url)
+        
+        if 'postgresql' in dsn or 'postgres' in dsn:
+            return 'postgres'
+        elif 'sqlite' in dsn:
+            return 'sqlite'
+        elif 'mysql' in dsn or 'pymysql' in dsn:
+            if 'mariadb' in db_name.lower():
+                return 'mariadb'
+            return 'mysql'
+        
+        return 'unknown'
+    
+    def execute_sql_for_engine(
+        self, 
+        db_name: str, 
+        engine: Engine, 
+        script_path: Path,
+        db_type: str
+    ) -> Dict[str, Any]:
+        """执行SQL脚本 - 每条语句独立事务"""
+        try:
+            sql_content = script_path.read_text(encoding='utf-8')
+            statements = self._parse_sql_statements(sql_content, db_type)
+            
+            executed = 0
+            failed = 0
+            errors = []
+            
+            logger.info(f"{db_name}: 解析到 {len(statements)} 条SQL语句")
+            
+            for i, stmt in enumerate(statements):
+                stmt = stmt.strip()
+                if not stmt or stmt.startswith('--'):
+                    continue
+                
+                # ✅ 关键修复：每条语句使用独立连接/事务
+                try:
+                    with engine.connect() as conn:
+                        # 开始事务
+                        trans = conn.begin()
+                        try:
+                            conn.execute(text(stmt))
+                            trans.commit()
+                            executed += 1
+                        except Exception as e:
+                            trans.rollback()
+                            raise e
+                            
+                except Exception as e:
+                    failed += 1
+                    error_msg = str(e)[:150]
+                    
+                    # 忽略 "already exists" 类型的错误
+                    if any(x in error_msg.lower() for x in ['already exists', 'duplicate', 'unique constraint']):
+                        # 这不是真正的错误，对象已存在
+                        executed += 1
+                        failed -= 1
+                    else:
+                        errors.append(f"语句 {i+1}: {error_msg}")
+                        if len(errors) <= 5:
+                            logger.warning(f"{db_name} - 语句 {i+1} 执行失败: {error_msg[:80]}")
+            
+            # 记录 INSERT 语句执行情况
+            insert_count = sum(1 for s in statements if 'INSERT' in s.upper())
+            logger.info(f"{db_name}: 共 {insert_count} 条 INSERT 语句")
+            
+            return {
+                "success": failed == 0 or failed < len(statements) * 0.1,  # 允许 10% 失败率
+                "executed": executed,
+                "failed": failed,
+                "total": len(statements),
+                "errors": errors[:10]  # 只返回前10个错误
+            }
+            
+        except Exception as e:
+            logger.error(f"{db_name} 初始化异常: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def _parse_sql_statements(self, sql_content: str, db_type: str) -> list:
+        """解析SQL语句"""
+        # 移除单行注释（但保留 SQL 内容）
+        lines = []
+        for line in sql_content.split('\n'):
+            stripped = line.strip()
+            if stripped.startswith('--'):
+                continue
+            lines.append(line)
+        
+        sql_content = '\n'.join(lines)
+        
+        # MySQL/MariaDB：处理 DELIMITER
+        if db_type in ('mysql', 'mariadb') and 'DELIMITER' in sql_content:
+            return self._parse_with_delimiter(sql_content)
+        
+        # PostgreSQL：处理 $$ 函数体
+        if db_type == 'postgres':
+            return self._parse_postgres_style(sql_content)
+        
+        # SQLite：简单按分号分割
+        if db_type == 'sqlite':
+            return self._parse_simple(sql_content)
+        
+        # 默认：简单分割
+        return self._parse_simple(sql_content)
+    
+    def _parse_simple(self, sql_content: str) -> list:
+        """简单按分号分割（适用于SQLite和简单SQL）"""
         statements = []
-
-        if db_type in ("mysql", "mariadb"):
-            # 处理 DELIMITER $$ ... DELIMITER ;
-            current_delimiter = ";"
-            buffer = []
-            lines = sql_content.split("\n")
-
-            for line in lines:
-                stripped = line.strip()
-
-                # 跳过注释
-                if stripped.startswith("--") or not stripped:
-                    continue
-
-                # 检测 DELIMITER 变更
-                if stripped.upper().startswith("DELIMITER"):
-                    if buffer:
-                        statements.append("\n".join(buffer))
-                        buffer = []
-                    new_delimiter = stripped.split()[-1]
-                    current_delimiter = new_delimiter
-                    continue
-
-                buffer.append(line)
-
-                # 检查语句结束
-                if stripped.endswith(current_delimiter):
-                    stmt = "\n".join(buffer).rstrip(current_delimiter).strip()
-                    if stmt and not stmt.startswith("--"):
-                        statements.append(stmt)
-                    buffer = []
-
-            if buffer:
-                stmt = "\n".join(buffer).strip()
+        current = []
+        
+        for line in sql_content.split('\n'):
+            stripped = line.strip()
+            if not stripped:
+                continue
+            
+            current.append(line)
+            
+            if stripped.endswith(';'):
+                stmt = '\n'.join(current).strip()
+                # 移除末尾分号后检查是否有内容
+                if stmt and stmt != ';':
+                    statements.append(stmt)
+                current = []
+        
+        if current:
+            stmt = '\n'.join(current).strip()
+            if stmt:
+                statements.append(stmt)
+        
+        return statements
+    
+    def _parse_postgres_style(self, sql_content: str) -> list:
+        """解析 PostgreSQL 风格的 SQL（处理 $$ 函数体）"""
+        statements = []
+        current = []
+        in_dollar_quote = False
+        
+        for line in sql_content.split('\n'):
+            stripped = line.strip()
+            if not stripped:
+                current.append(line)
+                continue
+                
+            current.append(line)
+            
+            # 检测 $$ 引用（计算这一行有多少个 $$）
+            dollar_count = line.count('$$')
+            if dollar_count % 2 == 1:
+                in_dollar_quote = not in_dollar_quote
+            
+            # 如果不在 $$ 块内且行以分号结尾
+            if not in_dollar_quote and stripped.endswith(';'):
+                stmt = '\n'.join(current).strip()
+                if stmt and stmt != ';':
+                    statements.append(stmt)
+                current = []
+        
+        if current:
+            stmt = '\n'.join(current).strip()
+            if stmt:
+                statements.append(stmt)
+        
+        return statements
+    
+    def _parse_with_delimiter(self, sql_content: str) -> list:
+        """处理包含 DELIMITER 的 SQL（MySQL/MariaDB）"""
+        statements = []
+        current_delimiter = ';'
+        current_stmt = []
+        
+        for line in sql_content.split('\n'):
+            stripped = line.strip()
+            
+            # 检查 DELIMITER 命令
+            if stripped.upper().startswith('DELIMITER'):
+                parts = stripped.split()
+                if len(parts) >= 2:
+                    if current_stmt:
+                        stmt = '\n'.join(current_stmt).strip()
+                        if stmt:
+                            statements.append(stmt)
+                        current_stmt = []
+                    current_delimiter = parts[1]
+                continue
+            
+            current_stmt.append(line)
+            
+            # 检查是否到达语句结尾
+            if stripped.endswith(current_delimiter):
+                stmt = '\n'.join(current_stmt)
+                if current_delimiter != ';':
+                    stmt = stmt.rsplit(current_delimiter, 1)[0]
+                stmt = stmt.strip()
                 if stmt:
                     statements.append(stmt)
-
-        else:
-            # PostgreSQL / SQLite: 简单按分号分割
-            raw_statements = sql_content.split(";")
-            for stmt in raw_statements:
-                cleaned = stmt.strip()
-                # 过滤空语句和注释
-                if cleaned and not cleaned.startswith("--"):
-                    statements.append(cleaned)
-
+                current_stmt = []
+        
+        if current_stmt:
+            stmt = '\n'.join(current_stmt).strip()
+            if stmt:
+                statements.append(stmt)
+        
         return statements
-
-    def execute_sql_for_engine(self, engine: Engine, db_type: str) -> Dict[str, any]:
-        """
-        为指定引擎执行对应的 SQL 脚本
-        """
-        result = {
-            "db_type": db_type,
-            "executed": 0,
-            "failed": 0,
-            "errors": [],
-        }
-
-        sql_file = self.sql_files.get(db_type)
-        if not sql_file or not sql_file.exists():
-            logger.warning(f"未找到 {db_type} 的 SQL 脚本: {sql_file}")
-            return result
-
-        logger.info(f"开始为 {db_type} 执行初始化脚本: {sql_file}")
-
+    
+    def verify_database_objects(self, engine: Engine, db_type: str) -> Dict[str, Any]:
+        """验证数据库对象"""
+        result = {"tables": [], "success": True}
+        
         try:
-            sql_content = self._read_sql_file(sql_file)
-            
-            # SQLite使用特殊处理
-            if db_type == "sqlite":
-                with engine.raw_connection() as conn:
-                    cursor = conn.cursor()
-                    try:
-                        cursor.executescript(sql_content)
-                        result["executed"] = 1
-                        logger.info(f"{db_type} 初始化完成: SQL脚本执行成功")
-                    except Exception as e:
-                        result["failed"] = 1
-                        result["errors"].append(str(e)[:200])
-                        logger.error(f"{db_type} 初始化失败: {e}")
-                return result
-
-            # PostgreSQL使用psycopg的execute
-            if db_type == "postgres":
-                try:
-                    with engine.raw_connection() as raw_conn:
-                        cursor = raw_conn.cursor()
-                        try:
-                            cursor.execute(sql_content)
-                            raw_conn.commit()
-                            result["executed"] = 1
-                            logger.info(f"{db_type} 初始化完成: SQL脚本执行成功")
-                        except Exception as e:
-                            result["failed"] = 1
-                            result["errors"].append(str(e)[:500])
-                            logger.error(f"{db_type} 初始化失败: {e}")
-                except Exception as e:
-                    result["failed"] = 1
-                    result["errors"].append(str(e)[:200])
-                    logger.error(f"{db_type} 连接失败: {e}")
-                return result
-
-            # MySQL/MariaDB使用逐语句执行
-            statements = self._split_sql_statements(sql_content, db_type)
-            logger.info(f"{db_type} 共解析出 {len(statements)} 条 SQL 语句")
-
-            with engine.begin() as conn:
-                for idx, stmt in enumerate(statements, 1):
-                    try:
-                        # 跳过空语句
-                        if not stmt.strip():
-                            continue
-
-                        # 执行 SQL
-                        conn.execute(text(stmt))
-                        result["executed"] += 1
-
-                    except Exception as e:
-                        result["failed"] += 1
-                        error_msg = f"语句 {idx} 执行失败: {str(e)[:200]}"
-                        result["errors"].append(error_msg)
-                        logger.error(f"{db_type} - {error_msg}")
-                        # 继续执行其他语句（触发器/存储过程可能部分已存在）
-
-            logger.info(
-                f"{db_type} 初始化完成: 成功 {result['executed']}, 失败 {result['failed']}"
-            )
-
+            with engine.connect() as conn:
+                if db_type in ('mysql', 'mariadb'):
+                    tables = conn.execute(text("SHOW TABLES")).fetchall()
+                    result["tables"] = [t[0] for t in tables]
+                    
+                    # 检查是否有数据
+                    for table in ['users', 'categories', 'items']:
+                        if table in result["tables"]:
+                            count = conn.execute(text(f"SELECT COUNT(*) FROM {table}")).scalar()
+                            result[f"{table}_count"] = count
+                    
+                elif db_type == 'postgres':
+                    tables = conn.execute(text(
+                        "SELECT tablename FROM pg_tables WHERE schemaname = 'public'"
+                    )).fetchall()
+                    result["tables"] = [t[0] for t in tables]
+                    
+                elif db_type == 'sqlite':
+                    tables = conn.execute(text(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                    )).fetchall()
+                    result["tables"] = [t[0] for t in tables]
+                    
         except Exception as e:
-            logger.error(f"{db_type} 初始化异常: {e}", exc_info=True)
-            result["errors"].append(str(e))
-
+            result["success"] = False
+            result["error"] = str(e)
+        
         return result
-
-    def initialize_all_databases(self) -> Dict[str, Dict]:
-        """
-        初始化所有数据库（创建触发器、存储过程、函数等）
-        """
-        logger.info("开始初始化所有数据库...")
-        results = {}
-
-        for db_name, engine in self.engines.items():
-            # 确定数据库类型
-            db_type = self._detect_db_type(db_name, engine)
-            results[db_name] = self.execute_sql_for_engine(engine, db_type)
-
-        logger.info("所有数据库初始化完成")
-        return results
-
-    def _detect_db_type(self, db_name: str, engine: Engine) -> str:
-        """根据引擎名称或方言检测数据库类型"""
-        dialect_name = engine.dialect.name.lower()
-
-        if "mysql" in db_name.lower() or dialect_name == "mysql":
-            # 进一步区分 MySQL 和 MariaDB
-            with engine.connect() as conn:
-                result = conn.execute(text("SELECT VERSION()")).scalar()
-                if "mariadb" in result.lower():
-                    return "mariadb"
-            return "mysql"
-        elif "mariadb" in db_name.lower():
-            return "mariadb"
-        elif "postgres" in db_name.lower() or dialect_name == "postgresql":
-            return "postgres"
-        elif "sqlite" in db_name.lower() or dialect_name == "sqlite":
-            return "sqlite"
-
-        logger.warning(f"未识别的数据库类型: {db_name} ({dialect_name}), 默认使用 mysql")
-        return "mysql"
-
-    def verify_database_objects(self, engine: Engine, db_type: str) -> Dict[str, any]:
-        """
-        验证数据库对象是否创建成功（触发器、存储过程等）
-        """
-        verification = {
-            "triggers": [],
-            "procedures": [],
-            "functions": [],
-            "views": [],
-        }
-
-        try:
-            with engine.connect() as conn:
-                if db_type == "mysql" or db_type == "mariadb":
-                    # 查询触发器
-                    triggers = conn.execute(
-                        text("SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA = DATABASE()")
-                    ).fetchall()
-                    verification["triggers"] = [t[0] for t in triggers]
-
-                    # 查询存储过程
-                    procedures = conn.execute(
-                        text("SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_TYPE = 'PROCEDURE'")
-                    ).fetchall()
-                    verification["procedures"] = [p[0] for p in procedures]
-
-                    # 查询函数
-                    functions = conn.execute(
-                        text("SELECT ROUTINE_NAME FROM information_schema.ROUTINES WHERE ROUTINE_SCHEMA = DATABASE() AND ROUTINE_TYPE = 'FUNCTION'")
-                    ).fetchall()
-                    verification["functions"] = [f[0] for f in functions]
-
-                elif db_type == "postgres":
-                    # 查询触发器
-                    triggers = conn.execute(
-                        text("SELECT trigger_name FROM information_schema.triggers WHERE trigger_schema = 'public'")
-                    ).fetchall()
-                    verification["triggers"] = [t[0] for t in triggers]
-
-                    # 查询函数（PostgreSQL 不区分存储过程）
-                    functions = conn.execute(
-                        text("SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public'")
-                    ).fetchall()
-                    verification["functions"] = [f[0] for f in functions]
-
-                elif db_type == "sqlite":
-                    # SQLite 查询触发器
-                    triggers = conn.execute(
-                        text("SELECT name FROM sqlite_master WHERE type = 'trigger'")
-                    ).fetchall()
-                    verification["triggers"] = [t[0] for t in triggers]
-
-                # 查询视图
-                views = conn.execute(
-                    text("SELECT table_name FROM information_schema.views WHERE table_schema = DATABASE()")
-                    if db_type in ("mysql", "mariadb")
-                    else text("SELECT table_name FROM information_schema.views WHERE table_schema = 'public'")
-                    if db_type == "postgres"
-                    else text("SELECT name FROM sqlite_master WHERE type = 'view'")
-                ).fetchall()
-                verification["views"] = [v[0] for v in views]
-
-        except Exception as e:
-            logger.error(f"验证数据库对象失败: {e}")
-
-        return verification
-
-
-# 全局初始化器实例
-_initializer = None
 
 
 def get_initializer() -> DatabaseInitializer:
-    """获取数据库初始化器单例"""
-    global _initializer
-    if _initializer is None:
-        _initializer = DatabaseInitializer()
-    return _initializer
+    """获取全局初始化器实例"""
+    global _initializer_instance
+    
+    if _initializer_instance is None:
+        engines = _create_engines()
+        _initializer_instance = DatabaseInitializer(engines)
+    
+    return _initializer_instance
 
 
-def initialize_databases() -> Dict[str, Dict]:
-    """便捷函数: 初始化所有数据库"""
+def _create_engines() -> Dict[str, Engine]:
+    """创建数据库引擎"""
+    engines = {}
+    
+    dsn_map = {
+        'mysql': 'MYSQL_DSN',
+        'mariadb': 'MARIADB_DSN',
+        'postgres': 'POSTGRES_DSN',
+        'sqlite': 'SQLITE_DSN',
+    }
+    
+    for db_name, env_var in dsn_map.items():
+        dsn = os.getenv(env_var)
+        if dsn:
+            try:
+                # SQLite 需要确保目录存在
+                if db_name == 'sqlite' and dsn.startswith('sqlite:///'):
+                    db_path = dsn.replace('sqlite:///', '')
+                    if db_path.startswith('/'):
+                        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+                
+                engines[db_name] = create_engine(dsn, echo=False)
+                logger.info(f"✅ {db_name} 引擎创建成功")
+            except Exception as e:
+                logger.warning(f"⚠️ {db_name} 引擎创建失败: {e}")
+    
+    return engines
+
+
+def initialize_databases() -> Dict[str, Any]:
+    """初始化所有数据库（入口函数）"""
     initializer = get_initializer()
     return initializer.initialize_all_databases()

@@ -53,7 +53,7 @@ def get_latest_inventory(limit: int = 8, session: Session = Depends(get_db_sessi
                 "id": item.id,
                 "title": item.title,
                 "price": float(item.price),
-                "currency": item.currency,
+                "currency": "CNY",  # ✅ 硬编码默认值
                 "status": item.status,
                 "category": category.name if category else None,
                 "created_at": item.created_at.isoformat() if isinstance(item.created_at, datetime) else None,

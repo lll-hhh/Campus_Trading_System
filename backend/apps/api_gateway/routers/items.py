@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api_gateway.dependencies import get_current_user, get_db_session
+from apps.api_gateway.dependencies import get_current_user, get_db_session,get_current_user_optional
 from apps.core.models import User
 from apps.services.business_logic import ItemService, FavoriteService
 
@@ -173,37 +173,44 @@ async def get_items(
 
 
 @router.get("/{item_id}", response_model=ItemResponse)
-async def get_item(
+async def get_item_detail(
     item_id: int,
-    session: Session = Depends(get_db_session)
+    session: Session = Depends(get_db_session),
+    current_user=Depends(get_current_user_optional)
 ):
     """获取商品详情"""
-    from apps.core.models import Category, ItemMedia
-    from sqlalchemy import select
+    from apps.core.models import Category, User
     
-    item = ItemService.get_item_detail(session, item_id)
+    item = session.get(Item, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="商品不存在")
     
-    cat = session.get(Category, item.category_id)
+    # 增加浏览量
+    item.view_count = (item.view_count or 0) + 1
+    session.commit()
+    
+    # 获取关联数据
     seller = session.get(User, item.seller_id)
-    medias = session.execute(
-        select(ItemMedia).where(ItemMedia.item_id == item.id)
-    ).scalars().all()
+    category = session.get(Category, item.category_id) if item.category_id else None
+    
+    # 获取图片
+    images = []
+    for media in item.medias:
+        images.append(media.image_url)
     
     return ItemResponse(
         id=item.id,
         title=item.title,
-        description=item.description,
+        description=item.description or "",
         price=float(item.price),
-        category=cat.name if cat else "其他",
-        images=[m.url for m in medias],
-        status=item.status,
-        condition=item.condition,
+        category=category.name if category else "其他",
+        images=images,
+        status=item.status or "available",
+        condition=item.condition,  # ✅ 使用属性方法
         seller_id=item.seller_id,
         seller_name=seller.username if seller else "未知",
-        view_count=item.view_count,
-        favorite_count=0,
+        view_count=item.view_count or 0,
+        favorite_count=item.favorite_count or 0,
         created_at=item.created_at,
         updated_at=item.updated_at
     )

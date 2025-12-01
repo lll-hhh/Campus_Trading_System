@@ -1,13 +1,27 @@
-"""User and permission related models."""
+"""User domain entities and roles."""
 from __future__ import annotations
 
 from datetime import datetime
-from typing import List, Optional
+from decimal import Decimal
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
+
+if TYPE_CHECKING:
+    from .inventory import Item
 
 
 class User(BaseModel):
@@ -16,15 +30,40 @@ class User(BaseModel):
     __tablename__ = "users"
 
     username: Mapped[str] = mapped_column(String(50), unique=True, nullable=False, index=True)
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     student_id: Mapped[Optional[str]] = mapped_column(String(20), unique=True, nullable=True, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="active")
-    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    
+    hashed_password: Mapped[str] = mapped_column("password_hash", String(255), nullable=False)
+    
+    phone: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    real_name: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_banned: Mapped[bool] = mapped_column(Boolean, default=False)
+    
+    credit_score: Mapped[int] = mapped_column(Integer, default=100, index=True)
+    seller_rating: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("5.00"))
+    buyer_rating: Mapped[Decimal] = mapped_column(Numeric(3, 2), default=Decimal("5.00"))
+    total_sales: Mapped[int] = mapped_column(Integer, default=0)
+    total_purchases: Mapped[int] = mapped_column(Integer, default=0)
+    
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    profile: Mapped["UserProfile"] = relationship(back_populates="user", uselist=False)
+    # ✅ 关系
+    profile: Mapped[Optional["UserProfile"]] = relationship(back_populates="user", uselist=False)
     roles: Mapped[List["Role"]] = relationship(
-        secondary="user_roles", back_populates="users", lazy="selectin"
+        secondary="user_roles",
+        back_populates="users",
+        lazy="selectin"
+    )
+    
+    # ✅ 新增：用户发布的商品
+    items: Mapped[List["Item"]] = relationship(
+        back_populates="seller",
+        lazy="selectin",
+        foreign_keys="Item.seller_id"
     )
 
 
@@ -44,55 +83,61 @@ class UserProfile(BaseModel):
 
 
 class Role(BaseModel):
-    """Role entity for RBAC."""
+    """User role for RBAC."""
 
     __tablename__ = "roles"
 
-    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(255))
-
-    permissions: Mapped[List["Permission"]] = relationship(
-        secondary="role_permissions", back_populates="roles", lazy="selectin"
-    )
+    
     users: Mapped[List[User]] = relationship(
-        secondary="user_roles", back_populates="roles", lazy="selectin"
+        secondary="user_roles",
+        back_populates="roles",
+        lazy="selectin"
+    )
+    permissions: Mapped[List["Permission"]] = relationship(
+        secondary="role_permissions",
+        back_populates="roles",
+        lazy="selectin"
     )
 
 
 class Permission(BaseModel):
-    """Fine-grained permission entry."""
+    """Granular permission."""
 
     __tablename__ = "permissions"
 
-    code: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    resource: Mapped[str] = mapped_column(String(50), nullable=False)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(255))
-
+    
     roles: Mapped[List[Role]] = relationship(
-        secondary="role_permissions", back_populates="permissions", lazy="selectin"
+        secondary="role_permissions",
+        back_populates="permissions",
+        lazy="selectin"
     )
 
 
-class RolePermission(BaseModel):
-    """Bridge between roles and permissions."""
-
-    __tablename__ = "role_permissions"
-    __table_args__ = (UniqueConstraint("role_id", "permission_id", name="uq_role_permissions_pair"),)
-
-    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
-    permission_id: Mapped[int] = mapped_column(ForeignKey("permissions.id"), nullable=False)
-
-    role: Mapped[Role] = relationship(back_populates="permissions")
-    permission: Mapped[Permission] = relationship(back_populates="roles")
-
-
 class UserRole(BaseModel):
-    """Bridge between users and roles."""
+    """Association table for users and roles."""
 
     __tablename__ = "user_roles"
-    __table_args__ = (UniqueConstraint("user_id", "role_id", name="uq_user_roles_pair"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "role_id", name="uq_user_role"),
+    )
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
 
-    user: Mapped[User] = relationship(back_populates="roles")
-    role: Mapped[Role] = relationship(back_populates="users")
+
+class RolePermission(BaseModel):
+    """Association table for roles and permissions."""
+
+    __tablename__ = "role_permissions"
+    __table_args__ = (
+        UniqueConstraint("role_id", "permission_id", name="uq_role_permission"),
+    )
+
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), nullable=False)
+    permission_id: Mapped[int] = mapped_column(ForeignKey("permissions.id"), nullable=False)

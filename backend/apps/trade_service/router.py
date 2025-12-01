@@ -1,4 +1,6 @@
 """Trade service router definitions with 4-database sync and transaction management."""
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
@@ -41,19 +43,9 @@ def create_offer(payload: OfferPayload) -> dict[str, str | float]:
 
 
 @router.post("/transactions", status_code=201)
-def create_transaction(payload: TransactionPayload) -> dict[str, any]:
+def create_transaction(payload: TransactionPayload) -> dict[str, Any]:  # ✅ 修复: any -> Any
     """
     Create a transaction with automatic sync to all 4 databases.
-    
-    Uses ACID transaction to:
-    1. Create transaction record
-    2. Update item status to 'sold'
-    3. Sync to all databases (MySQL/MariaDB/PostgreSQL/SQLite)
-    
-    Features:
-    - Deadlock detection and automatic retry
-    - REPEATABLE READ isolation level (MySQL)
-    - Pessimistic locking (FOR UPDATE)
     """
     with db_manager.session_scope("mysql") as session:
         # 1. 创建交易记录(四库同步)
@@ -104,11 +96,9 @@ def create_transaction(payload: TransactionPayload) -> dict[str, any]:
 def update_transaction_status(
     transaction_id: int,
     status: str,
-) -> dict[str, any]:
+) -> dict[str, Any]:  # ✅ 修复: any -> Any
     """
     Update transaction status with automatic sync to all 4 databases.
-    
-    Valid statuses: pending, completed, cancelled
     """
     valid_statuses = ['pending', 'completed', 'cancelled']
     if status not in valid_statuses:

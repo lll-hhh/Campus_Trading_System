@@ -12,127 +12,186 @@ import {
   NTag,
   NDivider,
   NPopconfirm,
+  NSpin,
   useMessage,
 } from 'naive-ui'
-import api from '../lib/http'
+import { http } from '@/lib/http'
 
 const router = useRouter()
 const message = useMessage()
 
+// ✅ 与后端 CartItemResponse 匹配的接口
 interface CartItem {
   id: number
   item_id: number
-  title: string
-  price: number
-  original_price: number
+  item_title: string
+  item_price: number
+  item_image: string | null
+  item_condition: string | null
+  seller_id: number
   seller_name: string
-  image_url: string
-  condition_type: string
-  status: string
   quantity: number
+  subtotal: number
+  item_status: string
+  added_at: string
+  // 前端专用字段
   checked: boolean
 }
 
-const cartItems = ref<CartItem[]>([
-  {
-    id: 1,
-    item_id: 101,
-    title: 'iPhone 12 Pro 128GB 深空灰',
-    price: 3299,
-    original_price: 5999,
-    seller_name: '张三',
-    image_url: '',
-    condition_type: 'like_new',
-    status: 'available',
-    quantity: 1,
-    checked: false,
-  },
-  {
-    id: 2,
-    item_id: 102,
-    title: '苹果 MacBook Air M1',
-    price: 5200,
-    original_price: 7999,
-    seller_name: '李四',
-    image_url: '',
-    condition_type: 'very_good',
-    status: 'available',
-    quantity: 1,
-    checked: false,
-  },
-])
+interface CartSummary {
+  items: Omit<CartItem, 'checked'>[]
+  total_items: number
+  total_quantity: number
+  total_price: number
+  available_count: number
+  unavailable_count: number
+}
 
+const cartItems = ref<CartItem[]>([])
+const loading = ref(false)
+
+// ✅ 全选逻辑
 const allChecked = computed({
   get: () => cartItems.value.length > 0 && cartItems.value.every(item => item.checked),
   set: (value: boolean) => {
     cartItems.value.forEach(item => {
-      item.checked = value
+      // 只勾选可购买的商品
+      if (item.item_status === 'available') {
+        item.checked = value
+      }
     })
   },
 })
 
+// ✅ 已选商品
 const checkedItems = computed(() => cartItems.value.filter(item => item.checked))
 
+// ✅ 总价
 const totalPrice = computed(() => {
-  return checkedItems.value.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  return checkedItems.value.reduce((sum, item) => sum + item.item_price * item.quantity, 0)
 })
 
-const totalSavings = computed(() => {
-  return checkedItems.value.reduce(
-    (sum, item) => sum + (item.original_price - item.price) * item.quantity,
-    0
-  )
-})
-
+// ✅ 成色映射
 const conditionTypeMap: Record<string, string> = {
-  brand_new: '全新',
+  new: '全新',
   like_new: '99新',
-  very_good: '95新',
-  good: '9成新',
-  used: '二手',
+  good: '良好',
+  fair: '一般',
 }
 
-const removeItem = async (id: number) => {
+// ✅ 加载购物车 - 调用后端 API
+const loadCartItems = async () => {
+  loading.value = true
   try {
-    // await api.delete(`/api/cart/${id}`)
-    const index = cartItems.value.findIndex(item => item.id === id)
-    if (index > -1) {
-      cartItems.value.splice(index, 1)
-      message.success('已从购物车移除')
-    }
-  } catch (error) {
-    message.error('移除失败')
+    const response = await http.get<CartSummary>('/cart')
+    // 将后端数据转换为前端格式，添加 checked 字段
+    cartItems.value = response.data.items.map(item => ({
+      ...item,
+      checked: false  // 默认不选中
+    }))
+  } catch (error: any) {
+    console.error('加载购物车失败:', error)
+    message.error(error.response?.data?.detail || '加载购物车失败')
+  } finally {
+    loading.value = false
   }
 }
 
+// ✅ 删除商品 - 调用后端 API
+const removeItem = async (id: number) => {
+  try {
+    await http.delete(`/cart/${id}`)
+    // 从本地列表移除
+    const index = cartItems.value.findIndex(item => item.id === id)
+    if (index > -1) {
+      cartItems.value.splice(index, 1)
+    }
+    message.success('已从购物车移除')
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '移除失败')
+  }
+}
+
+// ✅ 更新数量 - 调用后端 API
 const updateQuantity = async (item: CartItem, quantity: number) => {
   if (quantity < 1) {
     message.warning('数量不能小于1')
     return
   }
-  item.quantity = quantity
-  // TODO: 调用API更新数量
+  
+  try {
+    await http.put(`/cart/${item.id}`, { quantity })
+    item.quantity = quantity
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '更新失败')
+  }
 }
 
-const checkout = () => {
+// ✅ 删除选中商品 - 调用后端 API
+const removeCheckedItems = async () => {
+  const ids = checkedItems.value.map(item => item.id)
+  if (ids.length === 0) {
+    message.warning('请先选择要删除的商品')
+    return
+  }
+  
+  try {
+    await http.post('/cart/batch-delete', { cart_item_ids: ids })
+    // 从本地列表移除
+    cartItems.value = cartItems.value.filter(item => !item.checked)
+    message.success('已删除选中商品')
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '删除失败')
+  }
+}
+
+// ✅ 清空购物车 - 调用后端 API
+const clearCart = async () => {
+  try {
+    await http.delete('/cart')
+    cartItems.value = []
+    message.success('购物车已清空')
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '清空失败')
+  }
+}
+
+// ✅ 结算/联系卖家
+const checkout = async () => {
   if (checkedItems.value.length === 0) {
     message.warning('请先选择要结算的商品')
     return
   }
-  // 注意：这是二手交易平台，应该跳转到联系卖家或约定交易
-  router.push({
-    name: 'checkout',
-    query: { items: checkedItems.value.map(item => item.id).join(',') },
-  })
+  
+  // 检查是否有不可购买的商品
+  const unavailable = checkedItems.value.filter(item => item.item_status !== 'available')
+  if (unavailable.length > 0) {
+    message.warning('部分商品已下架或已售出，请取消选择后重试')
+    return
+  }
+  
+  try {
+    // 调用结算预览 API
+    const ids = checkedItems.value.map(item => item.id)
+    const response = await http.post('/cart/checkout-preview', null, {
+      params: { cart_item_ids: ids }
+    })
+    
+    console.log('结算预览:', response.data)
+    
+    // 跳转到结算页面（或显示结算弹窗）
+    router.push({
+      path: '/checkout',
+      query: { items: ids.join(',') }
+    })
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '结算失败')
+  }
 }
 
-const loadCartItems = async () => {
-  try {
-    // const response = await api.get('/api/cart')
-    // cartItems.value = response.data
-  } catch (error) {
-    message.error('加载购物车失败')
-  }
+// ✅ 跳转到商品详情
+const goToItem = (itemId: number) => {
+  router.push(`/item/${itemId}`)
 }
 
 onMounted(() => {
@@ -149,122 +208,146 @@ onMounted(() => {
         </n-space>
       </template>
 
-      <n-empty v-if="cartItems.length === 0" description="购物车是空的">
-        <template #extra>
-          <n-button @click="router.push('/marketplace')">去逛逛</n-button>
-        </template>
-      </n-empty>
+      <!-- 加载状态 -->
+      <n-spin :show="loading">
+        <n-empty v-if="!loading && cartItems.length === 0" description="购物车是空的">
+          <template #extra>
+            <n-button @click="router.push('/marketplace')">去逛逛</n-button>
+          </template>
+        </n-empty>
 
-      <div v-else>
-        <!-- 全选 -->
-        <div class="cart-header">
-          <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
-          <span style="margin-left: auto">商品信息</span>
-          <span style="width: 120px; text-align: center">单价</span>
-          <span style="width: 100px; text-align: center">数量</span>
-          <span style="width: 120px; text-align: center">小计</span>
-          <span style="width: 80px; text-align: center">操作</span>
-        </div>
+        <div v-else-if="cartItems.length > 0">
+          <!-- 全选 -->
+          <div class="cart-header">
+            <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
+            <span style="margin-left: auto">商品信息</span>
+            <span style="width: 120px; text-align: center">单价</span>
+            <span style="width: 100px; text-align: center">数量</span>
+            <span style="width: 120px; text-align: center">小计</span>
+            <span style="width: 80px; text-align: center">操作</span>
+          </div>
 
-        <n-divider style="margin: 12px 0" />
+          <n-divider style="margin: 12px 0" />
 
-        <!-- 商品列表 -->
-        <div class="cart-items">
-          <div v-for="item in cartItems" :key="item.id" class="cart-item">
-            <n-checkbox v-model:checked="item.checked" />
-
-            <div class="item-info">
-              <n-image
-                :src="item.image_url || 'https://via.placeholder.com/80'"
-                width="80"
-                height="80"
-                object-fit="cover"
-                style="border-radius: 4px"
+          <!-- 商品列表 -->
+          <div class="cart-items">
+            <div 
+              v-for="item in cartItems" 
+              :key="item.id" 
+              class="cart-item"
+              :class="{ 'unavailable': item.item_status !== 'available' }"
+            >
+              <n-checkbox 
+                v-model:checked="item.checked" 
+                :disabled="item.item_status !== 'available'"
               />
-              <div class="item-detail">
-                <div class="item-title">{{ item.title }}</div>
-                <div class="item-meta">
-                  <n-tag size="small" type="info">{{ conditionTypeMap[item.condition_type] }}</n-tag>
-                  <span style="margin-left: 8px; color: #666">卖家: {{ item.seller_name }}</span>
+
+              <div class="item-info" @click="goToItem(item.item_id)" style="cursor: pointer;">
+                <n-image
+                  :src="item.item_image || 'https://via.placeholder.com/80'"
+                  width="80"
+                  height="80"
+                  object-fit="cover"
+                  style="border-radius: 4px"
+                  preview-disabled
+                />
+                <div class="item-detail">
+                  <div class="item-title">{{ item.item_title }}</div>
+                  <div class="item-meta">
+                    <n-tag v-if="item.item_condition" size="small" type="info">
+                      {{ conditionTypeMap[item.item_condition] || item.item_condition }}
+                    </n-tag>
+                    <span style="margin-left: 8px; color: #666">卖家: {{ item.seller_name }}</span>
+                    <!-- 商品状态标签 -->
+                    <n-tag 
+                      v-if="item.item_status !== 'available'" 
+                      size="small" 
+                      type="error"
+                      style="margin-left: 8px"
+                    >
+                      {{ item.item_status === 'sold' ? '已售出' : '已下架' }}
+                    </n-tag>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="item-price">
-              <div style="color: #f56c6c; font-weight: bold; font-size: 16px">
-                ¥{{ item.price.toLocaleString() }}
+              <div class="item-price">
+                <div style="color: #f56c6c; font-weight: bold; font-size: 16px">
+                  ¥{{ item.item_price.toLocaleString() }}
+                </div>
               </div>
-              <div style="color: #999; text-decoration: line-through; font-size: 12px">
-                ¥{{ item.original_price.toLocaleString() }}
+
+              <div class="item-quantity">
+                <n-input-number
+                  v-model:value="item.quantity"
+                  :min="1"
+                  :max="99"
+                  size="small"
+                  :disabled="item.item_status !== 'available'"
+                  @update:value="(val) => val && updateQuantity(item, val)"
+                  style="width: 80px"
+                />
+              </div>
+
+              <div class="item-subtotal">
+                <span style="color: #f56c6c; font-weight: bold; font-size: 18px">
+                  ¥{{ (item.item_price * item.quantity).toLocaleString() }}
+                </span>
+              </div>
+
+              <div class="item-actions">
+                <n-popconfirm @positive-click="removeItem(item.id)">
+                  <template #trigger>
+                    <n-button text type="error">删除</n-button>
+                  </template>
+                  确定要从购物车移除此商品吗？
+                </n-popconfirm>
               </div>
             </div>
+          </div>
 
-            <div class="item-quantity">
-              <n-input-number
-                v-model:value="item.quantity"
-                :min="1"
-                :max="1"
-                size="small"
-                @update:value="(val) => val && updateQuantity(item, val)"
-                style="width: 80px"
-              />
-              <div style="font-size: 12px; color: #999; margin-top: 4px">仅此一件</div>
-            </div>
+          <n-divider style="margin: 24px 0" />
 
-            <div class="item-subtotal">
-              <span style="color: #f56c6c; font-weight: bold; font-size: 18px">
-                ¥{{ (item.price * item.quantity).toLocaleString() }}
-              </span>
-            </div>
-
-            <div class="item-actions">
-              <n-popconfirm @positive-click="removeItem(item.id)">
+          <!-- 结算区域 -->
+          <div class="cart-footer">
+            <div class="footer-left">
+              <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
+              <n-button text type="error" style="margin-left: 16px" @click="removeCheckedItems">
+                删除选中商品
+              </n-button>
+              <n-popconfirm @positive-click="clearCart">
                 <template #trigger>
-                  <n-button text type="error">删除</n-button>
+                  <n-button text type="warning" style="margin-left: 16px">清空购物车</n-button>
                 </template>
-                确定要从购物车移除此商品吗？
+                确定要清空购物车吗？
               </n-popconfirm>
             </div>
-          </div>
-        </div>
 
-        <n-divider style="margin: 24px 0" />
+            <div class="footer-right">
+              <div class="price-info">
+                <div class="price-row">
+                  <span>已选商品:</span>
+                  <span style="font-size: 18px; font-weight: bold">{{ checkedItems.length }} 件</span>
+                </div>
+                <div class="price-row total">
+                  <span>合计:</span>
+                  <span class="total-price">¥{{ totalPrice.toLocaleString() }}</span>
+                </div>
+              </div>
 
-        <!-- 结算区域 -->
-        <div class="cart-footer">
-          <div class="footer-left">
-            <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
-            <n-button text type="error" style="margin-left: 16px">删除选中商品</n-button>
-          </div>
-
-          <div class="footer-right">
-            <div class="price-info">
-              <div class="price-row">
-                <span>已选商品:</span>
-                <span style="font-size: 18px; font-weight: bold">{{ checkedItems.length }} 件</span>
-              </div>
-              <div class="price-row" v-if="totalSavings > 0">
-                <span>已优惠:</span>
-                <span style="color: #18a058">-¥{{ totalSavings.toLocaleString() }}</span>
-              </div>
-              <div class="price-row total">
-                <span>合计:</span>
-                <span class="total-price">¥{{ totalPrice.toLocaleString() }}</span>
-              </div>
+              <n-button
+                type="primary"
+                size="large"
+                :disabled="checkedItems.length === 0"
+                @click="checkout"
+                style="margin-left: 24px"
+              >
+                联系卖家 ({{ checkedItems.length }})
+              </n-button>
             </div>
-
-            <n-button
-              type="primary"
-              size="large"
-              :disabled="checkedItems.length === 0"
-              @click="checkout"
-              style="margin-left: 24px"
-            >
-              联系卖家 ({{ checkedItems.length }})
-            </n-button>
           </div>
         </div>
-      </div>
+      </n-spin>
     </n-card>
 
     <!-- 温馨提示 -->
@@ -318,6 +401,17 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(24, 160, 88, 0.1);
 }
 
+/* ✅ 不可购买商品的样式 */
+.cart-item.unavailable {
+  opacity: 0.6;
+  background: #f5f5f5;
+}
+
+.cart-item.unavailable:hover {
+  border-color: #e0e0e6;
+  box-shadow: none;
+}
+
 .item-info {
   flex: 1;
   display: flex;
@@ -342,6 +436,8 @@ onMounted(() => {
   display: flex;
   align-items: center;
   font-size: 14px;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .item-price {

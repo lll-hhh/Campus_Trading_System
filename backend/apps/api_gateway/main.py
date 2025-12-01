@@ -19,16 +19,23 @@ def create_app() -> FastAPI:
     """Create and configure the API gateway instance."""
 
     settings = get_settings()
-    app = FastAPI(title=settings.app_name, version="0.1.0")
+    
+    # ✅ 添加 redirect_slashes=False 禁用尾斜杠重定向
+    app = FastAPI(
+        title=settings.app_name, 
+        version="0.1.0",
+        redirect_slashes=False  # ✅ 关键：禁用 /cart 重定向到 /cart/
+    )
 
-    if settings.cors_origins:
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origins=[str(origin) for origin in settings.cors_origins],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+    # ✅ 更宽松的 CORS 配置（开发环境）
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # 允许所有来源
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+    )
 
     app.include_router(health.router)
     app.include_router(auth.router, prefix=settings.api_v1_prefix)
@@ -59,11 +66,10 @@ def create_app() -> FastAPI:
                     f"{result['failed']} 条失败"
                 )
                 if result['errors']:
-                    for error in result['errors'][:3]:  # 只显示前3个错误
+                    for error in result['errors'][:3]:
                         logger.warning(f"{db_name} 错误: {error}")
         except Exception as e:
             logger.error(f"数据库初始化异常: {e}", exc_info=True)
-            # 不阻断应用启动，允许运行时手动初始化
 
     @app.get("/", tags=["root"])
     def read_root() -> dict[str, str]:

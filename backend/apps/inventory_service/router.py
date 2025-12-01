@@ -18,7 +18,6 @@ class ItemPayload(BaseModel):
     category_id: int
     price: float
     description: str | None = None
-    currency: str = "CNY"
 
 
 @router.get("/items")
@@ -39,7 +38,7 @@ def list_items(limit: int = 20) -> list[dict[str, str | float | int | None]]:
             "id": item.id,
             "title": item.title,
             "price": float(item.price),
-            "currency": item.currency,
+            "currency": "CNY",  # ✅ 硬编码默认值
             "status": item.status,
             "category_id": item.category_id,
         }
@@ -49,19 +48,13 @@ def list_items(limit: int = 20) -> list[dict[str, str | float | int | None]]:
 
 @router.post("/items", status_code=201)
 def create_item(payload: ItemPayload) -> dict[str, str | int | float]:
-    """
-    Create a new item listing with automatic sync to all 4 databases.
+    """Create a new item listing with automatic sync to all 4 databases."""
     
-    Uses transaction management with deadlock retry.
-    Syncs to: MySQL, MariaDB, PostgreSQL, SQLite
-    """
-    # 先验证分类存在(从主库查询)
     with db_manager.session_scope("mysql") as session:
         category = session.get(Category, payload.category_id)
         if category is None:
             raise HTTPException(status_code=400, detail="Category not found")
     
-    # 使用统一服务插入并同步到所有数据库
     with db_manager.session_scope("mysql") as session:
         item_data = {
             'seller_id': payload.seller_id,
@@ -69,11 +62,9 @@ def create_item(payload: ItemPayload) -> dict[str, str | int | float]:
             'title': payload.title,
             'description': payload.description or "",
             'price': payload.price,
-            'currency': payload.currency,
             'status': 'draft',
         }
         
-        # 自动同步到四个数据库
         item_id = db_operation_service.insert_with_sync(
             session=session,
             table='items',
@@ -92,20 +83,15 @@ def create_item(payload: ItemPayload) -> dict[str, str | int | float]:
 
 @router.put("/items/{item_id}", status_code=200)
 def update_item(item_id: int, payload: ItemPayload) -> dict[str, str | int]:
-    """
-    Update an item with automatic sync to all 4 databases.
+    """Update an item with automatic sync to all 4 databases."""
     
-    Uses optimistic locking and transaction management.
-    """
     with db_manager.session_scope("mysql") as session:
         update_data = {
             'title': payload.title,
             'description': payload.description or "",
             'price': payload.price,
-            'currency': payload.currency,
         }
         
-        # 自动同步到四个数据库
         rowcount = db_operation_service.update_with_sync(
             session=session,
             table='items',
@@ -126,13 +112,9 @@ def update_item(item_id: int, payload: ItemPayload) -> dict[str, str | int]:
 
 @router.delete("/items/{item_id}", status_code=200)
 def delete_item(item_id: int) -> dict[str, str | int]:
-    """
-    Delete an item with automatic sync to all 4 databases.
+    """Delete an item with automatic sync to all 4 databases."""
     
-    Uses transaction management with deadlock retry.
-    """
     with db_manager.session_scope("mysql") as session:
-        # 自动同步到四个数据库
         rowcount = db_operation_service.delete_with_sync(
             session=session,
             table='items',

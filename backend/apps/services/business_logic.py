@@ -34,32 +34,45 @@ class ItemService:
         ).scalar_one_or_none()
         
         if not category:
-            category = Category(name=category_name, description=f"{category_name}分类")
+            category = Category(name=category_name, slug=category_name.lower(), description=f"{category_name}分类")
             session.add(category)
             session.flush()
         
-        # 创建商品
+        # ✅ 映射 condition 到 condition_type
+        condition_map = {
+            "new": "全新",
+            "like_new": "99新",
+            "very_good": "95新",
+            "good": "9成新",
+            "used": "二手",
+        }
+        condition_type = condition_map.get(condition, "二手")
+        
+        # 创建商品（不包含 currency 和 condition 字段）
         item = Item(
             seller_id=seller_id,
             category_id=category.id,
             title=title,
             description=description,
             price=price,
-            currency="CNY",
+            condition_type=condition_type,  # ✅ 使用正确的字段名
             status=status,
-            condition=condition,
             view_count=0
         )
         session.add(item)
         session.flush()
         
         # 添加图片
-        for img_url in images:
-            media = ItemMedia(item_id=item.id, media_type="image", url=img_url)
+        for idx, img_url in enumerate(images):
+            media = ItemMedia(
+                item_id=item.id,
+                image_url=img_url,
+                sort_order=idx,
+                is_cover=(idx == 0)
+            )
             session.add(media)
         
-        session.commit()
-        session.refresh(item)
+        session.flush()
         return item
     
     @staticmethod

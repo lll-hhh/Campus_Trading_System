@@ -263,7 +263,7 @@ import {
   Happy
 } from '@vicons/ionicons5';
 import { useAuthStore } from '@/stores/auth';
-import http from '@/lib/http';
+import {http} from '@/lib/http';
 
 interface Conversation {
   id: number;
@@ -318,7 +318,7 @@ const filteredConversations = computed(() => {
 // 加载会话列表
 const loadConversations = async () => {
   try {
-    const response = await http.get('/api/v1/messages/conversations');
+    const response = await http.get('/messages/conversations');
     conversations.value = response.data.map((conv: any) => ({
       id: conv.id,
       userId: conv.other_user_id,
@@ -338,7 +338,7 @@ const loadConversations = async () => {
 // 加载消息历史
 const loadMessages = async (conversationId: number) => {
   try {
-    const response = await http.get(`/api/v1/messages/conversation/${conversationId}`);
+    const response = await http.get(`/messages/conversation/${conversationId}`);
     messages.value = response.data.map((msg: any) => ({
       id: msg.id,
       content: msg.content,
@@ -371,7 +371,7 @@ const sendMessage = async () => {
   if (!inputMessage.value.trim() || !selectedConversation.value) return;
   
   try {
-    const response = await http.post('/api/v1/messages/send', {
+    const response = await http.post('/messages/send', {
       receiver_id: selectedConversation.value.userId,
       content: inputMessage.value,
       message_type: 'text'
@@ -415,7 +415,7 @@ const scrollToBottom = () => {
 // 标记会话为已读
 const markConversationAsRead = async (conversationId: number) => {
   try {
-    await http.post(`/api/v1/messages/conversation/${conversationId}/read`);
+    await http.post(`/messages/conversation/${conversationId}/read`);
     
     const conv = conversations.value.find(c => c.id === conversationId);
     if (conv) {
@@ -429,7 +429,7 @@ const markConversationAsRead = async (conversationId: number) => {
 // 标记全部已读
 const markAllAsRead = async () => {
   try {
-    await http.post('/api/v1/messages/read-all');
+    await http.post('/messages/read-all');
     conversations.value.forEach(conv => {
       conv.unreadCount = 0;
     });

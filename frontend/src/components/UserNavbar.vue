@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, h } from 'vue'  // ✅ 添加 h
+import { useRouter, RouterLink } from 'vue-router'  // ✅ 添加 RouterLink
 import { NLayout, NLayoutHeader, NMenu, NButton, NSpace, NAvatar, NDropdown, NBadge } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
 import SearchAutocomplete from './SearchAutocomplete.vue'
@@ -13,36 +13,39 @@ const searchKeyword = ref('')
 const unreadMessages = ref(5)
 
 const isLoggedIn = computed(() => authStore.isAuthenticated)
-const userName = computed(() => authStore.displayName || '用户')
+const userName = computed(() => authStore.user?.displayName || authStore.user?.username || '用户')
 
-const menuOptions = [
+// ✅ 修复：使用正确的 n-menu options 格式
+const menuOptions = computed(() => [
   {
-    label: '🏪 商品市场',
-    key: 'marketplace',
-    path: '/marketplace'
+    label: () => h(RouterLink, { to: '/marketplace' }, { default: () => '🏪 商品市场' }),
+    key: 'marketplace'
   },
   {
-    label: '🛒 购物车',
-    key: 'cart',
-    path: '/cart'
+    label: () => h(RouterLink, { to: '/cart' }, { default: () => '🛒 购物车' }),
+    key: 'cart'
   },
   {
-    label: '📦 我的商品',
-    key: 'my-items',
-    path: '/my-items'
+    label: () => h(RouterLink, { to: '/my-items' }, { default: () => '📦 我的商品' }),
+    key: 'my-items'
   },
   {
-    label: '📝 交易记录',
-    key: 'orders',
-    path: '/orders'
+    label: () => h(RouterLink, { to: '/orders' }, { default: () => '📝 交易记录' }),
+    key: 'orders'
   },
   {
-    label: '💬 消息',
-    key: 'messages',
-    path: '/messages',
-    badge: unreadMessages.value
+    label: () => h(
+      RouterLink, 
+      { to: '/messages' }, 
+      { 
+        default: () => unreadMessages.value > 0 
+          ? `💬 消息 (${unreadMessages.value})` 
+          : '💬 消息' 
+      }
+    ),
+    key: 'messages'
   }
-]
+])
 
 const userDropdownOptions = [
   {
@@ -88,16 +91,15 @@ const userDropdownOptions = [
 
 const activeKey = computed(() => {
   const path = router.currentRoute.value.path
-  const item = menuOptions.find(option => path.startsWith(option.path))
-  return item?.key || 'marketplace'
+  if (path.startsWith('/marketplace') || path.startsWith('/item/')) return 'marketplace'
+  if (path.startsWith('/cart')) return 'cart'
+  if (path.startsWith('/my-items')) return 'my-items'
+  if (path.startsWith('/orders')) return 'orders'
+  if (path.startsWith('/messages')) return 'messages'
+  return 'marketplace'
 })
 
-const handleMenuSelect = (key: string) => {
-  const item = menuOptions.find(option => option.key === key)
-  if (item) {
-    router.push(item.path)
-  }
-}
+// ✅ 删除 handleMenuSelect，因为 RouterLink 会自动处理导航
 
 const handleSearch = (query?: string) => {
   const searchTerm = query || searchKeyword.value
@@ -137,12 +139,11 @@ const handlePublish = () => {
         <SearchAutocomplete v-model="searchKeyword" @search="handleSearch" />
       </div>
 
-      <!-- 导航菜单 -->
+      <!-- ✅ 修复：移除 @update:value，RouterLink 会自动处理 -->
       <n-menu
-        v-model:value="activeKey"
+        :value="activeKey"
         mode="horizontal"
         :options="menuOptions"
-        @update:value="handleMenuSelect"
         class="nav-menu"
       />
 

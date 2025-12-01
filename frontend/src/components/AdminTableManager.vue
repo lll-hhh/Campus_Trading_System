@@ -19,7 +19,7 @@ import {
   DataTableColumns,
 } from 'naive-ui'
 import AdvancedTableFilterPanel, { FilterCondition, TableColumn } from '../components/AdvancedTableFilterPanel.vue'
-import api from '../lib/http'
+import  { http as api } from '../lib/http'
 
 const props = defineProps<{
   tableName: string

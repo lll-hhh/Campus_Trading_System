@@ -1,9 +1,9 @@
 -- ============================================
 -- PostgreSQL 校园交易系统完整数据库脚本
 -- ============================================
--- 版本: 2.0
--- 日期: 2025-11-18
--- 说明: 包含所有表、索引、触发器、函数、事务示例
+-- 版本: 2.1
+-- 日期: 2025-12-01
+-- 说明: 修复分区表外键问题
 
 -- ============================================
 -- 1. 核心业务表
@@ -38,11 +38,11 @@ CREATE TABLE IF NOT EXISTS users (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_users_username ON users(username);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_student_id ON users(student_id);
-CREATE INDEX idx_users_credit ON users(credit_score);
-CREATE INDEX idx_users_active ON users(is_active, is_banned);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_student_id ON users(student_id);
+CREATE INDEX IF NOT EXISTS idx_users_credit ON users(credit_score);
+CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active, is_banned);
 
 COMMENT ON TABLE users IS '用户表';
 COMMENT ON COLUMN users.credit_score IS '信用分(0-100)';
@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS categories (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_categories_slug ON categories(slug);
-CREATE INDEX idx_categories_active ON categories(is_active);
+CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug);
+CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(is_active);
 
 -- 商品表
 CREATE TABLE IF NOT EXISTS items (
@@ -95,15 +95,12 @@ CREATE TABLE IF NOT EXISTS items (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_items_seller ON items(seller_id);
-CREATE INDEX idx_items_category ON items(category_id);
-CREATE INDEX idx_items_status ON items(status);
-CREATE INDEX idx_items_created ON items(created_at);
-CREATE INDEX idx_items_price ON items(price);
-CREATE INDEX idx_items_tags ON items USING GIN(tags);
-
--- 全文搜索索引
-CREATE INDEX idx_items_search ON items USING GIN(to_tsvector('english', title || ' ' || COALESCE(description, '')));
+CREATE INDEX IF NOT EXISTS idx_items_seller ON items(seller_id);
+CREATE INDEX IF NOT EXISTS idx_items_category ON items(category_id);
+CREATE INDEX IF NOT EXISTS idx_items_status ON items(status);
+CREATE INDEX IF NOT EXISTS idx_items_created ON items(created_at);
+CREATE INDEX IF NOT EXISTS idx_items_price ON items(price);
+CREATE INDEX IF NOT EXISTS idx_items_tags ON items USING GIN(tags);
 
 -- 商品图片表
 CREATE TABLE IF NOT EXISTS item_images (
@@ -116,8 +113,8 @@ CREATE TABLE IF NOT EXISTS item_images (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_item_images_item ON item_images(item_id);
-CREATE INDEX idx_item_images_cover ON item_images(item_id, is_cover);
+CREATE INDEX IF NOT EXISTS idx_item_images_item ON item_images(item_id);
+CREATE INDEX IF NOT EXISTS idx_item_images_cover ON item_images(item_id, is_cover);
 
 -- 评论表
 CREATE TABLE IF NOT EXISTS comments (
@@ -136,14 +133,14 @@ CREATE TABLE IF NOT EXISTS comments (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_comments_item ON comments(item_id);
-CREATE INDEX idx_comments_user ON comments(user_id);
-CREATE INDEX idx_comments_parent ON comments(parent_id);
-CREATE INDEX idx_comments_created ON comments(created_at);
+CREATE INDEX IF NOT EXISTS idx_comments_item ON comments(item_id);
+CREATE INDEX IF NOT EXISTS idx_comments_user ON comments(user_id);
+CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
+CREATE INDEX IF NOT EXISTS idx_comments_created ON comments(created_at);
 
--- 交易表 (带分区)
+-- ✅ 修复：交易表 - 不使用分区，使用普通表以支持外键
 CREATE TABLE IF NOT EXISTS transactions (
-    id BIGSERIAL,
+    id BIGSERIAL PRIMARY KEY,
     item_id BIGINT NOT NULL REFERENCES items(id),
     buyer_id BIGINT NOT NULL REFERENCES users(id),
     seller_id BIGINT NOT NULL REFERENCES users(id),
@@ -168,26 +165,14 @@ CREATE TABLE IF NOT EXISTS transactions (
     completed_at TIMESTAMP,
     cancelled_at TIMESTAMP,
     
-    sync_version INTEGER DEFAULT 0,
-    PRIMARY KEY (id, created_at)
-) PARTITION BY RANGE (created_at);
+    sync_version INTEGER DEFAULT 0
+);
 
--- 创建分区
-CREATE TABLE IF NOT EXISTS transactions_2024 PARTITION OF transactions
-    FOR VALUES FROM ('2024-01-01') TO ('2025-01-01');
-
-CREATE TABLE IF NOT EXISTS transactions_2025 PARTITION OF transactions
-    FOR VALUES FROM ('2025-01-01') TO ('2026-01-01');
-
-CREATE TABLE IF NOT EXISTS transactions_2026 PARTITION OF transactions
-    FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
-
-CREATE TABLE IF NOT EXISTS transactions_default PARTITION OF transactions DEFAULT;
-
-CREATE INDEX idx_transactions_buyer ON transactions(buyer_id);
-CREATE INDEX idx_transactions_seller ON transactions(seller_id);
-CREATE INDEX idx_transactions_item ON transactions(item_id);
-CREATE INDEX idx_transactions_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_buyer ON transactions(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_seller ON transactions(seller_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_item ON transactions(item_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at);
 
 -- 消息表
 CREATE TABLE IF NOT EXISTS messages (
@@ -207,11 +192,11 @@ CREATE TABLE IF NOT EXISTS messages (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_messages_sender ON messages(sender_id);
-CREATE INDEX idx_messages_receiver ON messages(receiver_id);
-CREATE INDEX idx_messages_conversation ON messages(sender_id, receiver_id);
-CREATE INDEX idx_messages_item ON messages(item_id);
-CREATE INDEX idx_messages_created ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
+CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(sender_id, receiver_id);
+CREATE INDEX IF NOT EXISTS idx_messages_item ON messages(item_id);
+CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
 
 -- 收藏表
 CREATE TABLE IF NOT EXISTS favorites (
@@ -224,8 +209,8 @@ CREATE TABLE IF NOT EXISTS favorites (
     UNIQUE (user_id, item_id)
 );
 
-CREATE INDEX idx_favorites_user ON favorites(user_id);
-CREATE INDEX idx_favorites_item ON favorites(item_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_user ON favorites(user_id);
+CREATE INDEX IF NOT EXISTS idx_favorites_item ON favorites(item_id);
 
 -- 举报表
 CREATE TABLE IF NOT EXISTS reports (
@@ -246,9 +231,9 @@ CREATE TABLE IF NOT EXISTS reports (
     sync_version INTEGER DEFAULT 0
 );
 
-CREATE INDEX idx_reports_reporter ON reports(reporter_id);
-CREATE INDEX idx_reports_reported_user ON reports(reported_user_id);
-CREATE INDEX idx_reports_status ON reports(status);
+CREATE INDEX IF NOT EXISTS idx_reports_reporter ON reports(reporter_id);
+CREATE INDEX IF NOT EXISTS idx_reports_reported_user ON reports(reported_user_id);
+CREATE INDEX IF NOT EXISTS idx_reports_status ON reports(status);
 
 -- ============================================
 -- 2. 系统管理表
@@ -257,7 +242,7 @@ CREATE INDEX idx_reports_status ON reports(status);
 -- 审计日志表
 CREATE TABLE IF NOT EXISTS audit_logs (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT,
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     table_name VARCHAR(100) NOT NULL,
     operation VARCHAR(20) NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
     record_id BIGINT,
@@ -265,15 +250,13 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     new_value JSONB,
     ip_address VARCHAR(45),
     user_agent TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_audit_logs_user ON audit_logs(user_id);
-CREATE INDEX idx_audit_logs_table ON audit_logs(table_name, operation);
-CREATE INDEX idx_audit_logs_created ON audit_logs(created_at);
-CREATE INDEX idx_audit_logs_record ON audit_logs(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_table ON audit_logs(table_name, operation);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_record ON audit_logs(table_name, record_id);
 
 -- 同步冲突表
 CREATE TABLE IF NOT EXISTS conflict_records (
@@ -286,18 +269,15 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     local_data JSONB,
     remote_data JSONB,
     resolved BOOLEAN DEFAULT FALSE,
-    resolved_by BIGINT,
+    resolved_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
     resolution_strategy VARCHAR(50),
     resolved_at TIMESTAMP,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_conflict_records_resolved ON conflict_records(resolved);
-CREATE INDEX idx_conflict_records_table ON conflict_records(table_name, record_id);
-CREATE INDEX idx_conflict_records_created ON conflict_records(created_at);
-CREATE INDEX idx_conflict_records_resolved_by ON conflict_records(resolved_by);
+CREATE INDEX IF NOT EXISTS idx_conflict_records_resolved ON conflict_records(resolved);
+CREATE INDEX IF NOT EXISTS idx_conflict_records_table ON conflict_records(table_name, record_id);
+CREATE INDEX IF NOT EXISTS idx_conflict_records_created ON conflict_records(created_at);
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS system_configs (
@@ -310,7 +290,7 @@ CREATE TABLE IF NOT EXISTS system_configs (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_system_configs_key ON system_configs(config_key);
+CREATE INDEX IF NOT EXISTS idx_system_configs_key ON system_configs(config_key);
 
 -- ============================================
 -- 3. 触发器函数
@@ -325,16 +305,20 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 应用到各表
+-- 应用到各表（使用 DROP IF EXISTS 避免重复创建）
+DROP TRIGGER IF EXISTS trg_users_updated_at ON users;
 CREATE TRIGGER trg_users_updated_at BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_items_updated_at ON items;
 CREATE TRIGGER trg_items_updated_at BEFORE UPDATE ON items
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_comments_updated_at ON comments;
 CREATE TRIGGER trg_comments_updated_at BEFORE UPDATE ON comments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS trg_system_configs_updated_at ON system_configs;
 CREATE TRIGGER trg_system_configs_updated_at BEFORE UPDATE ON system_configs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -348,6 +332,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_after_user_insert ON users;
 CREATE TRIGGER trg_after_user_insert
 AFTER INSERT ON users
 FOR EACH ROW EXECUTE FUNCTION audit_user_insert();
@@ -361,6 +346,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_after_comment_insert ON comments;
 CREATE TRIGGER trg_after_comment_insert
 AFTER INSERT ON comments
 FOR EACH ROW EXECUTE FUNCTION update_item_inquiry_count();
@@ -379,10 +365,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_favorite_insert ON favorites;
 CREATE TRIGGER trg_favorite_insert
 AFTER INSERT ON favorites
 FOR EACH ROW EXECUTE FUNCTION update_item_favorite_count();
 
+DROP TRIGGER IF EXISTS trg_favorite_delete ON favorites;
 CREATE TRIGGER trg_favorite_delete
 AFTER DELETE ON favorites
 FOR EACH ROW EXECUTE FUNCTION update_item_favorite_count();
@@ -392,17 +380,15 @@ CREATE OR REPLACE FUNCTION update_transaction_complete()
 RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.status = 'completed' AND (OLD.status IS NULL OR OLD.status != 'completed') THEN
-        -- 更新卖家销售数
         UPDATE users SET total_sales = total_sales + 1 WHERE id = NEW.seller_id;
-        -- 更新买家购买数
         UPDATE users SET total_purchases = total_purchases + 1 WHERE id = NEW.buyer_id;
-        -- 更新商品状态
         UPDATE items SET status = 'sold', sold_at = CURRENT_TIMESTAMP WHERE id = NEW.item_id;
     END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_after_transaction_update ON transactions;
 CREATE TRIGGER trg_after_transaction_update
 AFTER UPDATE ON transactions
 FOR EACH ROW EXECUTE FUNCTION update_transaction_complete();
@@ -435,12 +421,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_after_transaction_rating ON transactions;
 CREATE TRIGGER trg_after_transaction_rating
 AFTER UPDATE ON transactions
 FOR EACH ROW EXECUTE FUNCTION update_user_rating();
 
 -- ============================================
--- 4. 存储函数(相当于MySQL的存储过程)
+-- 4. 存储函数
 -- ============================================
 
 -- 创建交易
@@ -455,7 +442,6 @@ DECLARE
     v_item_status VARCHAR(20);
     v_transaction_id BIGINT;
 BEGIN
-    -- 检查商品状态
     SELECT seller_id, price, status INTO v_seller_id, v_item_price, v_item_status
     FROM items WHERE id = p_item_id FOR UPDATE;
     
@@ -464,7 +450,6 @@ BEGIN
         RETURN;
     END IF;
     
-    -- 创建交易记录
     INSERT INTO transactions (
         item_id, buyer_id, seller_id, item_price, final_amount, 
         buyer_contact, status, contacted_at
@@ -473,7 +458,6 @@ BEGIN
         p_buyer_contact, 'contacted', CURRENT_TIMESTAMP
     ) RETURNING id INTO v_transaction_id;
     
-    -- 更新商品状态
     UPDATE items SET status = 'reserved' WHERE id = p_item_id;
     
     RETURN QUERY SELECT v_transaction_id, NULL::TEXT;
@@ -514,50 +498,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 搜索商品
-CREATE OR REPLACE FUNCTION search_items(
-    p_keyword TEXT,
-    p_category_id BIGINT,
-    p_min_price DECIMAL,
-    p_max_price DECIMAL,
-    p_condition_type VARCHAR,
-    p_offset INTEGER,
-    p_limit INTEGER
-) RETURNS TABLE(
-    id BIGINT,
-    title VARCHAR,
-    price DECIMAL,
-    seller_username VARCHAR,
-    seller_rating DECIMAL,
-    is_verified BOOLEAN,
-    category_name VARCHAR,
-    cover_image VARCHAR
-) AS $$
-BEGIN
-    RETURN QUERY
-    SELECT 
-        i.id,
-        i.title,
-        i.price,
-        u.username AS seller_username,
-        u.seller_rating,
-        u.is_verified,
-        c.name AS category_name,
-        (SELECT image_url FROM item_images WHERE item_id = i.id AND is_cover = TRUE LIMIT 1) AS cover_image
-    FROM items i
-    INNER JOIN users u ON i.seller_id = u.id
-    LEFT JOIN categories c ON i.category_id = c.id
-    WHERE i.status = 'available'
-        AND (p_keyword IS NULL OR to_tsvector('english', i.title || ' ' || COALESCE(i.description, '')) @@ plainto_tsquery('english', p_keyword))
-        AND (p_category_id IS NULL OR i.category_id = p_category_id)
-        AND (p_min_price IS NULL OR i.price >= p_min_price)
-        AND (p_max_price IS NULL OR i.price <= p_max_price)
-        AND (p_condition_type IS NULL OR i.condition_type = p_condition_type)
-    ORDER BY i.created_at DESC
-    OFFSET p_offset LIMIT p_limit;
-END;
-$$ LANGUAGE plpgsql;
-
 -- ============================================
 -- 5. 初始化数据
 -- ============================================
@@ -585,36 +525,18 @@ ON CONFLICT (config_key) DO UPDATE SET config_value = EXCLUDED.config_value;
 -- 6. 视图
 -- ============================================
 
--- 商品详情视图
 CREATE OR REPLACE VIEW v_item_details AS
 SELECT 
-    i.id,
-    i.title,
-    i.description,
-    i.price,
-    i.original_price,
-    i.condition_type,
-    i.location,
-    i.status,
-    i.is_negotiable,
-    i.is_shipped,
-    i.view_count,
-    i.favorite_count,
-    i.inquiry_count,
-    i.created_at,
-    u.id AS seller_id,
-    u.username AS seller_username,
-    u.avatar_url AS seller_avatar,
-    u.seller_rating,
-    u.is_verified AS seller_verified,
-    u.total_sales AS seller_total_sales,
-    c.name AS category_name,
-    c.slug AS category_slug
+    i.id, i.title, i.description, i.price, i.original_price, i.condition_type,
+    i.location, i.status, i.is_negotiable, i.is_shipped,
+    i.view_count, i.favorite_count, i.inquiry_count, i.created_at,
+    u.id AS seller_id, u.username AS seller_username, u.avatar_url AS seller_avatar,
+    u.seller_rating, u.is_verified AS seller_verified, u.total_sales AS seller_total_sales,
+    c.name AS category_name, c.slug AS category_slug
 FROM items i
 INNER JOIN users u ON i.seller_id = u.id
 LEFT JOIN categories c ON i.category_id = c.id;
 
--- 交易统计视图
 CREATE OR REPLACE VIEW v_transaction_stats AS
 SELECT 
     DATE(created_at) AS transaction_date,
@@ -626,15 +548,9 @@ SELECT
 FROM transactions
 GROUP BY DATE(created_at);
 
--- 用户活跃度视图
 CREATE OR REPLACE VIEW v_user_activity AS
 SELECT 
-    u.id,
-    u.username,
-    u.credit_score,
-    u.seller_rating,
-    u.total_sales,
-    u.total_purchases,
+    u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.total_purchases,
     COUNT(DISTINCT i.id) AS active_items,
     COUNT(DISTINCT c.id) AS comment_count,
     COUNT(DISTINCT m.id) AS message_count,
@@ -646,49 +562,39 @@ LEFT JOIN messages m ON m.sender_id = u.id
 WHERE u.is_active = TRUE AND u.is_banned = FALSE
 GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.total_purchases;
 
--- 完成
-SELECT 'PostgreSQL schema created successfully!' AS message;
-
 -- ============================================
--- 7. 扩展关联表 (PostgreSQL版本)
+-- 7. 扩展关联表
 -- ============================================
 
 -- 用户关注表
 CREATE TABLE IF NOT EXISTS user_follows (
     id BIGSERIAL PRIMARY KEY,
-    follower_id BIGINT NOT NULL,
-    following_id BIGINT NOT NULL,
+    follower_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    following_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0,
-    
     UNIQUE (follower_id, following_id),
-    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
     CHECK (follower_id != following_id)
 );
-CREATE INDEX idx_user_follows_follower ON user_follows(follower_id);
-CREATE INDEX idx_user_follows_following ON user_follows(following_id);
+CREATE INDEX IF NOT EXISTS idx_user_follows_follower ON user_follows(follower_id);
+CREATE INDEX IF NOT EXISTS idx_user_follows_following ON user_follows(following_id);
 
 -- 商品浏览历史表
 CREATE TABLE IF NOT EXISTS item_view_history (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
-    item_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    item_id BIGINT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     view_duration INTEGER DEFAULT 0,
     viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_item_view_history_user ON item_view_history(user_id);
-CREATE INDEX idx_item_view_history_item ON item_view_history(item_id);
-CREATE INDEX idx_item_view_history_viewed_at ON item_view_history(viewed_at);
+CREATE INDEX IF NOT EXISTS idx_item_view_history_user ON item_view_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_item_view_history_item ON item_view_history(item_id);
 
 -- 用户地址表
 CREATE TABLE IF NOT EXISTS user_addresses (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     address_type VARCHAR(20) DEFAULT 'dormitory' CHECK (address_type IN ('dormitory', 'home', 'other')),
     building VARCHAR(50),
     room VARCHAR(20),
@@ -698,91 +604,73 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     is_default BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_user_addresses_user ON user_addresses(user_id);
-CREATE INDEX idx_user_addresses_default ON user_addresses(user_id, is_default);
+CREATE INDEX IF NOT EXISTS idx_user_addresses_user ON user_addresses(user_id);
 
 -- 商品价格历史表
 CREATE TABLE IF NOT EXISTS item_price_history (
     id BIGSERIAL PRIMARY KEY,
-    item_id BIGINT NOT NULL,
+    item_id BIGINT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     old_price DECIMAL(10, 2),
     new_price DECIMAL(10, 2) NOT NULL,
     change_reason VARCHAR(200),
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_item_price_history_item ON item_price_history(item_id);
-CREATE INDEX idx_item_price_history_changed_at ON item_price_history(changed_at);
+CREATE INDEX IF NOT EXISTS idx_item_price_history_item ON item_price_history(item_id);
 
 -- 评论点赞表
 CREATE TABLE IF NOT EXISTS comment_likes (
     id BIGSERIAL PRIMARY KEY,
-    comment_id BIGINT NOT NULL,
-    user_id BIGINT NOT NULL,
+    comment_id BIGINT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0,
-    
-    UNIQUE (comment_id, user_id),
-    FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    UNIQUE (comment_id, user_id)
 );
-CREATE INDEX idx_comment_likes_comment ON comment_likes(comment_id);
-CREATE INDEX idx_comment_likes_user ON comment_likes(user_id);
+CREATE INDEX IF NOT EXISTS idx_comment_likes_comment ON comment_likes(comment_id);
 
 -- 消息附件表
 CREATE TABLE IF NOT EXISTS message_attachments (
     id BIGSERIAL PRIMARY KEY,
-    message_id BIGINT NOT NULL,
+    message_id BIGINT NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
     file_type VARCHAR(20) DEFAULT 'image' CHECK (file_type IN ('image', 'video', 'document', 'other')),
     file_url VARCHAR(500) NOT NULL,
     file_name VARCHAR(200),
     file_size BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_message_attachments_message ON message_attachments(message_id);
+CREATE INDEX IF NOT EXISTS idx_message_attachments_message ON message_attachments(message_id);
 
 -- 举报处理记录表
 CREATE TABLE IF NOT EXISTS report_actions (
     id BIGSERIAL PRIMARY KEY,
-    report_id BIGINT NOT NULL,
-    admin_id BIGINT NOT NULL,
+    report_id BIGINT NOT NULL REFERENCES reports(id) ON DELETE CASCADE,
+    admin_id BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject')),
     action_note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_report_actions_report ON report_actions(report_id);
-CREATE INDEX idx_report_actions_admin ON report_actions(admin_id);
+CREATE INDEX IF NOT EXISTS idx_report_actions_report ON report_actions(report_id);
 
--- 交易评价图片表
+-- ✅ 修复：交易评价图片表 - 现在可以正常引用 transactions 表
 CREATE TABLE IF NOT EXISTS transaction_review_images (
     id BIGSERIAL PRIMARY KEY,
-    transaction_id BIGINT NOT NULL,
+    transaction_id BIGINT NOT NULL REFERENCES transactions(id) ON DELETE CASCADE,
     reviewer_type VARCHAR(10) NOT NULL CHECK (reviewer_type IN ('buyer', 'seller')),
     image_url VARCHAR(500) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_transaction_review_images_transaction ON transaction_review_images(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_transaction_review_images_transaction ON transaction_review_images(transaction_id);
 
 -- 系统通知表
 CREATE TABLE IF NOT EXISTS notifications (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL CHECK (type IN ('system', 'transaction', 'message', 'comment', 'follow', 'like')),
     title VARCHAR(200) NOT NULL,
     content TEXT,
@@ -790,53 +678,40 @@ CREATE TABLE IF NOT EXISTS notifications (
     related_type VARCHAR(50),
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_notifications_user ON notifications(user_id);
-CREATE INDEX idx_notifications_read ON notifications(user_id, is_read);
-CREATE INDEX idx_notifications_created ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(user_id, is_read);
 
--- 商品搜索记录表
+-- 搜索历史表
 CREATE TABLE IF NOT EXISTS search_history (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT,
+    user_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     keyword VARCHAR(200) NOT NULL,
     result_count INTEGER DEFAULT 0,
-    clicked_item_id BIGINT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
+    clicked_item_id BIGINT REFERENCES items(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_search_history_user ON search_history(user_id);
-CREATE INDEX idx_search_history_keyword ON search_history(keyword);
-CREATE INDEX idx_search_history_created ON search_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_search_history_user ON search_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_search_history_keyword ON search_history(keyword);
 
--- 用户信用分变更记录表
+-- ✅ 修复：信用分变更记录表 - 现在可以正常引用 transactions 表
 CREATE TABLE IF NOT EXISTS credit_score_history (
     id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     old_score INTEGER NOT NULL,
     new_score INTEGER NOT NULL,
     change_amount INTEGER NOT NULL,
     change_reason VARCHAR(200) NOT NULL,
-    related_transaction_id BIGINT,
-    related_report_id BIGINT,
-    admin_id BIGINT,
+    related_transaction_id BIGINT REFERENCES transactions(id) ON DELETE SET NULL,
+    related_report_id BIGINT REFERENCES reports(id) ON DELETE SET NULL,
+    admin_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    sync_version INTEGER DEFAULT 0,
-    
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (related_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
-    FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL,
-    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
+    sync_version INTEGER DEFAULT 0
 );
-CREATE INDEX idx_credit_score_history_user ON credit_score_history(user_id);
-CREATE INDEX idx_credit_score_history_created ON credit_score_history(created_at);
+CREATE INDEX IF NOT EXISTS idx_credit_score_history_user ON credit_score_history(user_id);
 
--- 数据库同步任务表
+-- 同步任务表
 CREATE TABLE IF NOT EXISTS sync_tasks (
     id BIGSERIAL PRIMARY KEY,
     task_type VARCHAR(30) NOT NULL CHECK (task_type IN ('full_sync', 'incremental_sync', 'conflict_resolution')),
@@ -852,10 +727,9 @@ CREATE TABLE IF NOT EXISTS sync_tasks (
     completed_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_sync_tasks_status ON sync_tasks(status);
-CREATE INDEX idx_sync_tasks_created ON sync_tasks(created_at);
+CREATE INDEX IF NOT EXISTS idx_sync_tasks_status ON sync_tasks(status);
 
--- 系统性能监控表
+-- 性能监控表
 CREATE TABLE IF NOT EXISTS performance_metrics (
     id BIGSERIAL PRIMARY KEY,
     metric_type VARCHAR(30) NOT NULL CHECK (metric_type IN ('query_time', 'connection_pool', 'sync_latency', 'error_rate')),
@@ -866,9 +740,7 @@ CREATE TABLE IF NOT EXISTS performance_metrics (
     details JSONB,
     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX idx_performance_metrics_type ON performance_metrics(metric_type);
-CREATE INDEX idx_performance_metrics_db ON performance_metrics(db_name);
-CREATE INDEX idx_performance_metrics_recorded ON performance_metrics(recorded_at);
-CREATE INDEX idx_performance_metrics_alert ON performance_metrics(is_alert, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_type ON performance_metrics(metric_type);
+CREATE INDEX IF NOT EXISTS idx_performance_metrics_db ON performance_metrics(db_name);
 
-SELECT 'PostgreSQL schema with complete relationships created!' AS message;
+SELECT 'PostgreSQL schema created successfully!' AS message;
