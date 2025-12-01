@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, Numeric, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, Numeric, String, Text, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import BaseModel
@@ -23,18 +23,27 @@ class Offer(BaseModel):
 
 
 class Transaction(BaseModel):
-    """Confirmed transaction between buyer and seller."""
+    """Confirmed transaction between buyer and seller - matches database schema."""
 
     __tablename__ = "transactions"
 
-    offer_id: Mapped[int] = mapped_column(ForeignKey("offers.id"), nullable=False, unique=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("items.id"), nullable=False)
     buyer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     seller_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="initiated")
-    total_amount: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
-    currency: Mapped[str] = mapped_column(String(10), nullable=False, server_default="CNY")
-
-    offer: Mapped[Offer] = relationship()
+    item_price: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    final_amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="pending")
+    buyer_contact: Mapped[Optional[str]] = mapped_column(String(200))
+    seller_contact: Mapped[Optional[str]] = mapped_column(String(200))
+    meeting_location: Mapped[Optional[str]] = mapped_column(String(200))
+    meeting_time: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    buyer_rating: Mapped[Optional[int]] = mapped_column(Integer)
+    seller_rating: Mapped[Optional[int]] = mapped_column(Integer)
+    buyer_review: Mapped[Optional[str]] = mapped_column(Text)
+    seller_review: Mapped[Optional[str]] = mapped_column(Text)
+    contacted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
 
 
 class TransactionLog(BaseModel):

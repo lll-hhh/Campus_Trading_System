@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP,
     
     sync_version INTEGER DEFAULT 0
@@ -47,6 +48,87 @@ CREATE INDEX IF NOT EXISTS idx_users_active ON users(is_active, is_banned);
 COMMENT ON TABLE users IS '用户表';
 COMMENT ON COLUMN users.credit_score IS '信用分(0-100)';
 
+-- 角色表 (RBAC)
+CREATE TABLE IF NOT EXISTS roles (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
+COMMENT ON TABLE roles IS '角色表';
+
+-- 权限表 (RBAC)
+CREATE TABLE IF NOT EXISTS permissions (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL,
+    resource VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    description VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(name);
+CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action);
+COMMENT ON TABLE permissions IS '权限表';
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS user_roles (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id BIGINT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 1,
+    UNIQUE (user_id, role_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
+COMMENT ON TABLE user_roles IS '用户角色关联表';
+
+-- 角色权限关联表
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id BIGSERIAL PRIMARY KEY,
+    role_id BIGINT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id BIGINT NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 1,
+    UNIQUE (role_id, permission_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
+COMMENT ON TABLE role_permissions IS '角色权限关联表';
+
+-- 用户资料表
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    display_name VARCHAR(120) NOT NULL,
+    phone VARCHAR(32),
+    campus VARCHAR(120),
+    bio VARCHAR(500),
+    avatar_url VARCHAR(512),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user ON user_profiles(user_id);
+COMMENT ON TABLE user_profiles IS '用户资料表';
+
 -- 商品分类表
 CREATE TABLE IF NOT EXISTS categories (
     id BIGSERIAL PRIMARY KEY,
@@ -57,6 +139,7 @@ CREATE TABLE IF NOT EXISTS categories (
     sort_order INTEGER DEFAULT 0,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 
@@ -90,6 +173,7 @@ CREATE TABLE IF NOT EXISTS items (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sold_at TIMESTAMP,
     
     sync_version INTEGER DEFAULT 0
@@ -110,6 +194,7 @@ CREATE TABLE IF NOT EXISTS item_images (
     sort_order INTEGER DEFAULT 0,
     is_cover BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 
@@ -129,6 +214,7 @@ CREATE TABLE IF NOT EXISTS comments (
     is_reported BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
@@ -161,6 +247,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     seller_review TEXT,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     contacted_at TIMESTAMP,
     completed_at TIMESTAMP,
     cancelled_at TIMESTAMP,
@@ -188,6 +275,7 @@ CREATE TABLE IF NOT EXISTS messages (
     is_deleted_by_receiver BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     read_at TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
@@ -204,6 +292,7 @@ CREATE TABLE IF NOT EXISTS favorites (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     item_id BIGINT NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0,
     
     UNIQUE (user_id, item_id)
@@ -227,6 +316,7 @@ CREATE TABLE IF NOT EXISTS reports (
     admin_note TEXT,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
@@ -287,6 +377,7 @@ CREATE TABLE IF NOT EXISTS system_configs (
     description TEXT,
     is_public BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -572,6 +663,7 @@ CREATE TABLE IF NOT EXISTS user_follows (
     follower_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     following_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0,
     UNIQUE (follower_id, following_id),
     CHECK (follower_id != following_id)
@@ -604,6 +696,7 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     is_default BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_user_addresses_user ON user_addresses(user_id);
@@ -626,6 +719,7 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     comment_id BIGINT NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0,
     UNIQUE (comment_id, user_id)
 );
@@ -640,6 +734,7 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     file_name VARCHAR(200),
     file_size BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_message_attachments_message ON message_attachments(message_id);
@@ -652,6 +747,7 @@ CREATE TABLE IF NOT EXISTS report_actions (
     action_type VARCHAR(20) NOT NULL CHECK (action_type IN ('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject')),
     action_note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_report_actions_report ON report_actions(report_id);
@@ -663,6 +759,7 @@ CREATE TABLE IF NOT EXISTS transaction_review_images (
     reviewer_type VARCHAR(10) NOT NULL CHECK (reviewer_type IN ('buyer', 'seller')),
     image_url VARCHAR(500) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_transaction_review_images_transaction ON transaction_review_images(transaction_id);
@@ -678,6 +775,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     related_type VARCHAR(50),
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id);
@@ -707,6 +805,7 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     related_report_id BIGINT REFERENCES reports(id) ON DELETE SET NULL,
     admin_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_credit_score_history_user ON credit_score_history(user_id);

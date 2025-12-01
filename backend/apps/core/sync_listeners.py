@@ -26,6 +26,7 @@ class PendingSyncMutation:
     primary_key: Dict[str, Any]
     record_id: str
     previous_version: Optional[int]
+    row_data: Optional[Dict[str, Any]] = None  # 在 flush 阶段就保存实例数据
 
 
 def register_sync_listeners(factory: sessionmaker[Session]) -> None:
@@ -117,6 +118,9 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
         pk = _extract_primary_key(state)
         if not pk:
             continue
+        # 在 flush 阶段就序列化实例数据
+        mapper = class_mapper(state.mapper.class_)
+        row_data = _serialize_instance(mapper, obj)
         mutations.append(
             PendingSyncMutation(
                 action="insert",
@@ -125,6 +129,7 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
                 primary_key=pk,
                 record_id=_record_id(pk),
                 previous_version=None,
+                row_data=row_data,
             )
         )
 
@@ -138,6 +143,9 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
         if not pk:
             continue
         previous_version = state.info.get("previous_sync_version")
+        # 在 flush 阶段就序列化实例数据
+        mapper = class_mapper(state.mapper.class_)
+        row_data = _serialize_instance(mapper, obj)
         mutations.append(
             PendingSyncMutation(
                 action="update",
@@ -146,6 +154,7 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
                 primary_key=pk,
                 record_id=_record_id(pk),
                 previous_version=previous_version,
+                row_data=row_data,
             )
         )
 
@@ -165,6 +174,7 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
                 primary_key=pk,
                 record_id=_record_id(pk),
                 previous_version=previous_version,
+                row_data=None,  # 删除操作不需要 row_data
             )
         )
 
@@ -180,16 +190,16 @@ def _build_sql_payload(session: Session, mutation: PendingSyncMutation) -> Optio
         )
         sync_version = mutation.previous_version or 0
     else:
-        instance = session.get(mutation.model_class, _identity_from_pk(mapper, mutation.primary_key))
-        if instance is None:
+        # 使用在 flush 阶段保存的 row_data，避免在 commit 后查询
+        row_data = mutation.row_data
+        if row_data is None:
             logger.warning(
-                "Skipped sync mutation because row no longer exists",
+                "Skipped sync mutation because row_data is None",
                 table=mutation.table_name,
                 action=mutation.action,
                 record_id=mutation.record_id,
             )
             return None
-        row_data = _serialize_instance(mapper, instance)
         if mutation.action == "insert":
             statement, params = _compose_insert_statement(mutation.table_name, row_data)
         else:
@@ -333,8 +343,12 @@ def _identity_from_pk(mapper, primary_key: Dict[str, Any]):
 
 def _serialize_instance(mapper, instance: Any) -> Dict[str, Any]:
     values: Dict[str, Any] = {}
-    for column in mapper.columns:
-        values[column.key] = getattr(instance, column.key)
+    for prop in mapper.iterate_properties:
+        if hasattr(prop, 'columns'):
+            # 这是一个 ColumnProperty，使用属性名而不是列名
+            attr_name = prop.key
+            if hasattr(instance, attr_name):
+                values[attr_name] = getattr(instance, attr_name)
     return values
 
 

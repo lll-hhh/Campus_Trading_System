@@ -252,6 +252,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { useMessage } from 'naive-ui';
 import { 
   ChatboxEllipses, 
@@ -291,6 +292,7 @@ interface Message {
 
 const message = useMessage();
 const authStore = useAuthStore();
+const route = useRoute();
 
 const searchQuery = ref('');
 const conversations = ref<Conversation[]>([]);
@@ -306,6 +308,66 @@ const unreadCount = computed(() => {
   return conversations.value.reduce((sum, conv) => sum + conv.unreadCount, 0);
 });
 
+const pendingUserId = ref<number | null>(null);
+const pendingItemId = ref<number | null>(null);
+
+const mapConversation = (conv: any): Conversation => ({
+  id: conv.id,
+  userId: conv.other_user_id ?? conv.userId ?? conv.user_id,
+  username: conv.other_user_name ?? conv.username ?? '未知用户',
+  avatar: conv.other_user_avatar || conv.avatar || '',
+  lastMessage: conv.last_message ?? conv.lastMessage ?? '',
+  lastMessageTime: conv.last_message_time ?? conv.lastMessageTime ?? new Date().toISOString(),
+  unreadCount: conv.unread_count ?? conv.unreadCount ?? 0,
+  online: conv.online ?? false
+});
+
+const upsertConversation = (conv: Conversation): Conversation => {
+  const index = conversations.value.findIndex(c => c.id === conv.id);
+  if (index >= 0) {
+    conversations.value[index] = conv;
+    return conversations.value[index];
+  }
+  conversations.value.unshift(conv);
+  return conversations.value[0];
+};
+
+const updatePendingContextFromRoute = () => {
+  const queryUserId = Number(route.query.userId);
+  pendingUserId.value = Number.isFinite(queryUserId) ? queryUserId : null;
+  const queryItemId = Number(route.query.itemId);
+  pendingItemId.value = Number.isFinite(queryItemId) ? queryItemId : null;
+};
+
+const ensureConversationForUser = async (userId: number) => {
+  try {
+    const response = await http.post('/messages/conversations/start', {
+      user_id: userId,
+      item_id: pendingItemId.value ?? undefined
+    });
+    const conv = mapConversation(response.data);
+    const saved = upsertConversation(conv);
+    selectConversation(saved);
+    pendingUserId.value = null;
+    pendingItemId.value = null;
+  } catch (error) {
+    console.error('创建会话失败:', error);
+    message.error('无法开启会话，请稍后再试');
+  }
+};
+
+const trySelectPendingConversation = async () => {
+  if (!pendingUserId.value) return;
+  const target = conversations.value.find(conv => conv.userId === pendingUserId.value);
+  if (target) {
+    selectConversation(target);
+    pendingUserId.value = null;
+    pendingItemId.value = null;
+    return;
+  }
+  await ensureConversationForUser(pendingUserId.value);
+};
+
 // 过滤后的会话列表
 const filteredConversations = computed(() => {
   if (!searchQuery.value) return conversations.value;
@@ -319,16 +381,9 @@ const filteredConversations = computed(() => {
 const loadConversations = async () => {
   try {
     const response = await http.get('/messages/conversations');
-    conversations.value = response.data.map((conv: any) => ({
-      id: conv.id,
-      userId: conv.other_user_id,
-      username: conv.other_user_name,
-      avatar: conv.other_user_avatar || '',
-      lastMessage: conv.last_message,
-      lastMessageTime: conv.last_message_time,
-      unreadCount: conv.unread_count || 0,
-      online: conv.online || false
-    }));
+    const data = response.data.conversations || response.data;
+    conversations.value = (Array.isArray(data) ? data : []).map(mapConversation);
+    void trySelectPendingConversation();
   } catch (error) {
     console.error('加载会话列表失败:', error);
     message.error('加载会话列表失败');
@@ -338,15 +393,16 @@ const loadConversations = async () => {
 // 加载消息历史
 const loadMessages = async (conversationId: number) => {
   try {
-    const response = await http.get(`/messages/conversation/${conversationId}`);
-    messages.value = response.data.map((msg: any) => ({
+    const response = await http.get(`/messages/conversations/${conversationId}`);
+    const data = response.data.messages || response.data;
+    messages.value = (Array.isArray(data) ? data : []).map((msg: any) => ({
       id: msg.id,
       content: msg.content,
       timestamp: msg.created_at,
       isSent: msg.sender_id === authStore.user?.id,
       type: msg.message_type || 'text',
       itemData: msg.item_data
-    }));
+    })).reverse(); // 反转顺序，最新的在底部
     
     // 滚动到底部
     await nextTick();
@@ -371,7 +427,7 @@ const sendMessage = async () => {
   if (!inputMessage.value.trim() || !selectedConversation.value) return;
   
   try {
-    const response = await http.post('/messages/send', {
+    const response = await http.post('/messages', {
       receiver_id: selectedConversation.value.userId,
       content: inputMessage.value,
       message_type: 'text'
@@ -415,7 +471,7 @@ const scrollToBottom = () => {
 // 标记会话为已读
 const markConversationAsRead = async (conversationId: number) => {
   try {
-    await http.post(`/messages/conversation/${conversationId}/read`);
+    await http.put(`/messages/conversations/${conversationId}/read`);
     
     const conv = conversations.value.find(c => c.id === conversationId);
     if (conv) {
@@ -429,10 +485,13 @@ const markConversationAsRead = async (conversationId: number) => {
 // 标记全部已读
 const markAllAsRead = async () => {
   try {
-    await http.post('/messages/read-all');
-    conversations.value.forEach(conv => {
-      conv.unreadCount = 0;
-    });
+    // 逐个标记会话已读
+    for (const conv of conversations.value) {
+      if (conv.unreadCount > 0) {
+        await http.put(`/messages/conversations/${conv.id}/read`);
+        conv.unreadCount = 0;
+      }
+    }
     message.success('已全部标记为已读');
   } catch (error) {
     console.error('标记全部已读失败:', error);
@@ -464,14 +523,23 @@ const handleImageSelected = async (event: Event) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
+  updatePendingContextFromRoute();
   loadConversations();
-  currentUserAvatar.value = authStore.user?.avatar || '';
+  currentUserAvatar.value = (authStore.user as any)?.avatar || '';
   
   // 定时刷新会话列表（每30秒）
   setInterval(() => {
-    loadConversations();
-  }, 30000);
-});
+      loadConversations();
+    }, 30000);
+  });
+
+  watch(
+    () => [route.query.userId, route.query.itemId],
+    () => {
+      updatePendingContextFromRoute();
+      void trySelectPendingConversation();
+    }
+  );
 
 // 监听选中的会话变化
 watch(selectedConversation, (newVal) => {

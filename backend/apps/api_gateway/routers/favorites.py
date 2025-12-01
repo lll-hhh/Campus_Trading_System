@@ -25,7 +25,7 @@ class FavoriteItemDto(BaseModel):
         from_attributes = True
 
 
-@router.get("/", response_model=List[FavoriteItemDto])
+@router.get("", response_model=List[FavoriteItemDto])
 async def get_my_favorites(
     current_user=Depends(get_current_user),
     skip: int = 0,

@@ -194,6 +194,15 @@ const goToItem = (itemId: number) => {
   router.push(`/item/${itemId}`)
 }
 
+// ✅ 获取商品图片，没有则使用随机占位图
+const getItemImage = (item: any) => {
+  if (item.item_image) {
+    return item.item_image
+  }
+  // 使用 picsum.photos 作为占位图，item_id 保证同一商品图片一致
+  return `https://picsum.photos/80/80?random=${item.item_id}`
+}
+
 onMounted(() => {
   loadCartItems()
 })
@@ -244,7 +253,7 @@ onMounted(() => {
 
               <div class="item-info" @click="goToItem(item.item_id)" style="cursor: pointer;">
                 <n-image
-                  :src="item.item_image || 'https://via.placeholder.com/80'"
+                  :src="getItemImage(item)"
                   width="80"
                   height="80"
                   object-fit="cover"
@@ -506,5 +515,26 @@ onMounted(() => {
 .total-price {
   color: #f56c6c;
   font-size: 24px;
+}
+
+.item-image-wrapper {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.item-placeholder {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon {
+  font-size: 32px;
 }
 </style>

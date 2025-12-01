@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS users (
     total_purchases INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     last_login_at TEXT,
     sync_version INTEGER DEFAULT 0
 );
@@ -39,6 +40,82 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_credit ON users(credit_score);
+
+-- 角色表 (RBAC)
+CREATE TABLE IF NOT EXISTS roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
+
+-- 权限表 (RBAC)
+CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    resource TEXT NOT NULL,
+    action TEXT NOT NULL,
+    description TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_permissions_name ON permissions(name);
+CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action);
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS user_roles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 1,
+    UNIQUE (user_id, role_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_roles_user ON user_roles(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role_id);
+
+-- 角色权限关联表
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+    permission_id INTEGER NOT NULL REFERENCES permissions(id) ON DELETE CASCADE,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 1,
+    UNIQUE (role_id, permission_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role ON role_permissions(role_id);
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission ON role_permissions(permission_id);
+
+-- 用户资料表
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    display_name TEXT NOT NULL,
+    phone TEXT,
+    campus TEXT,
+    bio TEXT,
+    avatar_url TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    sync_version INTEGER DEFAULT 1
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_profiles_user ON user_profiles(user_id);
 
 -- 商品分类表
 CREATE TABLE IF NOT EXISTS categories (
@@ -50,6 +127,7 @@ CREATE TABLE IF NOT EXISTS categories (
     sort_order INTEGER DEFAULT 0,
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -76,6 +154,7 @@ CREATE TABLE IF NOT EXISTS items (
     inquiry_count INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sold_at TEXT,
     sync_version INTEGER DEFAULT 0
 );
@@ -93,6 +172,7 @@ CREATE TABLE IF NOT EXISTS item_images (
     sort_order INTEGER DEFAULT 0,
     is_cover INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -108,6 +188,7 @@ CREATE TABLE IF NOT EXISTS comments (
     is_deleted INTEGER DEFAULT 0,
     is_reported INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
@@ -133,6 +214,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     buyer_review TEXT,
     seller_review TEXT,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     contacted_at TEXT,
     completed_at TEXT,
     cancelled_at TEXT,
@@ -155,6 +237,7 @@ CREATE TABLE IF NOT EXISTS messages (
     is_deleted_by_sender INTEGER DEFAULT 0,
     is_deleted_by_receiver INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     read_at TEXT,
     sync_version INTEGER DEFAULT 0
 );
@@ -168,6 +251,7 @@ CREATE TABLE IF NOT EXISTS favorites (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     item_id INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0,
     UNIQUE (user_id, item_id)
 );
@@ -187,6 +271,7 @@ CREATE TABLE IF NOT EXISTS reports (
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'resolved', 'rejected')),
     admin_note TEXT,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     resolved_at TEXT,
     sync_version INTEGER DEFAULT 0
 );
@@ -242,6 +327,7 @@ CREATE TABLE IF NOT EXISTS system_configs (
     description TEXT,
     is_public INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -254,6 +340,7 @@ CREATE TABLE IF NOT EXISTS user_follows (
     follower_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     following_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0,
     UNIQUE (follower_id, following_id),
     CHECK (follower_id != following_id)
@@ -280,6 +367,7 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     is_default INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -298,6 +386,7 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     comment_id INTEGER NOT NULL REFERENCES comments(id) ON DELETE CASCADE,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0,
     UNIQUE (comment_id, user_id)
 );
@@ -310,6 +399,7 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     file_name TEXT,
     file_size INTEGER,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -320,6 +410,7 @@ CREATE TABLE IF NOT EXISTS report_actions (
     action_type TEXT NOT NULL CHECK (action_type IN ('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject')),
     action_note TEXT,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -329,6 +420,7 @@ CREATE TABLE IF NOT EXISTS transaction_review_images (
     reviewer_type TEXT NOT NULL CHECK (reviewer_type IN ('buyer', 'seller')),
     image_url TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -342,6 +434,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     related_type TEXT,
     is_read INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 
@@ -365,6 +458,7 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     related_report_id INTEGER REFERENCES reports(id) ON DELETE SET NULL,
     admin_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
     sync_version INTEGER DEFAULT 0
 );
 

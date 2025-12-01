@@ -486,6 +486,11 @@ const loadItems = async () => {
       params.category = categorySlugMap[selectedCategory.value] || ''
     }
     
+    // 成色筛选
+    if (selectedCondition.value) {
+      params.condition = selectedCondition.value
+    }
+    
     // 关键词搜索
     if (searchKeyword.value.trim()) {
       params.keyword = searchKeyword.value.trim()
@@ -695,7 +700,7 @@ const handleContactSeller = (item: ItemData) => {
     router.push('/login')
     return
   }
-  router.push(`/messages?userId=${item.seller_id}`)
+  router.push(`/messages?userId=${item.seller_id}&itemId=${item.id}`)
 }
 
 // ========== 发布商品弹窗 ==========

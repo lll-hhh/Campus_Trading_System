@@ -1,5 +1,5 @@
 """Aggregate models for CampuSwap."""
-from .additional import CartItem, Conversation, RefreshToken, SearchHistory, SearchTrending
+from .additional import CartItem, Conversation, Message, RefreshToken, SearchHistory, SearchTrending
 from .ai import AIAction, AIChat, AIInsight, AIModel, FraudPattern
 from .base import Base, BaseModel, PrimaryKeyMixin, SyncVersionMixin, TimestampMixin
 from .inventory import (
@@ -42,6 +42,7 @@ __all__ = [
     "ItemAttachment",
     "ItemMedia",
     "ItemTag",
+    "Message",
     "ModerationTask",
     "Offer",
     "Payment",

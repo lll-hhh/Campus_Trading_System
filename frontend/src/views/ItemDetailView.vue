@@ -98,6 +98,26 @@ const comments = ref<Comment[]>([])
 // 相似推荐
 const similarItems = ref<ItemDetail[]>([])
 
+// 商品详情弹窗状态
+const showDetailDialog = ref(false)
+const detailLoading = ref(false)
+type DetailDialogItem = ItemDetail & { isFavorited?: boolean }
+const currentItem = ref<DetailDialogItem>({
+  id: 0,
+  title: '',
+  price: 0,
+  category: '',
+  condition: '',
+  status: '',
+  view_count: 0,
+  favorite_count: 0,
+  images: [],
+  description: '',
+  seller_id: 0,
+  seller_name: '',
+  created_at: ''
+})
+
 // 新评论
 const newComment = reactive({
   rating: 5,
@@ -112,7 +132,11 @@ const loadItemDetail = async () => {
   loading.value = true
   try {
     const response = await http.get(`/items/${itemId.value}`)
-    item.value = response.data
+    item.value = {
+      ...response.data,
+      images: response.data.images || []
+    }
+    currentItem.value = { ...item.value, isFavorited: isFavorited.value }
     
     // 如果没有原价，设置为当前价格的1.2倍（模拟）
     if (!item.value.originalPrice) {
@@ -135,6 +159,7 @@ const loadItemDetail = async () => {
     // 检查是否已收藏
     if (authStore.isAuthenticated) {
       await checkFavoriteStatus()
+      currentItem.value.isFavorited = isFavorited.value
     }
     
     // 加载相似商品
@@ -197,6 +222,7 @@ const loadSimilarItems = async () => {
       .slice(0, 4)
       .map((i: ItemDetail) => ({
         ...i,
+        images: i.images || [],
         image: i.images?.[0] || `https://picsum.photos/200/200?random=${i.id}`
       }))
   } catch (error) {
@@ -205,18 +231,19 @@ const loadSimilarItems = async () => {
 }
 
 // ✅ 新增：加入购物车
-const handleAddToCart = async (item: any) => {
+const handleAddToCart = async (targetItem?: ItemDetail) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
     return
   }
   
   try {
+    const data = targetItem ?? item.value
     await http.post('/cart', {
-      item_id: item.id,
+      item_id: data.id,
       quantity: 1
     })
-    message.success(`"${item.name}" 已加入购物车`)
+    message.success(`"${data.title}" 已加入购物车`)
   } catch (error: any) {
     const detail = error.response?.data?.detail
     if (detail === '不能购买自己发布的商品') {
@@ -238,7 +265,7 @@ const handleBuyNow = () => {
   }
   
   // 检查是否是自己的商品
-  if (item.value.seller_id === authStore.userId) {
+  if (item.value.seller_id === authStore.user?.id) {
     message.warning('不能购买自己的商品')
     return
   }
@@ -273,29 +300,62 @@ const handleContactSeller = () => {
     return
   }
   
-  router.push(`/messages?userId=${item.value.seller_id}`)
+  router.push(`/messages?userId=${item.value.seller_id}&itemId=${item.value.id}`)
 }
 
 // ✅ 新增：收藏/取消收藏
-const handleToggleFavorite = async (item: any) => {
+const handleToggleFavorite = async (targetItem?: { id: number; isFavorited?: boolean }) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
     return
   }
   
   try {
-    if (item.isFavorited) {
-      await http.delete(`/favorites/${item.id}`)
-      item.isFavorited = false
+    const itemId = targetItem?.id ?? item.value.id
+    const currentlyFavorited = targetItem?.isFavorited ?? isFavorited.value
+    if (currentlyFavorited) {
+      await http.delete(`/favorites/${itemId}`)
+      if (targetItem) {
+        targetItem.isFavorited = false
+      } else {
+        isFavorited.value = false
+        if (currentItem.value.id === item.value.id) {
+          currentItem.value.isFavorited = false
+        }
+      }
       message.success('已取消收藏')
     } else {
-      await http.post(`/favorites/${item.id}`)
-      item.isFavorited = true
+      await http.post(`/favorites/${itemId}`)
+      if (targetItem) {
+        targetItem.isFavorited = true
+      } else {
+        isFavorited.value = true
+        if (currentItem.value.id === item.value.id) {
+          currentItem.value.isFavorited = true
+        }
+      }
       message.success('收藏成功')
     }
   } catch (error: any) {
     message.error(error.response?.data?.detail || '操作失败')
   }
+}
+
+const viewItemDetail = (targetItem: ItemDetail) => {
+  currentItem.value = {
+    ...targetItem,
+    images: targetItem.images || []
+  }
+  showDetailDialog.value = true
+}
+
+const handleWantToBuy = () => {
+  if (!authStore.isAuthenticated) {
+    message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  handleContactSeller()
 }
 
 // 提交评论
@@ -322,9 +382,9 @@ const handleSubmitComment = async () => {
     comments.value.unshift({
       id: response.data.id || Date.now(),
       user: {
-        id: authStore.userId || 0,
-        username: authStore.displayName || '当前用户',
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${authStore.userId}`
+        id: authStore.user?.id || 0,
+        username: authStore.user?.displayName || authStore.user?.username || '当前用户',
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${authStore.user?.id || 'current'}`
       },
       rating: newComment.rating,
       content: newComment.content,
@@ -454,25 +514,25 @@ onMounted(async () => {
                 <n-button 
                   type="primary" 
                   size="large" 
-                  @click="handleBuyNow"
+                  @click="handleBuyNow()"
                   :disabled="item.status !== 'available'"
                 >
                   💰 立即购买
                 </n-button>
                 <n-button 
                   size="large" 
-                  @click="handleAddToCart"
+                  @click="handleAddToCart()"
                   :disabled="item.status !== 'available'"
                 >
                   🛒 加入购物车
                 </n-button>
-                <n-button size="large" @click="handleContactSeller">
+                <n-button size="large" @click="handleContactSeller()">
                   💬 联系卖家
                 </n-button>
                 <n-button
                   :type="isFavorited ? 'error' : 'default'"
                   size="large"
-                  @click="handleToggleFavorite"
+                  @click="handleToggleFavorite()"
                 >
                   {{ isFavorited ? '❤️ 已收藏' : '🤍 收藏' }}
                 </n-button>
@@ -505,7 +565,7 @@ onMounted(async () => {
                   placeholder="分享你的使用体验..."
                   :rows="3"
                 />
-                <n-button type="primary" @click="handleSubmitComment">
+                <n-button type="primary" @click="handleSubmitComment()">
                   提交评价
                 </n-button>
               </n-space>
@@ -557,13 +617,13 @@ onMounted(async () => {
                 <n-button 
                   size="small" 
                   type="primary"
-                  @click.stop="handleAddToCart(item)"
+                  @click.stop="handleAddToCart(similarItem)"
                 >
                   🛒 加购
                 </n-button>
                 <n-button 
                   size="small"
-                  @click.stop="viewItemDetail(item)"
+                  @click.stop="viewItemDetail(similarItem)"
                 >
                   查看详情
                 </n-button>
@@ -649,7 +709,7 @@ onMounted(async () => {
                 type="warning" 
                 size="large" 
                 block 
-                @click="handleWantToBuy"
+                @click="handleWantToBuy()"
                 strong
               >
                 💬 我想要 - 联系卖家

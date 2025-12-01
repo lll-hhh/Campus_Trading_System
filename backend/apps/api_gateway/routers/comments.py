@@ -5,10 +5,11 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User
+from apps.core.models import User, Comment
 from apps.services.business_logic import CommentService
 
 router = APIRouter(prefix="/comments", tags=["评论管理"])
@@ -51,7 +52,7 @@ class CommentListResponse(BaseModel):
 
 # ==================== API路由 ====================
 
-@router.post("/", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 async def create_comment(
     payload: CommentCreateRequest,
     current_user: User = Depends(get_current_user),
@@ -64,7 +65,7 @@ async def create_comment(
         user_id=current_user.id,
         content=payload.content,
         rating=payload.rating,
-        parent_comment_id=payload.parent_comment_id
+        parent_id=payload.parent_comment_id
     )
     
     return CommentResponse(
@@ -75,7 +76,7 @@ async def create_comment(
         user_avatar=None,
         content=comment.content,
         rating=comment.rating,
-        parent_comment_id=comment.parent_comment_id,
+        parent_comment_id=comment.parent_id,
         reply_count=0,
         created_at=comment.created_at
     )
@@ -89,8 +90,6 @@ async def get_item_comments(
     session: Session = Depends(get_db_session)
 ):
     """获取商品的评论列表"""
-    from sqlalchemy import select
-    
     comments, total = CommentService.get_item_comments(
         session, item_id, page, page_size
     )
@@ -103,7 +102,7 @@ async def get_item_comments(
         # 计算回复数
         reply_count = session.execute(
             select(func.count()).select_from(Comment).where(
-                Comment.parent_comment_id == comment.id
+                Comment.parent_id == comment.id
             )
         ).scalar() or 0
         
@@ -115,7 +114,7 @@ async def get_item_comments(
             user_avatar=None,
             content=comment.content,
             rating=comment.rating,
-            parent_comment_id=comment.parent_comment_id,
+            parent_comment_id=comment.parent_id,
             reply_count=reply_count,
             created_at=comment.created_at
         ))
@@ -149,8 +148,7 @@ async def get_my_comments(
     session: Session = Depends(get_db_session)
 ):
     """获取我的评论"""
-    from apps.core.models import Comment
-    from sqlalchemy import select, and_, func, desc
+    from sqlalchemy import and_, desc
     
     # 查询用户的评论
     query = select(Comment).where(Comment.user_id == current_user.id)
@@ -177,7 +175,7 @@ async def get_my_comments(
             user_avatar=None,
             content=comment.content,
             rating=comment.rating,
-            parent_comment_id=comment.parent_comment_id,
+            parent_comment_id=comment.parent_id,
             reply_count=0,
             created_at=comment.created_at
         ))

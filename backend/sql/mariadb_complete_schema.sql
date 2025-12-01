@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS users (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP NULL,
     
     sync_version INT DEFAULT 0 COMMENT '同步版本号',
@@ -48,6 +49,82 @@ CREATE TABLE IF NOT EXISTS users (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
 ROW_FORMAT=DYNAMIC COMMENT='用户表';
 
+-- 角色表 (RBAC)
+CREATE TABLE IF NOT EXISTS roles (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(50) NOT NULL UNIQUE COMMENT '角色名称',
+    description VARCHAR(255) COMMENT '角色描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 1,
+    INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='角色表';
+
+-- 权限表 (RBAC)
+CREATE TABLE IF NOT EXISTS permissions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL UNIQUE COMMENT '权限名称',
+    resource VARCHAR(50) NOT NULL COMMENT '资源类型',
+    action VARCHAR(50) NOT NULL COMMENT '操作类型',
+    description VARCHAR(255) COMMENT '权限描述',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 1,
+    INDEX idx_name (name),
+    INDEX idx_resource_action (resource, action)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='权限表';
+
+-- 用户角色关联表
+CREATE TABLE IF NOT EXISTS user_roles (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 1,
+    UNIQUE KEY uq_user_role (user_id, role_id),
+    INDEX idx_user (user_id),
+    INDEX idx_role (role_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='用户角色关联表';
+
+-- 角色权限关联表
+CREATE TABLE IF NOT EXISTS role_permissions (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    role_id BIGINT NOT NULL,
+    permission_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 1,
+    UNIQUE KEY uq_role_permission (role_id, permission_id),
+    INDEX idx_role (role_id),
+    INDEX idx_permission (permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='角色权限关联表';
+
+-- 用户资料表
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL UNIQUE,
+    display_name VARCHAR(120) NOT NULL COMMENT '显示名称',
+    phone VARCHAR(32) COMMENT '联系电话',
+    campus VARCHAR(120) COMMENT '校区',
+    bio VARCHAR(500) COMMENT '个人简介',
+    avatar_url VARCHAR(512) COMMENT '头像URL',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 1,
+    INDEX idx_user (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='用户资料表';
+
 -- 商品分类表
 CREATE TABLE IF NOT EXISTS categories (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -58,6 +135,7 @@ CREATE TABLE IF NOT EXISTS categories (
     sort_order INT DEFAULT 0 COMMENT '排序',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     INDEX idx_slug (slug),
     INDEX idx_active (is_active)
@@ -90,6 +168,7 @@ CREATE TABLE IF NOT EXISTS items (
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sold_at TIMESTAMP NULL COMMENT '售出时间',
     
     sync_version INT DEFAULT 0,
@@ -113,6 +192,7 @@ CREATE TABLE IF NOT EXISTS item_images (
     sort_order INT DEFAULT 0 COMMENT '排序',
     is_cover BOOLEAN DEFAULT FALSE COMMENT '是否封面',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_item (item_id),
@@ -134,6 +214,7 @@ CREATE TABLE IF NOT EXISTS comments (
     is_reported BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
@@ -201,6 +282,7 @@ CREATE TABLE IF NOT EXISTS messages (
     is_deleted_by_receiver BOOLEAN DEFAULT FALSE,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     read_at TIMESTAMP NULL,
     sync_version INT DEFAULT 0,
     
@@ -221,6 +303,7 @@ CREATE TABLE IF NOT EXISTS favorites (
     user_id BIGINT NOT NULL,
     item_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     UNIQUE KEY uk_user_item (user_id, item_id),
@@ -246,6 +329,7 @@ CREATE TABLE IF NOT EXISTS reports (
     admin_note TEXT COMMENT '管理员备注',
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP NULL,
     sync_version INT DEFAULT 0,
     
@@ -275,6 +359,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     ip_address VARCHAR(45),
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_user (user_id),
     INDEX idx_table (table_name, operation),
@@ -299,6 +384,7 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     resolution_strategy VARCHAR(50) COMMENT '解决策略',
     resolved_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_resolved (resolved),
     INDEX idx_table_record (table_name, record_id),
@@ -316,6 +402,7 @@ CREATE TABLE IF NOT EXISTS system_configs (
     description TEXT,
     is_public BOOLEAN DEFAULT FALSE COMMENT '是否公开',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_key (config_key)
@@ -584,6 +671,7 @@ CREATE TABLE IF NOT EXISTS user_follows (
     follower_id BIGINT NOT NULL COMMENT '关注者ID',
     following_id BIGINT NOT NULL COMMENT '被关注者ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     UNIQUE KEY uk_follower_following (follower_id, following_id),
@@ -622,6 +710,7 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     is_default BOOLEAN DEFAULT FALSE COMMENT '是否默认地址',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_user (user_id),
@@ -650,6 +739,7 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     comment_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     UNIQUE KEY uk_comment_user (comment_id, user_id),
@@ -666,6 +756,7 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     file_name VARCHAR(200),
     file_size BIGINT COMMENT '文件大小(字节)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_message (message_id),
@@ -680,6 +771,7 @@ CREATE TABLE IF NOT EXISTS report_actions (
     action_type ENUM('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject') NOT NULL,
     action_note TEXT COMMENT '处理说明',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_report (report_id),
@@ -695,6 +787,7 @@ CREATE TABLE IF NOT EXISTS transaction_review_images (
     reviewer_type ENUM('buyer', 'seller') NOT NULL,
     image_url VARCHAR(500) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_transaction (transaction_id),
@@ -712,6 +805,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     related_type VARCHAR(50) COMMENT '关联对象类型',
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_user (user_id),
@@ -727,6 +821,7 @@ CREATE TABLE IF NOT EXISTS search_history (
     result_count INT DEFAULT 0,
     clicked_item_id BIGINT COMMENT '点击的商品ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_user (user_id),
     INDEX idx_keyword (keyword),
@@ -746,6 +841,7 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     related_report_id BIGINT COMMENT '关联举报',
     admin_id BIGINT COMMENT '操作管理员',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
     
     INDEX idx_user (user_id),
@@ -771,6 +867,7 @@ CREATE TABLE IF NOT EXISTS sync_tasks (
     started_at TIMESTAMP NULL,
     completed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库同步任务表';

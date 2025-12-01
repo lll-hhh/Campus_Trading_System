@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
 from apps.core.models import User
+from apps.services.business_logic import MessageService
 
 router = APIRouter(prefix="/messages", tags=["消息管理"])
 
@@ -74,9 +75,15 @@ class ConversationListResponse(BaseModel):
     total_unread: int
 
 
+class ConversationStartRequest(BaseModel):
+    """开启会话请求"""
+    user_id: int = Field(..., description="想要联系的用户ID")
+    item_id: Optional[int] = Field(None, description="关联的商品ID")
+
+
 # ==================== API路由 ====================
 
-@router.post("/", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MessageResponse, status_code=status.HTTP_201_CREATED)
 async def send_message(
     payload: MessageSendRequest,
     current_user: User = Depends(get_current_user),
@@ -87,26 +94,21 @@ async def send_message(
     
     可以关联商品ID，方便买卖双方沟通
     """
-    # TODO: 验证接收者是否存在
-    # TODO: 创建或获取会话
-    # TODO: 创建消息记录
-    # TODO: 发送实时通知（WebSocket）
-    
-    return MessageResponse(
-        id=1,
-        conversation_id=1,
-        sender_id=current_user.id,
-        sender_name=current_user.username,
-        sender_avatar=None,
-        receiver_id=payload.receiver_id,
-        receiver_name="接收者",
-        receiver_avatar=None,
-        content=payload.content,
-        message_type=payload.message_type,
-        item_id=payload.item_id,
-        is_read=False,
-        created_at=datetime.utcnow()
-    )
+    try:
+        result = MessageService.send_message(
+            session=session,
+            sender_id=current_user.id,
+            receiver_id=payload.receiver_id,
+            content=payload.content,
+            item_id=payload.item_id
+        )
+        session.commit()
+        return MessageResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"发送失败: {str(e)}")
 
 
 @router.get("/conversations", response_model=ConversationListResponse)
@@ -119,29 +121,42 @@ async def get_conversations(
     
     按最后消息时间排序
     """
-    # TODO: 查询用户的所有会话
-    
-    mock_conversations = [
-        ConversationResponse(
-            id=i,
-            other_user_id=100 + i,
-            other_user_name=f"用户{i}",
-            other_user_avatar=f"https://api.dicebear.com/7.x/avataaars/svg?seed=User{i}",
-            last_message=f"这是最后一条消息内容 {i}",
-            last_message_time=datetime.utcnow(),
-            unread_count=i * 2,
-            created_at=datetime.utcnow()
+    try:
+        result = MessageService.get_conversations(session, current_user.id)
+        return ConversationListResponse(
+            conversations=[ConversationResponse(**conv) for conv in result["conversations"]],
+            total=result["total"],
+            total_unread=result["total_unread"]
         )
-        for i in range(1, 6)
-    ]
-    
-    total_unread = sum(conv.unread_count for conv in mock_conversations)
-    
-    return ConversationListResponse(
-        conversations=mock_conversations,
-        total=len(mock_conversations),
-        total_unread=total_unread
-    )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取会话列表失败: {str(e)}")
+
+
+@router.post("/conversations/start", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+async def start_conversation(
+    payload: ConversationStartRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """首次联系时创建或获取会话"""
+    if payload.user_id == current_user.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="无法与自己创建会话")
+    try:
+        conv = MessageService.get_or_create_conversation(
+            session=session,
+            user1_id=current_user.id,
+            user2_id=payload.user_id,
+            item_id=payload.item_id
+        )
+        session.commit()
+        conv_data = MessageService.serialize_conversation(session, conv, current_user.id)
+        return ConversationResponse(**conv_data)
+    except ValueError as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"创建会话失败: {str(e)}")
 
 
 @router.get("/conversations/{conversation_id}", response_model=MessageListResponse)
@@ -157,34 +172,25 @@ async def get_conversation_messages(
     
     按时间倒序返回，支持分页加载历史消息
     """
-    # TODO: 验证会话权限
-    # TODO: 查询消息列表
-    # TODO: 标记消息为已读
-    
-    mock_messages = [
-        MessageResponse(
-            id=i,
+    try:
+        result = MessageService.get_conversation_messages(
+            session=session,
+            user_id=current_user.id,
             conversation_id=conversation_id,
-            sender_id=current_user.id if i % 2 == 0 else 100,
-            sender_name=current_user.username if i % 2 == 0 else "对方用户",
-            sender_avatar=None,
-            receiver_id=100 if i % 2 == 0 else current_user.id,
-            receiver_name="对方用户" if i % 2 == 0 else current_user.username,
-            receiver_avatar=None,
-            content=f"这是消息内容 {i}",
-            message_type="text",
-            is_read=i % 2 == 1,
-            created_at=datetime.utcnow()
+            page=page,
+            page_size=page_size
         )
-        for i in range(1, min(page_size + 1, 21))
-    ]
-    
-    return MessageListResponse(
-        messages=mock_messages,
-        total=100,
-        page=page,
-        page_size=page_size
-    )
+        session.commit()  # 提交已读标记
+        return MessageListResponse(
+            messages=[MessageResponse(**msg) for msg in result["messages"]],
+            total=result["total"],
+            page=result["page"],
+            page_size=result["page_size"]
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取消息失败: {str(e)}")
 
 
 @router.put("/{message_id}/read")
@@ -196,10 +202,15 @@ async def mark_message_read(
     """
     标记消息为已读
     """
-    # TODO: 验证消息接收者
-    # TODO: 更新已读状态
-    
-    return {"message": "消息已标记为已读", "message_id": message_id}
+    try:
+        result = MessageService.mark_message_read(session, current_user.id, message_id)
+        session.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"操作失败: {str(e)}")
 
 
 @router.put("/conversations/{conversation_id}/read")
@@ -211,9 +222,15 @@ async def mark_conversation_read(
     """
     标记会话所有消息为已读
     """
-    # TODO: 批量更新会话消息为已读
-    
-    return {"message": "会话消息已全部标记为已读", "conversation_id": conversation_id}
+    try:
+        result = MessageService.mark_conversation_read(session, current_user.id, conversation_id)
+        session.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"操作失败: {str(e)}")
 
 
 @router.delete("/conversations/{conversation_id}")
@@ -227,9 +244,15 @@ async def delete_conversation(
     
     注意：只是隐藏会话，不会删除消息记录
     """
-    # TODO: 软删除会话
-    
-    return {"message": "会话已删除", "conversation_id": conversation_id}
+    try:
+        result = MessageService.delete_conversation(session, current_user.id, conversation_id)
+        session.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"删除失败: {str(e)}")
 
 
 @router.get("/unread/count")
@@ -242,12 +265,10 @@ async def get_unread_count(
     
     用于顶部导航栏的徽章显示
     """
-    # TODO: 统计未读消息数
-    
-    return {
-        "total_unread": 5,
-        "conversations_with_unread": 3
-    }
+    try:
+        return MessageService.get_unread_count(session, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"获取失败: {str(e)}")
 
 
 @router.get("/search")
@@ -263,10 +284,13 @@ async def search_messages(
     
     支持按内容、联系人名称搜索
     """
-    # TODO: 全文搜索消息
-    
-    return {
-        "results": [],
-        "total": 0,
-        "keyword": keyword
-    }
+    try:
+        return MessageService.search_messages(
+            session=session,
+            user_id=current_user.id,
+            keyword=keyword,
+            page=page,
+            page_size=page_size
+        )
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"搜索失败: {str(e)}")

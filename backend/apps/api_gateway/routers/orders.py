@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User
+from apps.core.models import User, Item
 from apps.services.business_logic import TransactionService
 
 router = APIRouter(prefix="/orders", tags=["订单管理"])
@@ -19,8 +19,7 @@ router = APIRouter(prefix="/orders", tags=["订单管理"])
 class OrderCreateRequest(BaseModel):
     """创建订单请求"""
     item_id: int = Field(..., description="商品ID")
-    quantity: int = Field(default=1, ge=1)
-    note: Optional[str] = Field(None, max_length=500)
+    buyer_contact: Optional[str] = Field(None, max_length=200, description="买家联系方式")
 
 
 class OrderItemInfo(BaseModel):
@@ -28,7 +27,6 @@ class OrderItemInfo(BaseModel):
     item_id: int
     item_title: str
     item_price: float
-    quantity: int
 
 
 class OrderResponse(BaseModel):
@@ -41,7 +39,7 @@ class OrderResponse(BaseModel):
     item_info: OrderItemInfo
     total_amount: float
     status: str
-    note: Optional[str] = None
+    buyer_contact: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -64,21 +62,18 @@ class OrderStatusUpdateRequest(BaseModel):
 
 # ==================== API路由 ====================
 
-@router.post("/", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=OrderResponse, status_code=status.HTTP_201_CREATED)
 async def create_order(
     payload: OrderCreateRequest,
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_db_session)
 ):
     """创建订单"""
-    from apps.core.models import Item
-    
     transaction = TransactionService.create_transaction(
         session=session,
         buyer_id=current_user.id,
         item_id=payload.item_id,
-        quantity=payload.quantity,
-        note=payload.note
+        buyer_contact=payload.buyer_contact
     )
     
     if not transaction:
@@ -97,18 +92,17 @@ async def create_order(
         item_info=OrderItemInfo(
             item_id=item.id,
             item_title=item.title,
-            item_price=float(transaction.price),
-            quantity=transaction.quantity
+            item_price=float(transaction.item_price)
         ),
-        total_amount=float(transaction.total_amount),
+        total_amount=float(transaction.final_amount),
         status=transaction.status,
-        note=transaction.note,
+        buyer_contact=transaction.buyer_contact,
         created_at=transaction.created_at,
         updated_at=transaction.updated_at
     )
 
 
-@router.get("/", response_model=OrderListResponse)
+@router.get("", response_model=OrderListResponse)
 async def get_orders(
     role: str = Query("buyer", description="buyer或seller"),
     page: int = Query(1, ge=1),
@@ -117,8 +111,6 @@ async def get_orders(
     session: Session = Depends(get_db_session)
 ):
     """获取订单列表"""
-    from apps.core.models import Item
-    
     transactions, total = TransactionService.get_user_transactions(
         session, current_user.id, role, page, page_size
     )
@@ -139,12 +131,11 @@ async def get_orders(
             item_info=OrderItemInfo(
                 item_id=item.id if item else 0,
                 item_title=item.title if item else "商品已删除",
-                item_price=float(trans.price),
-                quantity=trans.quantity
+                item_price=float(trans.item_price)
             ),
-            total_amount=float(trans.total_amount),
+            total_amount=float(trans.final_amount),
             status=trans.status,
-            note=trans.note,
+            buyer_contact=trans.buyer_contact,
             created_at=trans.created_at,
             updated_at=trans.updated_at
         ))
@@ -164,7 +155,7 @@ async def get_order(
     session: Session = Depends(get_db_session)
 ):
     """获取订单详情"""
-    from apps.core.models import Transaction, Item
+    from apps.core.models import Transaction
     
     transaction = session.get(Transaction, order_id)
     if not transaction:
@@ -187,12 +178,11 @@ async def get_order(
         item_info=OrderItemInfo(
             item_id=item.id if item else 0,
             item_title=item.title if item else "商品已删除",
-            item_price=float(transaction.price),
-            quantity=transaction.quantity
+            item_price=float(transaction.item_price)
         ),
-        total_amount=float(transaction.total_amount),
+        total_amount=float(transaction.final_amount),
         status=transaction.status,
-        note=transaction.note,
+        buyer_contact=transaction.buyer_contact,
         created_at=transaction.created_at,
         updated_at=transaction.updated_at
     )
@@ -206,7 +196,6 @@ async def update_order_status(
     session: Session = Depends(get_db_session)
 ):
     """更新订单状态"""
-    from apps.core.models import Item
     
     transaction = TransactionService.update_transaction_status(
         session, order_id, current_user.id, payload.status
@@ -228,12 +217,11 @@ async def update_order_status(
         item_info=OrderItemInfo(
             item_id=item.id if item else 0,
             item_title=item.title if item else "商品已删除",
-            item_price=float(transaction.price),
-            quantity=transaction.quantity
+            item_price=float(transaction.item_price)
         ),
-        total_amount=float(transaction.total_amount),
+        total_amount=float(transaction.final_amount),
         status=transaction.status,
-        note=transaction.note,
+        buyer_contact=transaction.buyer_contact,
         created_at=transaction.created_at,
         updated_at=transaction.updated_at
     )

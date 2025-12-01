@@ -4,14 +4,20 @@
 from typing import List, Optional
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from apps.api_gateway.dependencies import get_current_user, get_db_session
+from apps.api_gateway.dependencies import (
+    get_current_user,
+    get_current_user_optional,
+    get_db_session,
+)
+from apps.core.models.users import User
+from apps.services.business_logic import SearchService
 
 
-router = APIRouter()
+router = APIRouter(prefix="/search", tags=["搜索功能"])
 
 
 # ==================== Pydantic Models ====================
@@ -95,41 +101,17 @@ async def search_autocomplete(
     
     返回匹配的关键词、分类、商品标题建议
     """
-    # TODO: 实现基于Elasticsearch或数据库的自动补全
-    # 当前返回模拟数据
-    
-    suggestions = []
-    
-    # 模拟关键词建议
-    keywords = [
-        "iPhone 15", "MacBook Pro", "iPad", "AirPods",
-        "小米手机", "华为手机", "耳机", "充电器"
-    ]
-    for kw in keywords:
-        if query.lower() in kw.lower():
-            suggestions.append(SearchSuggestion(
-                text=kw,
-                type="keyword",
-                count=100 + len(kw) * 10
-            ))
-    
-    # 模拟分类建议
-    categories = ["数码产品", "图书教材", "生活用品", "服装配饰"]
-    for cat in categories:
-        if query in cat:
-            suggestions.append(SearchSuggestion(
-                text=cat,
-                type="category",
-                count=50
-            ))
-    
-    # 限制返回数量
-    suggestions = suggestions[:limit]
-    
-    return SearchAutoCompleteResponse(
-        suggestions=suggestions,
-        total=len(suggestions)
-    )
+    try:
+        result = SearchService.get_autocomplete(db, query, limit)
+        return SearchAutoCompleteResponse(
+            suggestions=[SearchSuggestion(**s) for s in result["suggestions"]],
+            total=result["total"]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"自动补全失败: {str(e)}"
+        )
 
 
 @router.get("/search", response_model=SearchResultResponse)
@@ -138,12 +120,12 @@ async def advanced_search(
     category: Optional[str] = Query(None, description="分类筛选"),
     min_price: Optional[float] = Query(None, ge=0, description="最低价格"),
     max_price: Optional[float] = Query(None, ge=0, description="最高价格"),
-    status: Optional[str] = Query(None, description="商品状态：在售/已售出"),
+    item_status: Optional[str] = Query("available", description="商品状态"),
     sort_by: str = Query("relevance", description="排序方式：relevance/price_asc/price_desc/time_desc/popular"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db_session),
-    current_user: Optional[dict] = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ) -> SearchResultResponse:
     """
     高级搜索
@@ -154,107 +136,38 @@ async def advanced_search(
     - 多种排序方式
     - 结果高亮
     """
-    # TODO: 实现真实的搜索逻辑
-    # 当前返回模拟数据
-    
-    # 保存搜索历史
-    if current_user:
-        # TODO: 保存到search_history表
-        pass
-    
-    # 模拟搜索结果
-    mock_items = [
-        {
-            "id": 1,
-            "title": f"iPhone 15 Pro Max 256GB 深空黑 - {q}",
-            "price": 8999.00,
-            "image": "https://via.placeholder.com/200",
-            "category": "数码产品",
-            "seller_name": "张三",
-            "seller_avatar": "https://via.placeholder.com/50",
-            "view_count": 1234,
-            "favorite_count": 56,
-            "status": "在售",
-            "created_at": datetime.utcnow(),
-            "highlight": f"全新未拆封，支持官方验机。搜索词：<em>{q}</em>"
-        },
-        {
-            "id": 2,
-            "title": f"MacBook Air M2 13寸 - {q}",
-            "price": 7499.00,
-            "image": "https://via.placeholder.com/200",
-            "category": "数码产品",
-            "seller_name": "李四",
-            "seller_avatar": None,
-            "view_count": 890,
-            "favorite_count": 34,
-            "status": "在售",
-            "created_at": datetime.utcnow(),
-            "highlight": f"9成新，仅用3个月。关键词：<em>{q}</em>"
-        },
-        {
-            "id": 3,
-            "title": f"AirPods Pro 2代 - {q}",
-            "price": 1599.00,
-            "image": "https://via.placeholder.com/200",
-            "category": "数码产品",
-            "seller_name": "王五",
-            "seller_avatar": "https://via.placeholder.com/50",
-            "view_count": 567,
-            "favorite_count": 23,
-            "status": "在售",
-            "created_at": datetime.utcnow(),
-            "highlight": f"原装正品，配件齐全。包含：<em>{q}</em>"
-        }
-    ]
-    
-    # 应用筛选条件
-    filtered_items = mock_items.copy()
-    
-    if category:
-        filtered_items = [item for item in filtered_items if item["category"] == category]
-    
-    if min_price is not None:
-        filtered_items = [item for item in filtered_items if item["price"] >= min_price]
-    
-    if max_price is not None:
-        filtered_items = [item for item in filtered_items if item["price"] <= max_price]
-    
-    if status:
-        filtered_items = [item for item in filtered_items if item["status"] == status]
-    
-    # 应用排序
-    if sort_by == "price_asc":
-        filtered_items.sort(key=lambda x: x["price"])
-    elif sort_by == "price_desc":
-        filtered_items.sort(key=lambda x: x["price"], reverse=True)
-    elif sort_by == "time_desc":
-        filtered_items.sort(key=lambda x: x["created_at"], reverse=True)
-    elif sort_by == "popular":
-        filtered_items.sort(key=lambda x: x["view_count"], reverse=True)
-    
-    # 分页
-    total = len(filtered_items)
-    start = (page - 1) * page_size
-    end = start + page_size
-    items = filtered_items[start:end]
-    
-    # 相关搜索建议
-    suggestions = [
-        f"{q} 二手",
-        f"{q} 全新",
-        f"{q} 配件",
-        f"便宜的{q}"
-    ]
-    
-    return SearchResultResponse(
-        items=[SearchResultItem(**item) for item in items],
-        total=total,
-        page=page,
-        page_size=page_size,
-        query=q,
-        suggestions=suggestions
-    )
+    try:
+        user_id = None
+        if current_user:
+            user_id = getattr(current_user, "id", None)
+        result = SearchService.search_items(
+            session=db,
+            keyword=q,
+            category=category,
+            min_price=min_price,
+            max_price=max_price,
+            status=item_status or "available",
+            sort_by=sort_by,
+            page=page,
+            page_size=page_size,
+            user_id=user_id
+        )
+        db.commit()  # 提交搜索历史和热门统计
+        
+        return SearchResultResponse(
+            items=[SearchResultItem(**item) for item in result["items"]],
+            total=result["total"],
+            page=result["page"],
+            page_size=result["page_size"],
+            query=result["query"],
+            suggestions=result["suggestions"]
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"搜索失败: {str(e)}"
+        )
 
 
 @router.get("/popular", response_model=PopularSearchResponse)
@@ -267,33 +180,24 @@ async def get_popular_searches(
     
     基于搜索频率统计，展示实时热搜榜
     """
-    # TODO: 从数据库统计真实的热门搜索
-    # 当前返回模拟数据
-    
-    popular_keywords = [
-        PopularSearch(keyword="iPhone 15", count=1234, trend="up"),
-        PopularSearch(keyword="MacBook", count=890, trend="stable"),
-        PopularSearch(keyword="AirPods", count=756, trend="up"),
-        PopularSearch(keyword="iPad", count=654, trend="down"),
-        PopularSearch(keyword="小米手机", count=543, trend="up"),
-        PopularSearch(keyword="华为手机", count=432, trend="stable"),
-        PopularSearch(keyword="机械键盘", count=321, trend="up"),
-        PopularSearch(keyword="显示器", count=287, trend="stable"),
-        PopularSearch(keyword="耳机", count=234, trend="down"),
-        PopularSearch(keyword="充电宝", count=198, trend="stable"),
-    ]
-    
-    return PopularSearchResponse(
-        keywords=popular_keywords[:limit],
-        updated_at=datetime.utcnow()
-    )
+    try:
+        result = SearchService.get_popular_searches(db, limit)
+        return PopularSearchResponse(
+            keywords=[PopularSearch(**kw) for kw in result["keywords"]],
+            updated_at=result["updated_at"]
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取热门搜索失败: {str(e)}"
+        )
 
 
 @router.get("/history", response_model=SearchHistoryResponse)
 async def get_search_history(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session)
 ) -> SearchHistoryResponse:
     """
@@ -301,81 +205,69 @@ async def get_search_history(
     
     需要登录
     """
-    # TODO: 从数据库读取真实的搜索历史
-    # 当前返回模拟数据
-    
-    user_id = current_user["id"]
-    
-    mock_history = [
-        SearchHistoryItem(
-            id=1,
-            keyword="iPhone 15",
-            searched_at=datetime.utcnow(),
-            result_count=45
-        ),
-        SearchHistoryItem(
-            id=2,
-            keyword="MacBook Pro",
-            searched_at=datetime.utcnow(),
-            result_count=23
-        ),
-        SearchHistoryItem(
-            id=3,
-            keyword="AirPods",
-            searched_at=datetime.utcnow(),
-            result_count=67
+    try:
+        user_id = getattr(current_user, "id")
+        result = SearchService.get_search_history(db, user_id, page, page_size)
+        return SearchHistoryResponse(
+            history=[SearchHistoryItem(**h) for h in result["history"]],
+            total=result["total"]
         )
-    ]
-    
-    # 分页
-    total = len(mock_history)
-    start = (page - 1) * page_size
-    end = start + page_size
-    history = mock_history[start:end]
-    
-    return SearchHistoryResponse(
-        history=history,
-        total=total
-    )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取搜索历史失败: {str(e)}"
+        )
 
 
 @router.delete("/history/{history_id}")
 async def delete_search_history(
     history_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
     删除单条搜索历史
     """
-    # TODO: 实现真实的删除逻辑
-    
-    return {
-        "success": True,
-        "message": "搜索历史已删除"
-    }
+    try:
+        user_id = getattr(current_user, "id")
+        result = SearchService.delete_search_history(db, user_id, history_id)
+        db.commit()
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"删除失败: {str(e)}"
+        )
 
 
 @router.delete("/history")
 async def clear_search_history(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
     清空搜索历史
     """
-    # TODO: 实现真实的清空逻辑
-    user_id = current_user["id"]
-    
-    return {
-        "success": True,
-        "message": "搜索历史已清空"
-    }
+    try:
+        user_id = getattr(current_user, "id")
+        result = SearchService.clear_search_history(db, user_id)
+        db.commit()
+        return result
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"清空失败: {str(e)}"
+        )
 
 
 @router.get("/suggestions")
 async def get_search_suggestions(
     query: str = Query(..., min_length=1),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
@@ -387,23 +279,11 @@ async def get_search_suggestions(
     - 相关商品标题
     - 分类匹配
     """
-    # TODO: 实现智能建议算法
-    
-    suggestions = {
-        "related_searches": [
-            f"{query} 二手",
-            f"{query} 全新",
-            f"便宜的{query}"
-        ],
-        "hot_keywords": [
-            "iPhone 15",
-            "MacBook",
-            "AirPods"
-        ],
-        "categories": [
-            "数码产品",
-            "图书教材"
-        ]
-    }
-    
-    return suggestions
+    try:
+        user_id = getattr(current_user, "id", None) if current_user else None
+        return SearchService.get_search_suggestions(db, query, user_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"获取建议失败: {str(e)}"
+        )

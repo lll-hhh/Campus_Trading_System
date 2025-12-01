@@ -66,13 +66,10 @@ class BatchDeleteRequest(BaseModel):
 
 def get_cart_item_response(cart_item: CartItem, item: Item, seller: User) -> CartItemResponse:
     """构建购物车商品响应对象"""
-    # 获取第一张图片
+    # 获取第一张图片 - 从 medias 关系获取
     first_image = None
-    if item.images:
-        if isinstance(item.images, list) and len(item.images) > 0:
-            first_image = item.images[0]
-        elif isinstance(item.images, str):
-            first_image = item.images.split(',')[0] if item.images else None
+    if hasattr(item, 'medias') and item.medias:
+        first_image = item.medias[0].url if item.medias else None
     
     return CartItemResponse(
         id=cart_item.id,

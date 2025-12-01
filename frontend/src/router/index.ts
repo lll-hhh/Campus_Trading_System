@@ -13,6 +13,7 @@ import OrdersView from '@/views/OrdersView.vue';
 import ProfileCenterView from '@/views/ProfileCenterView.vue';
 import UserProfileView from '@/views/UserProfileView.vue';
 import ShoppingCartView from '@/views/ShoppingCartView.vue';
+import CheckoutView from '@/views/CheckoutView.vue';
 import SearchHistoryView from '@/views/SearchHistoryView.vue';
 import UserSettingsView from '@/views/UserSettingsView.vue';
 import LoginView from '@/views/LoginView.vue';
@@ -96,6 +97,12 @@ const router = createRouter({
           name: 'cart',
           component: ShoppingCartView,
           meta: { title: '购物车', icon: '🛒', role: 'user', requiresAuth: true }
+        },
+        {
+          path: 'checkout',
+          name: 'checkout',
+          component: CheckoutView,
+          meta: { title: '订单确认', icon: '📦', role: 'user', requiresAuth: true }
         },
         {
           path: 'messages',

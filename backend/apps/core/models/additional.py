@@ -48,22 +48,17 @@ class SearchHistory(Base):
     __tablename__ = "search_history"
     
     id = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, nullable=False, comment="用户ID")
+    user_id = Column(BigInteger, comment="用户ID")
     keyword = Column(String(200), nullable=False, comment="搜索关键词")
     result_count = Column(Integer, default=0, comment="搜索结果数量")
-    search_type = Column(
-        Enum('keyword', 'category', 'advanced', name='search_type_enum'),
-        default='keyword',
-        comment="搜索类型"
-    )
-    filters = Column(JSON, comment="搜索过滤条件(JSON)")
+    clicked_item_id = Column(BigInteger, comment="点击的商品ID")
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     __table_args__ = (
         Index('idx_user_id', 'user_id'),
         Index('idx_keyword', 'keyword'),
         Index('idx_created', 'created_at'),
-        Index('idx_user_created', 'user_id', 'created_at'),
     )
 
 
@@ -85,6 +80,31 @@ class SearchTrending(Base):
     )
 
 
+# ==================== 消息模型 ====================
+
+class Message(Base, TimestampMixin):
+    """消息表"""
+    __tablename__ = "messages"
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    sender_id = Column(BigInteger, nullable=False, comment="发送者ID")
+    receiver_id = Column(BigInteger, nullable=False, comment="接收者ID")
+    item_id = Column(BigInteger, comment="关联商品ID")
+    content = Column(Text, nullable=False, comment="消息内容")
+    is_read = Column(Boolean, default=False, comment="是否已读")
+    is_deleted_by_sender = Column(Boolean, default=False, comment="发送者是否删除")
+    is_deleted_by_receiver = Column(Boolean, default=False, comment="接收者是否删除")
+    read_at = Column(DateTime, comment="阅读时间")
+    sync_version = Column(Integer, default=0)
+    
+    __table_args__ = (
+        Index('idx_sender_id', 'sender_id'),
+        Index('idx_receiver_id', 'receiver_id'),
+        Index('idx_item_id', 'item_id'),
+        Index('idx_created', 'created_at'),
+    )
+
+
 # ==================== 会话模型 ====================
 
 class Conversation(Base, TimestampMixin):
@@ -97,22 +117,17 @@ class Conversation(Base, TimestampMixin):
     item_id = Column(BigInteger, comment="关联商品ID（可选）")
     
     # 最后消息信息
-    last_message_id = Column(BigInteger, comment="最后一条消息ID")
-    last_message_content = Column(Text, comment="最后消息内容")
-    last_message_at = Column(DateTime, comment="最后消息时间")
+    last_message = Column(Text, comment="最后消息内容")
+    last_message_time = Column(DateTime, comment="最后消息时间")
     
     # 未读计数
-    user1_unread_count = Column(Integer, default=0, comment="用户1未读消息数")
-    user2_unread_count = Column(Integer, default=0, comment="用户2未读消息数")
-    
-    # 删除标记
-    user1_deleted = Column(Boolean, default=False, comment="用户1是否删除")
-    user2_deleted = Column(Boolean, default=False, comment="用户2是否删除")
+    unread_count_user1 = Column(Integer, default=0, comment="用户1未读消息数")
+    unread_count_user2 = Column(Integer, default=0, comment="用户2未读消息数")
     
     __table_args__ = (
-        UniqueConstraint('user1_id', 'user2_id', name='unique_users'),
-        Index('idx_user1', 'user1_id', 'user1_deleted'),
-        Index('idx_user2', 'user2_id', 'user2_deleted'),
+        UniqueConstraint('user1_id', 'user2_id', name='unique_conversation'),
+        Index('idx_user1', 'user1_id'),
+        Index('idx_user2', 'user2_id'),
         Index('idx_item', 'item_id'),
         Index('idx_updated', 'updated_at'),
     )

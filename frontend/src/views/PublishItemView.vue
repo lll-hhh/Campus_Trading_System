@@ -15,9 +15,11 @@ import {
   NRadio,
   NCheckbox,
   useMessage,
-  type UploadFileInfo
+  type UploadFileInfo,
+  type FormRules
 } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
+import { http } from '@/lib/http'
 
 const router = useRouter()
 const message = useMessage()
@@ -76,7 +78,7 @@ const contactMethodOptions = [
 ]
 
 // 表单验证规则
-const rules = {
+const rules: FormRules = {
   title: [
     { required: true, message: '请输入商品标题', trigger: 'blur' },
     { min: 5, max: 100, message: '标题长度为5-100个字符', trigger: 'blur' }
@@ -98,8 +100,16 @@ const rules = {
 }
 
 // 图片上传处理
-const handleUploadChange = ({ fileList: newFileList }: { fileList: UploadFileInfo[] }) => {
+const syncImagesFromFiles = (files: UploadFileInfo[]) => {
+  const urls = files
+    .map((file) => file.url || file.thumbnailUrl)
+    .filter((url): url is string => !!url)
+  formData.images = urls
+}
+
+const handleUploadChange = (newFileList: UploadFileInfo[]) => {
   fileList.value = newFileList
+  syncImagesFromFiles(newFileList)
 }
 
 const handleBeforeUpload = (data: { file: UploadFileInfo }) => {
@@ -123,11 +133,19 @@ const customUpload = ({ file, onFinish, onError }: any) => {
   // TODO: 实际上传到服务器
   // 这里模拟上传过程
   setTimeout(() => {
-    // 创建本地预览URL
-    const url = URL.createObjectURL(file.file)
-    formData.images.push(url)
-    onFinish()
-    message.success('图片上传成功')
+    try {
+      if (file.file) {
+        const url = URL.createObjectURL(file.file as File)
+        file.url = url
+        formData.images = Array.from(new Set([...formData.images, url]))
+      }
+      onFinish()
+      message.success('图片上传成功')
+    } catch (error) {
+      console.error('图片上传失败', error)
+      onError()
+      message.error('图片上传失败')
+    }
   }, 1000)
 }
 
@@ -140,7 +158,7 @@ const handleSubmit = async () => {
   }
   
   // 验证图片
-  if (fileList.value.length === 0) {
+  if (!formData.images || formData.images.length === 0) {
     message.warning('请至少上传一张商品图片')
     return
   }
@@ -148,13 +166,27 @@ const handleSubmit = async () => {
   loading.value = true
   
   try {
-    // TODO: 调用API发布商品
-    await new Promise(resolve => setTimeout(resolve, 1500))
+    await http.post('/items', {
+      title: formData.title,
+      description: formData.description,
+      price: formData.price,
+      category: formData.category,
+      condition: formData.condition,
+      status: 'available',
+      images: formData.images,
+      original_price: formData.originalPrice,
+      location: formData.location,
+      contact_method: formData.contactMethod,
+      phone: formData.phone,
+      wechat: formData.wechat,
+      allow_bargain: formData.allowBargain,
+      accept_return: formData.acceptReturn
+    })
     
     message.success('商品发布成功！')
     router.push('/my-items')
   } catch (error: any) {
-    message.error(error.message || '发布失败，请重试')
+    message.error(error.response?.data?.detail || error.message || '发布失败，请重试')
   } finally {
     loading.value = false
   }
