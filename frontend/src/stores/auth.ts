@@ -101,6 +101,16 @@ export const useAuthStore = defineStore('auth', {
       this.user = null;
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(USER_KEY);
+    },
+
+    // 监听 localStorage 变化，更新状态
+    initStorageListener() {
+      window.addEventListener('storage', (event) => {
+        if (event.key === STORAGE_KEY || event.key === USER_KEY) {
+          this.token = getSafeStoredToken();
+          this.user = getSafeStoredUser();
+        }
+      });
     }
   }
 });

@@ -117,7 +117,7 @@ const userLinks = [
   { label: '消息', to: '/messages', icon: '💬' },
   { label: '我的商品', to: '/my-items', icon: '📦' },
   { label: '我的订单', to: '/orders', icon: '📝' },
-  { label: '个人中心', to: '/profile', icon: '👤' }
+  { label: '个人中心', to: '/user/profile', icon: '👤' }
 ]
 
 // 管理员导航

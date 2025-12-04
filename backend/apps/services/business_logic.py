@@ -28,13 +28,44 @@ class ItemService:
         condition: str = "good"
     ) -> Item:
         """创建商品"""
+        # 首先尝试将slug转换为category_name
+        slug_to_name_map = {
+            "electronics": "数码产品",
+            "books": "图书教材", 
+            "daily": "生活用品",
+            "sports": "运动器材",
+            "fashion": "服装鞋包",
+            "beauty": "美妆护肤",
+            "other": "其他闲置",
+            # PublishItemView使用的slug
+            "digital": "数码产品",
+            "clothing": "服装鞋包",
+            "entertainment": "其他闲置",
+            "stationery": "其他闲置",
+            "music": "其他闲置",
+            "bicycle": "运动器材"
+        }
+        
+        # 如果输入的是slug，转换为name
+        actual_category_name = slug_to_name_map.get(category_name, category_name)
+        
         # 获取或创建分类
         category = session.execute(
-            select(Category).where(Category.name == category_name)
+            select(Category).where(Category.name == actual_category_name)
         ).scalar_one_or_none()
         
         if not category:
-            category = Category(name=category_name, slug=category_name.lower(), description=f"{category_name}分类")
+            category_slug = {
+                "数码产品": "electronics",
+                "图书教材": "books",
+                "生活用品": "daily", 
+                "运动器材": "sports",
+                "服装鞋包": "fashion",
+                "美妆护肤": "beauty",
+                "其他闲置": "other"
+            }.get(actual_category_name, actual_category_name.lower())
+            
+            category = Category(name=actual_category_name, slug=category_slug, description=f"{actual_category_name}分类")
             session.add(category)
             session.flush()
         
@@ -100,7 +131,7 @@ class ItemService:
         # 分类过滤
         if category:
             cat = session.execute(
-                select(Category).where(Category.name == category)
+                select(Category).where(Category.slug == category)
             ).scalar_one_or_none()
             if cat:
                 conditions.append(Item.category_id == cat.id)
@@ -175,7 +206,17 @@ class ItemService:
         # 更新字段
         for key, value in kwargs.items():
             if hasattr(item, key) and value is not None:
-                setattr(item, key, value)
+                # 特殊处理 condition 字段，映射到 condition_type
+                if key == 'condition':
+                    condition_mapping = {
+                        'new': '全新',
+                        'good': '9成新', 
+                        'fair': '二手',
+                        'poor': '二手'
+                    }
+                    item.condition_type = condition_mapping.get(value, '二手')
+                else:
+                    setattr(item, key, value)
         
         session.commit()
         session.refresh(item)

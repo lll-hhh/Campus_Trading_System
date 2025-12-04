@@ -17,7 +17,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import type { UploadFileInfo } from 'naive-ui'
-import api from '../lib/http'
+import { http as api } from '@/lib/http'
 
 const message = useMessage()
 
@@ -26,8 +26,10 @@ const profileForm = ref({
   username: '张三',
   email: 'zhangsan@example.com',
   student_id: 'S10001',
-  phone: '138****5678',
-  bio: '热爱生活，喜欢分享',
+  phone: '',
+  bio: '',
+  display_name: '',
+  campus: ''
 })
 
 // 密码修改
@@ -56,6 +58,29 @@ const notificationSettings = ref({
 
 const avatarUrl = ref('')
 
+// 加载用户资料
+const loadUserProfile = async () => {
+  try {
+    const response = await api.get('/auth/profile')
+    const profile = response.data
+    
+    profileForm.value = {
+      username: '当前用户', // 出于安全考虑不显示真实用户名
+      email: '已登录用户', // 出于安全考虑不显示真实邮箱
+      student_id: '已认证', // 出于安全考虑不显示真实学号
+      phone: profile.phone || '',
+      bio: profile.bio || '',
+      display_name: profile.display_name || '',
+      campus: profile.campus || ''
+    }
+    
+    avatarUrl.value = profile.avatar_url || ''
+  } catch (error: any) {
+    console.error('加载用户资料失败:', error)
+    message.error('加载用户资料失败')
+  }
+}
+
 const handleAvatarUpload = (options: { file: UploadFileInfo }) => {
   message.info('上传头像功能开发中...')
   return
@@ -63,10 +88,15 @@ const handleAvatarUpload = (options: { file: UploadFileInfo }) => {
 
 const updateProfile = async () => {
   try {
-    // await api.put('/api/users/profile', profileForm.value)
+    await api.put('/auth/profile', {
+      display_name: profileForm.value.display_name,
+      phone: profileForm.value.phone,
+      campus: profileForm.value.campus,
+      bio: profileForm.value.bio
+    })
     message.success('个人信息更新成功')
-  } catch (error) {
-    message.error('更新失败')
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '更新失败')
   }
 }
 
@@ -77,15 +107,18 @@ const updatePassword = async () => {
   }
   
   try {
-    // await api.put('/api/users/password', passwordForm.value)
+    await api.put('/auth/password', {
+      old_password: passwordForm.value.old_password,
+      new_password: passwordForm.value.new_password
+    })
     message.success('密码修改成功')
     passwordForm.value = {
       old_password: '',
       new_password: '',
       confirm_password: '',
     }
-  } catch (error) {
-    message.error('密码修改失败')
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '密码修改失败')
   }
 }
 
@@ -106,6 +139,13 @@ const updateNotifications = async () => {
     message.error('更新失败')
   }
 }
+
+// 页面加载时获取用户资料
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  loadUserProfile()
+})
 </script>
 
 <template>
@@ -135,8 +175,12 @@ const updateNotifications = async () => {
             </div>
 
             <n-form :model="profileForm" label-placement="left" :label-width="100">
-              <n-form-item label="用户名" path="username">
-                <n-input v-model:value="profileForm.username" placeholder="请输入用户名" />
+              <n-form-item label="显示名称" path="display_name">
+                <n-input v-model:value="profileForm.display_name" placeholder="请输入显示名称" />
+              </n-form-item>
+
+              <n-form-item label="校区" path="campus">
+                <n-input v-model:value="profileForm.campus" placeholder="请输入校区" />
               </n-form-item>
 
               <n-form-item label="邮箱" path="email">

@@ -132,11 +132,12 @@ const loadItemDetail = async () => {
   loading.value = true
   try {
     const response = await http.get(`/items/${itemId.value}`)
+    const normalizedImages = normalizeImages(response.data.images)
     item.value = {
       ...response.data,
-      images: response.data.images || []
+      images: normalizedImages
     }
-    currentItem.value = { ...item.value, isFavorited: isFavorited.value }
+    currentItem.value = { ...item.value, images: normalizedImages, isFavorited: isFavorited.value }
     
     // 如果没有原价，设置为当前价格的1.2倍（模拟）
     if (!item.value.originalPrice) {
@@ -220,11 +221,13 @@ const loadSimilarItems = async () => {
     similarItems.value = response.data.items
       .filter((i: ItemDetail) => i.id !== item.value.id)
       .slice(0, 4)
-      .map((i: ItemDetail) => ({
-        ...i,
-        images: i.images || [],
-        image: i.images?.[0] || `https://picsum.photos/200/200?random=${i.id}`
-      }))
+      .map((i: ItemDetail) => {
+        const normalized = normalizeImages(i.images)
+        return {
+          ...i,
+          images: normalized
+        }
+      })
   } catch (error) {
     console.error('加载相似商品失败:', error)
   }
@@ -344,7 +347,7 @@ const handleToggleFavorite = async (targetItem?: { id: number; isFavorited?: boo
 const viewItemDetail = (targetItem: ItemDetail) => {
   currentItem.value = {
     ...targetItem,
-    images: targetItem.images || []
+    images: normalizeImages(targetItem.images)
   }
   showDetailDialog.value = true
 }
@@ -405,6 +408,66 @@ const handleViewSimilarItem = (id: number) => {
   router.push(`/item/${id}`)
 }
 
+// 本地占位图
+const PLACEHOLDER_IMAGES = [
+  '/demo-images/placeholder1.jpg',
+  '/demo-images/placeholder2.jpg',
+  '/demo-images/placeholder3.jpg',
+  '/demo-images/placeholder4.jpg',
+  '/demo-images/placeholder5.jpg',
+  '/demo-images/placeholder6.jpg',
+]
+
+const getPlaceholderImage = (itemId: number) => {
+  if (PLACEHOLDER_IMAGES.length === 0) return ''
+  const index = Math.abs(itemId) % PLACEHOLDER_IMAGES.length
+  return PLACEHOLDER_IMAGES[index]
+}
+
+const normalizeImages = (raw: unknown): string[] => {
+  if (Array.isArray(raw)) {
+    return raw.filter((path): path is string => typeof path === 'string')
+  }
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw)
+      if (Array.isArray(parsed)) {
+        return parsed.filter((path): path is string => typeof path === 'string')
+      }
+    } catch (_err) {
+      // ignore JSON parse errors
+    }
+    return raw ? [raw] : []
+  }
+  return []
+}
+
+const buildDisplayImages = (images: string[] | string | undefined | null, fallbackId: number) => {
+  const normalized = normalizeImages(images)
+  if (normalized.length > 0) {
+    return normalized.map((img) => getFullImageUrl(img))
+  }
+  return [getPlaceholderImage(fallbackId)]
+}
+
+// 将相对图片URL转换为完整URL
+const getFullImageUrl = (relativeUrl: string) => {
+  if (!relativeUrl) return ''
+  if (/^https?:/i.test(relativeUrl) || relativeUrl.startsWith('data:')) {
+    return relativeUrl
+  }
+  const serverUrl = window.location.origin
+  return `${serverUrl}${relativeUrl}`
+}
+
+// 获取商品图片URL，支持随机占位图
+const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
+  return buildDisplayImages(images, itemId || 0)[0]
+}
+
+const itemDisplayImages = computed(() => buildDisplayImages(item.value.images, item.value.id))
+const dialogDisplayImages = computed(() => buildDisplayImages(currentItem.value.images, currentItem.value.id))
+
 // 格式化时间
 const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
@@ -434,15 +497,9 @@ onMounted(async () => {
           <n-grid-item>
             <n-carousel autoplay show-arrow>
               <img
-                v-for="(image, index) in item.images"
+                v-for="(image, index) in itemDisplayImages"
                 :key="index"
-                :src="image || `https://picsum.photos/800/600?random=${index}`"
-                class="carousel-img"
-              />
-              <!-- 如果没有图片，显示占位图 -->
-              <img
-                v-if="item.images.length === 0"
-                src="https://via.placeholder.com/800x600?text=No+Image"
+                :src="image"
                 class="carousel-img"
               />
             </n-carousel>
@@ -605,7 +662,7 @@ onMounted(async () => {
               @click="handleViewSimilarItem(similarItem.id)"
             >
               <img 
-                :src="(similarItem as any).image || similarItem.images?.[0] || `https://picsum.photos/200/200?random=${similarItem.id}`" 
+                :src="getItemImageUrl(similarItem.images, similarItem.id)" 
                 class="similar-item-img" 
               />
               <div class="similar-item-title">{{ similarItem.title }}</div>
@@ -646,15 +703,9 @@ onMounted(async () => {
           <!-- 图片轮播 -->
           <n-carousel autoplay show-arrow>
             <img
-              v-for="(image, index) in currentItem.images"
+              v-for="(image, index) in dialogDisplayImages"
               :key="index"
-              :src="image || `https://picsum.photos/800/600?random=${index}`"
-              class="carousel-img"
-            />
-            <!-- 如果没有图片，显示占位图 -->
-            <img
-              v-if="currentItem.images.length === 0"
-              src="https://via.placeholder.com/800x600?text=No+Image"
+              :src="image"
               class="carousel-img"
             />
           </n-carousel>

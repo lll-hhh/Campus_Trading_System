@@ -11,12 +11,10 @@
                   <div class="flex gap-4">
                     <div class="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                       <img
-                        v-if="item.images?.length"
-                        :src="item.images[0]"
+                        :src="getItemImageUrl(item.images, item.id)"
                         :alt="item.title"
                         class="w-full h-full object-cover"
                       />
-                      <span v-else class="text-4xl">{{ item.emoji }}</span>
                     </div>
                     <div class="flex-1 min-w-0">
                       <h3 class="font-bold mb-1 truncate">{{ item.title }}</h3>
@@ -45,12 +43,10 @@
                   <div class="flex gap-4">
                     <div class="w-24 h-24 bg-gray-200 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                       <img
-                        v-if="item.images?.length"
-                        :src="item.images[0]"
+                        :src="getItemImageUrl(item.images, item.id)"
                         :alt="item.title"
                         class="w-full h-full object-cover opacity-80"
                       />
-                      <span v-else class="text-4xl opacity-50">{{ item.emoji }}</span>
                     </div>
                     <div class="flex-1">
                       <h3 class="font-bold mb-1">{{ item.title }}</h3>
@@ -75,12 +71,10 @@
                   <div class="flex gap-4">
                     <div class="w-24 h-24 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
                       <img
-                        v-if="item.images?.length"
-                        :src="item.images[0]"
+                        :src="getItemImageUrl(item.images, item.id)"
                         :alt="item.title"
                         class="w-full h-full object-cover grayscale"
                       />
-                      <span v-else class="text-4xl opacity-40">{{ item.emoji }}</span>
                     </div>
                     <div class="flex-1">
                       <h3 class="font-bold mb-1">{{ item.title }}</h3>
@@ -102,12 +96,62 @@
         </n-spin>
       </div>
     </div>
+
+    <!-- Edit Item Modal -->
+    <n-modal
+      v-model:show="editModalVisible"
+      preset="card"
+      title="编辑商品"
+      size="huge"
+      :bordered="false"
+      :segmented="false"
+    >
+      <n-form :model="editForm" label-placement="top">
+        <n-form-item label="商品标题" path="title">
+          <n-input v-model:value="editForm.title" placeholder="请输入商品标题" />
+        </n-form-item>
+        
+        <n-form-item label="商品描述" path="description">
+          <n-input 
+            v-model:value="editForm.description" 
+            type="textarea" 
+            placeholder="请输入商品描述"
+            :autosize="{ minRows: 3, maxRows: 6 }"
+          />
+        </n-form-item>
+        
+        <n-form-item label="价格" path="price">
+          <n-input-number 
+            v-model:value="editForm.price" 
+            :min="0" 
+            :precision="2"
+            placeholder="请输入价格"
+            class="w-full"
+          />
+        </n-form-item>
+        
+        <n-form-item label="商品成色" path="condition">
+          <n-select 
+            v-model:value="editForm.condition" 
+            :options="conditionOptions"
+            placeholder="请选择商品成色"
+          />
+        </n-form-item>
+      </n-form>
+      
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="cancelEdit">取消</n-button>
+          <n-button type="primary" @click="saveEdit">保存</n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { NButton, NCard, NSpin, NTabPane, NTabs, NTag, useMessage } from 'naive-ui'
+import { NButton, NCard, NSpin, NTabPane, NTabs, NTag, useMessage, NModal, NForm, NFormItem, NInput, NInputNumber, NSelect, NSpace } from 'naive-ui'
 import { http } from '@/lib/http'
 
 type TabKey = 'selling' | 'sold' | 'removed'
@@ -139,10 +183,27 @@ const categoryEmojiMap: Record<string, string> = {
   books: '📚',
   daily: '🛋️',
   sports: '⚽',
-  fashion: '👔',
+  fashion: '👕',
   beauty: '💄',
   other: '📦'
 }
+
+// Edit modal state
+const editModalVisible = ref(false)
+const editingItem = ref<any>(null)
+const editForm = reactive({
+  title: '',
+  description: '',
+  price: 0,
+  condition: 'good'
+})
+
+const conditionOptions = [
+  { label: '全新', value: 'new' },
+  { label: '良好', value: 'good' },
+  { label: '一般', value: 'fair' },
+  { label: '较差', value: 'poor' }
+]
 
 const formatItems = (items: any[]) => {
   return items.map((item) => ({
@@ -188,7 +249,40 @@ const refreshTab = async (tabKey: TabKey) => {
 }
 
 const editItem = (item: any) => {
-  message.info(`后续将支持编辑「${item.title}」`)
+  editingItem.value = item
+  editForm.title = item.title
+  editForm.description = item.description || ''
+  editForm.price = item.price
+  editForm.condition = item.condition || 'good'
+  editModalVisible.value = true
+}
+
+const saveEdit = async () => {
+  if (!editingItem.value) return
+  
+  try {
+    await http.put(`/items/${editingItem.value.id}`, {
+      title: editForm.title,
+      description: editForm.description,
+      price: editForm.price,
+      condition: editForm.condition
+    })
+    
+    message.success('商品信息已更新')
+    editModalVisible.value = false
+    editingItem.value = null
+    
+    // Refresh the current tab
+    await refreshTab(activeTab.value)
+  } catch (error: any) {
+    console.error('编辑失败:', error)
+    message.error('编辑失败，请重试')
+  }
+}
+
+const cancelEdit = () => {
+  editModalVisible.value = false
+  editingItem.value = null
 }
 
 const removeItem = async (item: any) => {
@@ -205,7 +299,59 @@ const removeItem = async (item: any) => {
 
 const sellingItems = computed(() => itemsByTab.selling)
 const soldItems = computed(() => itemsByTab.sold)
-const removedItems = computed(() => itemsByTab.removed)
+const removedItems = computed(() => itemsByTab.sold)
+
+// 本地占位图列表
+const PLACEHOLDER_IMAGES = [
+  '/demo-images/placeholder1.jpg',
+  '/demo-images/placeholder2.jpg',
+  '/demo-images/placeholder3.jpg',
+  '/demo-images/placeholder4.jpg',
+  '/demo-images/placeholder5.jpg',
+  '/demo-images/placeholder6.jpg',
+]
+
+const getPlaceholderImage = (itemId: number) => {
+  if (PLACEHOLDER_IMAGES.length === 0) return ''
+  const index = Math.abs(itemId) % PLACEHOLDER_IMAGES.length
+  return PLACEHOLDER_IMAGES[index]
+}
+
+// 将相对图片URL转换为完整URL
+const getFullImageUrl = (relativeUrl: string) => {
+  if (!relativeUrl) return ''
+  if (/^https?:/i.test(relativeUrl) || relativeUrl.startsWith('data:')) {
+    return relativeUrl
+  }
+  const serverUrl = window.location.origin
+  return `${serverUrl}${relativeUrl}`
+}
+
+// 获取商品图片URL，支持随机占位图
+const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
+  if (Array.isArray(images) && images.length > 0) {
+    return getFullImageUrl(images[0])
+  }
+
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return getFullImageUrl(parsed[0])
+      }
+    } catch (err) {
+      // ignore
+    }
+    if (images.startsWith('http') || images.startsWith('data:')) {
+      return images
+    }
+    if (images.startsWith('/')) {
+      return getFullImageUrl(images)
+    }
+  }
+
+  return getPlaceholderImage(itemId || 0)
+}
 
 watch(activeTab, (tab) => {
   loadItems(tab)

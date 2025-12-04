@@ -20,6 +20,22 @@ class ItemPayload(BaseModel):
     description: str | None = None
 
 
+class ItemUpdatePayload(BaseModel):
+    """Payload for partial item updates."""
+
+    title: str | None = None
+    description: str | None = None
+    price: float | None = None
+    status: str | None = None
+    condition: str | None = None
+
+
+class ItemStatusUpdatePayload(BaseModel):
+    """Payload for updating item status."""
+
+    status: str = Field(..., description="Item status: available, reserved, sold, deleted")
+
+
 @router.get("/items")
 def list_items(limit: int = 20) -> list[dict[str, str | float | int | None]]:
     """Return latest listings from the primary database."""
@@ -82,15 +98,39 @@ def create_item(payload: ItemPayload) -> dict[str, str | int | float]:
 
 
 @router.put("/items/{item_id}", status_code=200)
-def update_item(item_id: int, payload: ItemPayload) -> dict[str, str | int]:
+def update_item(item_id: int, payload: ItemUpdatePayload) -> dict[str, str | int]:
     """Update an item with automatic sync to all 4 databases."""
     
     with db_manager.session_scope("mysql") as session:
-        update_data = {
-            'title': payload.title,
-            'description': payload.description or "",
-            'price': payload.price,
-        }
+        update_data = {}
+        
+        if payload.title is not None:
+            update_data['title'] = payload.title
+        if payload.description is not None:
+            update_data['description'] = payload.description
+        if payload.price is not None:
+            update_data['price'] = payload.price
+        
+        # Handle status mapping from frontend values to database values
+        if payload.status is not None:
+            if payload.status == 'removed':
+                update_data['status'] = 'deleted'
+            else:
+                update_data['status'] = payload.status
+        
+        # Handle condition mapping from frontend values to database condition_type
+        if payload.condition is not None:
+            condition_map = {
+                'new': '全新',
+                'like-new': '99新',
+                'excellent': '95新',
+                'good': '9成新',
+                'used': '二手'
+            }
+            update_data['condition_type'] = condition_map.get(payload.condition, payload.condition)
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No fields to update")
         
         rowcount = db_operation_service.update_with_sync(
             session=session,

@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User
+from apps.core.models import User, UserProfile
 from apps.core.security import create_access_token, verify_password, get_password_hash
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -188,4 +188,113 @@ def read_me(user: User = Depends(get_current_user)) -> TokenResponse:
 def logout():
     """用户登出 - JWT是无状态的，客户端删除token即可"""
     return {"message": "登出成功"}
+
+
+# ==================== 用户资料管理 ====================
+
+class UserProfileUpdateRequest(BaseModel):
+    """用户资料更新请求"""
+    display_name: Optional[str] = Field(None, min_length=1, max_length=120)
+    phone: Optional[str] = Field(None, max_length=32)
+    campus: Optional[str] = Field(None, max_length=120)
+    bio: Optional[str] = Field(None, max_length=500)
+
+
+class UserProfileResponse(BaseModel):
+    """用户资料响应"""
+    user_id: int
+    display_name: str
+    phone: Optional[str] = None
+    campus: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+@router.get("/profile", response_model=UserProfileResponse)
+def get_user_profile(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """获取用户资料"""
+    profile = session.get(UserProfile, current_user.id)
+    if not profile:
+        # 如果没有资料，创建一个默认的
+        profile = UserProfile(
+            user_id=current_user.id,
+            display_name=current_user.username
+        )
+        session.add(profile)
+        session.commit()
+        session.refresh(profile)
+    
+    return UserProfileResponse(
+        user_id=profile.user_id,
+        display_name=profile.display_name,
+        phone=profile.phone,
+        campus=profile.campus,
+        bio=profile.bio,
+        avatar_url=profile.avatar_url
+    )
+
+
+@router.put("/profile", response_model=UserProfileResponse)
+def update_user_profile(
+    payload: UserProfileUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """更新用户资料"""
+    profile = session.get(UserProfile, current_user.id)
+    if not profile:
+        profile = UserProfile(
+            user_id=current_user.id,
+            display_name=current_user.username
+        )
+        session.add(profile)
+    
+    # 更新字段
+    if payload.display_name is not None:
+        profile.display_name = payload.display_name
+    if payload.phone is not None:
+        profile.phone = payload.phone
+    if payload.campus is not None:
+        profile.campus = payload.campus
+    if payload.bio is not None:
+        profile.bio = payload.bio
+    
+    session.commit()
+    session.refresh(profile)
+    
+    return UserProfileResponse(
+        user_id=profile.user_id,
+        display_name=profile.display_name,
+        phone=profile.phone,
+        campus=profile.campus,
+        bio=profile.bio,
+        avatar_url=profile.avatar_url
+    )
+
+
+class ChangePasswordRequest(BaseModel):
+    """修改密码请求"""
+    old_password: str
+    new_password: str = Field(..., min_length=6)
+
+
+@router.put("/password")
+def change_password(
+    payload: ChangePasswordRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session)
+):
+    """修改密码"""
+    # 验证旧密码
+    if not verify_password(payload.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="旧密码错误")
+    
+    # 更新密码
+    current_user.hashed_password = get_password_hash(payload.new_password)
+    session.commit()
+    
+    return {"message": "密码修改成功"}
 

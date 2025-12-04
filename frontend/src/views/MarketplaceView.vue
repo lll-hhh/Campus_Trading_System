@@ -4,18 +4,86 @@
     <div class="search-bar bg-gradient-to-r from-orange-400 to-orange-500 p-4 rounded-lg mb-4">
       <div class="flex items-center gap-4 max-w-4xl mx-auto">
         <div class="flex-1">
-          <n-input
+          <n-auto-complete
             v-model:value="searchKeyword"
+            :options="autocompleteOptions"
+            :loading="searchLoading"
             placeholder="搜索宝贝、店铺..."
             size="large"
-            round
             clearable
+            @select="handleSelect"
+            @update:value="handleInput"
             @keyup.enter="handleSearch"
           >
             <template #prefix>
               <span>🔍</span>
             </template>
-          </n-input>
+          </n-auto-complete>
+
+          <!-- 热门搜索下拉面板 -->
+          <transition name="fade">
+            <div v-if="showHotSearches && !searchKeyword" class="hot-searches-panel">
+              <div class="panel-header">
+                <n-space justify="space-between">
+                  <span class="title">🔥 热门搜索</span>
+                  <n-button text size="small" @click="showHotSearches = false">
+                    <template #icon>
+                      <n-icon><CloseOutline /></n-icon>
+                    </template>
+                  </n-button>
+                </n-space>
+              </div>
+              <div class="panel-content">
+                <n-space>
+                  <n-tag
+                    v-for="(item, index) in hotSearches"
+                    :key="index"
+                    :type="getTrendType(item.trend)"
+                    :bordered="false"
+                    style="cursor: pointer"
+                    @click="selectHotSearch(item.keyword)"
+                  >
+                    {{ item.keyword }}
+                  </n-tag>
+                </n-space>
+              </div>
+            </div>
+          </transition>
+
+          <!-- 搜索历史下拉面板 -->
+          <transition name="fade">
+            <div v-if="showSearchHistory && !searchKeyword" class="search-history-panel">
+              <div class="panel-header">
+                <n-space justify="space-between">
+                  <span class="title">🕒 搜索历史</span>
+                  <n-space>
+                    <n-button text size="small" @click="clearSearchHistory">
+                      清空
+                    </n-button>
+                    <n-button text size="small" @click="showSearchHistory = false">
+                      <template #icon>
+                        <n-icon><CloseOutline /></n-icon>
+                      </template>
+                    </n-button>
+                  </n-space>
+                </n-space>
+              </div>
+              <div class="panel-content">
+                <n-list hoverable clickable>
+                  <n-list-item
+                    v-for="(item, index) in searchHistory"
+                    :key="index"
+                    @click="selectHistoryItem(item)"
+                  >
+                    <n-space>
+                      <n-icon><TimeOutline /></n-icon>
+                      <span>{{ item }}</span>
+                    </n-space>
+                  </n-list-item>
+                </n-list>
+              </div>
+            </div>
+          </transition>
         </div>
         <n-button type="warning" size="large" @click="handleSearch">
           搜索
@@ -130,9 +198,10 @@
           <!-- 商品图片 -->
           <div class="relative">
             <img
-              :src="item.images[0]"
+              :src="getItemImageUrl(item.images, item.id)"
               :alt="item.title"
               class="w-full h-48 object-cover rounded-t-lg"
+              loading="lazy"
             />
             <!-- 标签 -->
             <div class="absolute top-2 left-2 flex gap-1">
@@ -140,7 +209,7 @@
               <n-tag v-if="item.is_shipped" type="info" size="small">包邮</n-tag>
             </div>
             <!-- 图片数量 -->
-            <div v-if="item.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
+            <div v-if="Array.isArray(item.images) && item.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
               📷 {{ item.images.length }}
             </div>
           </div>
@@ -249,11 +318,11 @@
           <n-select
             v-model:value="newItem.condition"
             :options="[
-              { label: '全新', value: '全新' },
-              { label: '99新', value: '99新' },
-              { label: '95新', value: '95新' },
-              { label: '9成新', value: '9成新' },
-              { label: '二手', value: '二手' }
+              { label: '全新', value: 'new' },
+              { label: '99新', value: 'like-new' },
+              { label: '95新', value: 'excellent' },
+              { label: '9成新', value: 'good' },
+              { label: '二手', value: 'used' }
             ]"
           />
         </n-form-item>
@@ -265,6 +334,39 @@
             placeholder="详细描述商品情况..."
             :rows="4"
           />
+        </n-form-item>
+        
+        <n-form-item label="商品图片">
+          <n-upload
+            v-model:file-list="newItem.images"
+            :max="5"
+            :accept="'.jpg,.jpeg,.png,.gif'"
+            :show-file-list="true"
+            :show-preview-button="true"
+            :show-remove-button="true"
+            :show-download-button="false"
+            :show-retry-button="false"
+            list-type="image-card"
+            :custom-request="customUpload"
+            @before-upload="handleBeforeUpload"
+            @remove="handleRemoveImage"
+          >
+            <n-upload-dragger>
+              <div style="margin-bottom: 12px">
+                <n-icon size="48" :depth="3">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z" />
+                  </svg>
+                </n-icon>
+              </div>
+              <n-text style="font-size: 14px; text-align: center;">
+                点击或拖拽上传图片
+              </n-text>
+              <n-p depth="3" style="margin: 8px 0 0 0; font-size: 12px; text-align: center; line-height: 1.4;">
+                支持 JPG、PNG、GIF 格式<br>最多 5 张图片
+              </n-p>
+            </n-upload-dragger>
+          </n-upload>
         </n-form-item>
         
         <n-form-item label="交易地点">
@@ -292,9 +394,9 @@
         <div class="w-1/2">
           <n-carousel show-arrow>
             <img
-              v-for="(img, idx) in currentItem.images"
+              v-for="(img, idx) in (currentItem.images?.length ? currentItem.images : ['placeholder'])"
               :key="idx"
-              :src="img"
+              :src="currentItem.images?.length ? getFullImageUrl(img) : getItemImageUrl([], currentItem.id)"
               class="w-full h-80 object-cover rounded"
             />
           </n-carousel>
@@ -370,7 +472,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   NCard,
   NSpace,
@@ -396,8 +498,10 @@ import {
 } from 'naive-ui'
 import { useAuthStore } from '@/stores/auth'
 import { http } from '@/lib/http'
+import { CloseOutline, TimeOutline } from '@vicons/ionicons5'
 
 const router = useRouter()
+const route = useRoute()
 const message = useMessage()
 const authStore = useAuthStore()
 
@@ -415,6 +519,15 @@ const totalCount = ref(0)
 // 商品列表 - 改为响应式数据
 const items = ref<any[]>([])
 const totalItems = ref(0)
+
+// 搜索相关状态
+const autocompleteOptions = ref<any[]>([])
+const searchLoading = ref(false)
+const showHotSearches = ref(false)
+const showSearchHistory = ref(false)
+const hotSearches = ref<any[]>([])
+const searchHistory = ref<string[]>([])
+let debounceTimer: number | null = null
 
 // 分类数据
 const categories = ref([
@@ -583,10 +696,179 @@ const loadCategoryStats = async () => {
 
 // ========== 用户操作 ==========
 
+// 搜索相关方法
+const handleInput = (value: string) => {
+  if (!value) {
+    autocompleteOptions.value = []
+    showHotSearches.value = true
+    showSearchHistory.value = false
+    return
+  }
+
+  showHotSearches.value = false
+  showSearchHistory.value = false
+
+  // 防抖处理
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+  }
+
+  debounceTimer = setTimeout(() => {
+    fetchAutocomplete(value)
+  }, 300)
+}
+
+const fetchAutocomplete = async (query: string) => {
+  if (!query || query.length < 1) {
+    return
+  }
+
+  searchLoading.value = true
+
+  try {
+    // TODO: 调用真实的自动补全API
+    // const response = await fetch(`/api/v1/search/autocomplete?query=${query}`)
+    // const data = await response.json()
+
+    // 模拟API调用
+    await new Promise(resolve => setTimeout(resolve, 200))
+
+    // 模拟数据
+    const mockSuggestions = [
+      { text: `${query} Pro`, type: 'keyword', count: 100 },
+      { text: `${query} Max`, type: 'keyword', count: 80 },
+      { text: `${query} 二手`, type: 'keyword', count: 60 },
+      { text: `${query} 全新`, type: 'keyword', count: 50 },
+      { text: '数码产品', type: 'category', count: 200 }
+    ]
+
+    // 转换为autocomplete选项格式
+    autocompleteOptions.value = mockSuggestions.map(item => ({
+      label: formatLabel(item),
+      value: item.text,
+      type: item.type,
+      count: item.count
+    }))
+  } catch (error) {
+    console.error('自动补全失败:', error)
+  } finally {
+    searchLoading.value = false
+  }
+}
+
+const formatLabel = (item: any) => {
+  const icon = item.type === 'category' ? '📁' : '🔍'
+  return `${icon} ${item.text} ${item.count ? `(${item.count})` : ''}`
+}
+
+const handleSelect = (value: string) => {
+  searchKeyword.value = value
+  handleSearch()
+}
+
+const selectHotSearch = (keyword: string) => {
+  searchKeyword.value = keyword
+  handleSearch()
+}
+
+const selectHistoryItem = (keyword: string) => {
+  searchKeyword.value = keyword
+  handleSearch()
+}
+
+const clearSearchHistory = () => {
+  searchHistory.value = []
+  showSearchHistory.value = false
+  message.success('搜索历史已清空')
+}
+
+const getTrendType = (trend: string) => {
+  switch (trend) {
+    case 'up':
+      return 'error'
+    case 'down':
+      return 'info'
+    default:
+      return 'default'
+  }
+}
+
+// 加载热门搜索
+const loadHotSearches = async () => {
+  try {
+    // TODO: 从API加载
+    // const response = await fetch('/api/v1/search/popular')
+    // hotSearches.value = await response.json()
+
+    // 模拟数据
+    hotSearches.value = [
+      { keyword: 'iPhone', count: 150, trend: 'up' },
+      { keyword: '自行车', count: 120, trend: 'down' },
+      { keyword: '教材', count: 100, trend: 'up' },
+      { keyword: '显示器', count: 80, trend: 'default' },
+      { keyword: '二手书', count: 60, trend: 'up' }
+    ]
+  } catch (error) {
+    console.error('加载热门搜索失败:', error)
+  }
+}
+
+// 加载搜索历史
+const loadSearchHistory = async () => {
+  try {
+    // TODO: 从API加载
+    // const response = await fetch('/api/v1/search/history')
+    // searchHistory.value = await response.json()
+
+    // 从localStorage加载
+    const history = localStorage.getItem('searchHistory')
+    if (history) {
+      searchHistory.value = JSON.parse(history)
+    }
+  } catch (error) {
+    console.error('加载搜索历史失败:', error)
+  }
+}
+
+// 添加到搜索历史
+const addToHistory = (keyword: string) => {
+  // 检查是否已存在
+  const existsIndex = searchHistory.value.findIndex(item => item === keyword)
+  if (existsIndex !== -1) {
+    // 移到最前面
+    searchHistory.value.splice(existsIndex, 1)
+  }
+
+  // 添加新记录
+  searchHistory.value.unshift(keyword)
+
+  // 限制历史记录数量
+  if (searchHistory.value.length > 10) {
+    searchHistory.value = searchHistory.value.slice(0, 10)
+  }
+
+  // 保存到localStorage
+  localStorage.setItem('searchHistory', JSON.stringify(searchHistory.value))
+}
+
 // 搜索
 const handleSearch = () => {
+  if (!searchKeyword.value.trim()) {
+    message.warning('请输入搜索关键词')
+    return
+  }
+
+  // 添加到搜索历史
+  addToHistory(searchKeyword.value)
+
+  // 执行搜索
   currentPage.value = 1
   loadItems()
+
+  // 清空建议
+  autocompleteOptions.value = []
+  showHotSearches.value = false
+  showSearchHistory.value = false
 }
 
 // 选择分类
@@ -628,10 +910,10 @@ const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
 // ========== 商品详情弹窗 ==========
 const showDetailModal = ref(false)
-const currentItem = ref<ItemData | null>(null)
+const currentItem = ref<any | null>(null)
 const currentImageIndex = ref(0)
 
-const viewItemDetail = (item: ItemData) => {
+const viewItemDetail = (item: any) => {
   currentItem.value = item
   currentImageIndex.value = 0
   showDetailModal.value = true
@@ -645,7 +927,7 @@ const goToItemDetail = (itemId: number) => {
 // ========== 购物车 & 收藏 ==========
 
 // 加入购物车
-const handleAddToCart = async (item: ItemData) => {
+const handleAddToCart = async (item: any) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
     router.push('/login')
@@ -671,7 +953,7 @@ const handleAddToCart = async (item: ItemData) => {
 }
 
 // 收藏/取消收藏
-const handleToggleFavorite = async (item: ItemData) => {
+const handleToggleFavorite = async (item: any) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
     router.push('/login')
@@ -694,7 +976,7 @@ const handleToggleFavorite = async (item: ItemData) => {
 }
 
 // 联系卖家
-const handleContactSeller = (item: ItemData) => {
+const handleContactSeller = (item: any) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
     router.push('/login')
@@ -709,9 +991,10 @@ const newItem = ref({
   name: '',
   category_id: null as number | null,
   price: 0,
-  condition: '二手',
+  condition: 'used',
   description: '',
-  location: ''
+  location: '',
+  images: [] as any[]
 })
 
 const categoryOptions = computed(() => 
@@ -726,8 +1009,36 @@ const handlePublish = async () => {
     return
   }
   
+  // 检查是否有图片正在上传
+  const uploadingImages = newItem.value.images.filter((file: any) => file.status === 'uploading')
+  if (uploadingImages.length > 0) {
+    message.warning('请等待图片上传完成')
+    return
+  }
+  
+  // 检查是否有成功上传的图片（Naive UI状态为'finished'）
+  console.log('当前图片列表:', newItem.value.images)  // 调试日志
+  const uploadedImages = newItem.value.images.filter((file: any) => 
+    (file.status === 'finished' || file.status === 'done') && file.url
+  )
+  console.log('已上传图片:', uploadedImages)  // 调试日志
+  if (uploadedImages.length === 0) {
+    message.warning('请至少上传一张商品图片')
+    return
+  }
+  
   try {
     const categorySlug = categorySlugMap[newItem.value.category_id] || 'other'
+    
+    // 处理图片URL - 将完整URL转换为相对路径
+    const imageUrls = newItem.value.images
+      .filter((file: any) => file.url) // 只包含成功上传的文件
+      .map((file: any) => {
+        // 从完整URL中提取相对路径
+        const url = new URL(file.url)
+        return url.pathname
+      })
+    
     await http.post('/items', {
       title: newItem.value.name,
       description: newItem.value.description || newItem.value.name,
@@ -735,7 +1046,7 @@ const handlePublish = async () => {
       category: categorySlug,
       condition: newItem.value.condition,
       status: 'available',
-      images: []
+      images: imageUrls
     })
     
     message.success('发布成功!')
@@ -746,9 +1057,10 @@ const handlePublish = async () => {
       name: '',
       category_id: null,
       price: 0,
-      condition: '二手',
+      condition: 'used',
       description: '',
-      location: ''
+      location: '',
+      images: []
     }
     
     // 刷新列表
@@ -779,8 +1091,131 @@ const formatTime = (dateStr: string) => {
 
 // 页面加载时获取数据
 onMounted(() => {
+  // 处理URL参数
+  if (route.query.keyword) {
+    searchKeyword.value = route.query.keyword as string
+  }
   loadItems()
   loadCategoryStats()
+  loadHotSearches()
+  loadSearchHistory()
+})
+
+// 图片上传处理
+const handleBeforeUpload = async (data: { file: File; fileList: any[] }) => {
+  // 检查文件类型
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+  if (!allowedTypes.includes(data.file.type)) {
+    message.error('只支持 JPG、PNG、GIF 格式的图片')
+    return false
+  }
+  
+  // 检查文件大小 (5MB)
+  if (data.file.size > 5 * 1024 * 1024) {
+    message.error('图片大小不能超过 5MB')
+    return false
+  }
+  
+  return true
+}
+
+const handleRemoveImage = (file: any) => {
+  // 从newItem.images中移除
+  const index = newItem.value.images.findIndex((img: any) => img.id === file.id)
+  if (index > -1) {
+    newItem.value.images.splice(index, 1)
+  }
+}
+
+// 自定义上传函数
+const customUpload = async ({ file, onFinish, onError }: any) => {
+  try {
+    const formData = new FormData()
+    formData.append('file', file.file)
+    
+    const response = await http.post('/items/upload-image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    // 设置文件的URL为完整的服务器URL
+    const serverUrl = window.location.origin
+    file.url = `${serverUrl}${response.data.url}`
+    file.status = 'finished'  // Naive UI 使用 'finished' 表示上传完成
+    file.name = file.file.name
+    
+    console.log('图片上传成功:', file)  // 调试日志
+    onFinish()
+    message.success('图片上传成功')
+  } catch (error: any) {
+    console.error('图片上传失败', error)
+    file.status = 'error'
+    onError()
+    message.error(error.response?.data?.detail || '图片上传失败')
+  }
+}
+
+// 本地占位图列表（存放于public/demo-images目录）
+const PLACEHOLDER_IMAGES = [
+  '/demo-images/placeholder1.jpg',
+  '/demo-images/placeholder2.jpg',
+  '/demo-images/placeholder3.jpg',
+  '/demo-images/placeholder4.jpg',
+  '/demo-images/placeholder5.jpg',
+  '/demo-images/placeholder6.jpg',
+]
+
+// 根据商品ID获取占位图 URL，保证每个商品稳定但又有区分度
+const getPlaceholderImage = (itemId: number) => {
+  if (PLACEHOLDER_IMAGES.length === 0) {
+    return ''
+  }
+  const index = Math.abs(itemId) % PLACEHOLDER_IMAGES.length
+  return PLACEHOLDER_IMAGES[index]
+}
+
+const getFullImageUrl = (relativeUrl: string) => {
+  if (!relativeUrl) return ''
+  if (/^https?:/i.test(relativeUrl) || relativeUrl.startsWith('data:')) {
+    return relativeUrl
+  }
+  const serverUrl = window.location.origin
+  return `${serverUrl}${relativeUrl}`
+}
+
+// 获取商品图片URL，支持多图/字符串字段/无图情况
+const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
+  if (Array.isArray(images) && images.length > 0) {
+    return getFullImageUrl(images[0])
+  }
+
+  if (typeof images === 'string') {
+    try {
+      const parsed = JSON.parse(images)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return getFullImageUrl(parsed[0])
+      }
+    } catch (err) {
+      // ignore json parse error
+    }
+    if (images.startsWith('http') || images.startsWith('data:')) {
+      return images
+    }
+    if (images.startsWith('/')) {
+      return getFullImageUrl(images)
+    }
+  }
+
+  return getPlaceholderImage(itemId || 0)
+}
+
+// 监听搜索关键词变化
+watch(searchKeyword, (newVal) => {
+  if (!newVal) {
+    showHotSearches.value = true
+    showSearchHistory.value = false
+  }
 })
 </script>
 
@@ -805,5 +1240,6 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  line-clamp: 2;
 }
 </style>

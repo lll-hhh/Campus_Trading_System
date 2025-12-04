@@ -355,3 +355,41 @@ async def get_my_favorites(
         page=page,
         page_size=page_size
     )
+
+
+@router.post("/upload-image", response_model=dict)
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """上传商品图片"""
+    import os
+    import uuid
+    from pathlib import Path
+    
+    # 检查文件类型
+    allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="只支持 JPG、PNG、GIF 格式的图片")
+    
+    # 检查文件大小 (5MB)
+    file_content = await file.read()
+    if len(file_content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 5MB")
+    
+    # 生成唯一文件名
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_filename = f"{uuid.uuid4()}{file_extension}"
+    
+    # 确保目录存在
+    upload_dir = Path("/app/static/images/items")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 保存文件
+    file_path = upload_dir / unique_filename
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+    
+    # 返回图片URL
+    image_url = f"/images/items/{unique_filename}"
+    return {"url": image_url}

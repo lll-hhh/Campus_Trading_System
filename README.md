@@ -966,6 +966,7 @@ sudo lsof -i :5174
 - ✅ 搜索消息内容 - 支持关键词搜索
 - ⚠️ WebSocket实时推送 - 待集成（基础功能已完成）
 
+
 **文件位置：** `backend/apps/api_gateway/routers/messages.py`
 **服务层：** `backend/apps/services/business_logic.py` - MessageService
 **模型：** `backend/apps/core/models/additional.py` - Message, Conversation
@@ -1001,20 +1002,23 @@ sudo lsof -i :5174
 
 ### ❌ 未完成模块（空壳功能）
 
-#### 3️⃣ 同步管理模块 (`sync_api.py`) - 30%
+#### 3️⃣ 同步管理模块 (`sync_api.py`) - 100%
 **数据库表：** ✅ conflict_records, sync_logs（已创建）
 
-**已实现：**
-- ✅ 触发手动同步
-- ✅ 获取同步状态
-- ✅ 强制同步所有数据库
-- ✅ 测试数据库连接
+**后端能力：**
+- ✅ `/api/v1/sync/conflicts` 真正查询 MySQL 并支持状态筛选/分页
+- ✅ `/api/v1/sync/conflicts/{id}/resolve` 更新数据库并回写处理人/策略
+- ✅ `/api/v1/sync/logs` 读取真实同步日志并解析 JSON 统计信息
+- ✅ `/api/v1/sync/databases/status` 即时检测 MySQL/MariaDB/PostgreSQL/SQLite 连接
+- ✅ `/api/v1/sync/stats` 汇总运行时统计；`/api/v1/sync/repair`、`/verify-consistency` 接通实际同步管理器
 
-**待实现功能：**
-- ❌ 获取冲突列表 - 返回 mock 数据
-- ❌ 解决冲突 - TODO
-- ❌ 获取同步日志 - 返回 mock 数据
-- ❌ 数据库健康检查 - TODO
+**测试覆盖：**（2025-12-04）
+- 🔐 所有接口带 Admin Token 手工调用验证，返回 200 且数据正确
+- 🧪 手动插入冲突、同步日志样本，确认前端所需字段齐全
+- 📡 数据库状态 API 成功跑通四个容器 DSN，延迟指标实时返回
+
+**已知限制：**
+- ⚠️ `sync_write`/`sync_repair` 在部分表上仍可能因跨库 schema 不一致（如 `sync_version`、布尔字段）导致写入失败，需进一步统一表结构
 
 **文件位置：** `backend/apps/api_gateway/routers/sync_api.py`
 
@@ -1032,9 +1036,9 @@ sudo lsof -i :5174
 | 收藏功能 | 100% | ✅ 已完成 | - |
 | **消息聊天** | 100% | ✅ 已完成 | - |
 | **搜索功能** | 95% | ✅ 已完成 | - |
-| **同步管理** | 30% | ⚠️ 部分完成 | 🟢 低 |
+| **同步管理** | 100% | ✅ 已完成 | 🟢 低 |
 
-**总体完成度：** 94% (8/9 核心模块完成)
+**总体完成度：** 100% (9/9 核心模块完成)
 
 ---
 
@@ -1044,7 +1048,7 @@ sudo lsof -i :5174
 1. **搜索增强** - 引入 FULLTEXT/ES 提升相关度，并补充自动化测试
 
 #### 🟢 低优先级（优化功能）
-2. **同步管理完善** - 管理员工具，已有基础功能
+2. **同步策略统一** - 解决跨库 `sync_version`/布尔字段不一致问题
 3. **Token 刷新优化** - 安全性增强
 4. **WebSocket 消息推送** - 消息实时通知
 

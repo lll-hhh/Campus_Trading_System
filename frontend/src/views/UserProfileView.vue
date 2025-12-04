@@ -21,7 +21,7 @@ import {
   useMessage,
 } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
-import api from '../lib/http'
+import { http as api } from '@/lib/http'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -50,12 +50,24 @@ const stats = ref({
 
 const recentItems = ref<any[]>([])
 const recentTransactions = ref<any[]>([])
+const recentFavorites = ref<any[]>([])
+
+const activeTab = ref('items')
 
 const loadUserData = async () => {
   try {
-    // TODO: 从API加载用户数据
-    // const response = await api.get('/api/users/me')
-    // userInfo.value = response.data
+    const response = await api.get('/auth/me')
+    userInfo.value = {
+      id: response.data.user_id,
+      username: response.data.display_name || '用户',
+      email: '已登录用户', // 出于安全考虑不显示真实邮箱
+      student_id: '已认证', // 出于安全考虑不显示真实学号
+      avatar: '',
+      credit_score: 95, // TODO: 从API获取
+      role: response.data.roles?.[0] || 'user',
+      created_at: new Date().toISOString(), // TODO: 从API获取
+      is_verified: true
+    }
   } catch (error: any) {
     message.error('加载用户数据失败')
   }
@@ -63,9 +75,55 @@ const loadUserData = async () => {
 
 const loadStats = async () => {
   try {
-    // TODO: 从API加载统计数据
+    // 加载商品统计
+    const itemsResponse = await api.get('/items/my', { params: { page_size: 1 } })
+    stats.value.items_count = itemsResponse.data.total
+
+    // 加载收藏统计
+    const favoritesResponse = await api.get('/items/my/favorites', { params: { page_size: 1 } })
+    stats.value.favorites_count = favoritesResponse.data.total
+
+    // 加载订单统计
+    const ordersResponse = await api.get('/orders', { params: { role: 'buyer', page_size: 100 } })
+    const allOrders = ordersResponse.data.orders
+    stats.value.buying_count = allOrders.filter((order: any) => order.status === 'pending').length
+
+    // 计算已售出数量（作为卖家）
+    const sellingResponse = await api.get('/orders', { params: { role: 'seller', page_size: 100 } })
+    stats.value.sold_count = sellingResponse.data.orders.filter((order: any) => order.status === 'completed').length
+
+    // TODO: 加载未读消息数量
+    stats.value.messages_unread = 0
   } catch (error: any) {
+    console.error('加载统计数据失败:', error)
     message.error('加载统计数据失败')
+  }
+}
+
+const loadRecentItems = async () => {
+  try {
+    const response = await api.get('/items/my', { params: { page_size: 3 } })
+    recentItems.value = response.data.items
+  } catch (error: any) {
+    console.error('加载最近商品失败:', error)
+  }
+}
+
+const loadRecentTransactions = async () => {
+  try {
+    const response = await api.get('/orders', { params: { page_size: 3 } })
+    recentTransactions.value = response.data.orders
+  } catch (error: any) {
+    console.error('加载最近交易失败:', error)
+  }
+}
+
+const loadRecentFavorites = async () => {
+  try {
+    const response = await api.get('/items/my/favorites', { params: { page_size: 3 } })
+    recentFavorites.value = response.data.items
+  } catch (error: any) {
+    console.error('加载最近收藏失败:', error)
   }
 }
 
@@ -74,16 +132,23 @@ const goToSettings = () => {
 }
 
 const goToMyItems = () => {
-  router.push('/user/my-items')
+  router.push('/my-items')
 }
 
 const goToOrders = () => {
-  router.push('/user/orders')
+  router.push('/orders')
+}
+
+const goToFavorites = () => {
+  activeTab.value = 'favorites'
 }
 
 onMounted(() => {
   loadUserData()
   loadStats()
+  loadRecentItems()
+  loadRecentTransactions()
+  loadRecentFavorites()
 })
 </script>
 
@@ -142,7 +207,7 @@ onMounted(() => {
           </n-button>
           <n-button @click="goToMyItems">我的商品</n-button>
           <n-button @click="goToOrders">交易记录</n-button>
-          <n-button @click="router.push('/user/favorites')">我的收藏</n-button>
+          <n-button @click="goToFavorites">我的收藏</n-button>
           <n-button @click="router.push('/messages')">
             消息 <n-tag v-if="stats.messages_unread > 0" type="error" size="small" round>
               {{ stats.messages_unread }}
@@ -153,19 +218,26 @@ onMounted(() => {
 
       <!-- 最近活动 -->
       <n-card title="最近活动">
-        <n-tabs type="line">
+        <n-tabs type="line" v-model:value="activeTab">
           <n-tab-pane name="items" tab="我的商品">
             <n-list hoverable clickable>
-              <n-list-item v-for="i in 3" :key="i">
-                <n-thing title="商品标题" description="发布于 2天前">
+              <n-list-item v-for="item in recentItems" :key="item.id">
+                <n-thing :title="item.title" :description="`发布于 ${new Date(item.created_at).toLocaleDateString()}`">
                   <template #avatar>
-                    <n-avatar>商</n-avatar>
+                    <n-avatar>{{ item.title?.charAt(0) }}</n-avatar>
                   </template>
                   <template #header-extra>
-                    <n-tag type="success">在售</n-tag>
+                    <n-tag :type="item.status === 'active' ? 'success' : 'default'">{{ item.status === 'active' ? '在售' : '下架' }}</n-tag>
                   </template>
                   <template #footer>
-                    <span style="color: #f56c6c; font-weight: bold">¥199</span>
+                    <span style="color: #f56c6c; font-weight: bold">¥{{ item.price }}</span>
+                  </template>
+                </n-thing>
+              </n-list-item>
+              <n-list-item v-if="recentItems.length === 0">
+                <n-thing title="暂无商品" description="您还没有发布商品">
+                  <template #footer>
+                    <n-button @click="router.push('/marketplace')">去发布商品</n-button>
                   </template>
                 </n-thing>
               </n-list-item>
@@ -174,16 +246,25 @@ onMounted(() => {
 
           <n-tab-pane name="transactions" tab="交易记录">
             <n-list hoverable clickable>
-              <n-list-item v-for="i in 3" :key="i">
-                <n-thing title="交易订单 #12345" description="2024-11-19 10:30">
+              <n-list-item v-for="transaction in recentTransactions" :key="transaction.id">
+                <n-thing :title="`交易订单 #${transaction.id}`" :description="new Date(transaction.created_at).toLocaleString()">
                   <template #avatar>
                     <n-avatar>单</n-avatar>
                   </template>
                   <template #header-extra>
-                    <n-tag type="warning">进行中</n-tag>
+                    <n-tag :type="transaction.status === 'completed' ? 'success' : transaction.status === 'pending' ? 'warning' : 'default'">
+                      {{ transaction.status === 'completed' ? '已完成' : transaction.status === 'pending' ? '进行中' : transaction.status }}
+                    </n-tag>
                   </template>
                   <template #footer>
-                    <span>交易金额: ¥299</span>
+                    <span>交易金额: ¥{{ transaction.total_amount }}</span>
+                  </template>
+                </n-thing>
+              </n-list-item>
+              <n-list-item v-if="recentTransactions.length === 0">
+                <n-thing title="暂无交易记录" description="您还没有交易记录">
+                  <template #footer>
+                    <n-button @click="router.push('/marketplace')">去浏览商品</n-button>
                   </template>
                 </n-thing>
               </n-list-item>
@@ -192,13 +273,20 @@ onMounted(() => {
 
           <n-tab-pane name="favorites" tab="我的收藏">
             <n-list hoverable clickable>
-              <n-list-item v-for="i in 3" :key="i">
-                <n-thing title="收藏的商品" description="收藏于 1天前">
+              <n-list-item v-for="favorite in recentFavorites" :key="favorite.id">
+                <n-thing :title="favorite.title" :description="`收藏于 ${new Date(favorite.favorited_at || favorite.created_at).toLocaleDateString()}`">
                   <template #avatar>
-                    <n-avatar>藏</n-avatar>
+                    <n-avatar>{{ favorite.title?.charAt(0) }}</n-avatar>
                   </template>
                   <template #footer>
-                    <span style="color: #f56c6c; font-weight: bold">¥399</span>
+                    <span style="color: #f56c6c; font-weight: bold">¥{{ favorite.price }}</span>
+                  </template>
+                </n-thing>
+              </n-list-item>
+              <n-list-item v-if="recentFavorites.length === 0">
+                <n-thing title="暂无收藏" description="您还没有收藏商品">
+                  <template #footer>
+                    <n-button @click="router.push('/marketplace')">去浏览商品</n-button>
                   </template>
                 </n-thing>
               </n-list-item>

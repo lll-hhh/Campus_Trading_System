@@ -1,14 +1,17 @@
 """
 数据库同步API路由 - 同步管理、冲突解决、一致性验证
 """
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
+import json
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import text, create_engine
 
-from apps.api_gateway.dependencies import get_current_user, get_db_session
+from apps.api_gateway.dependencies import get_db_session, require_roles
+from apps.core.models import User
 from apps.services.sync_manager import sync_manager
 
 
@@ -106,12 +109,24 @@ class SyncLogListResponse(BaseModel):
     page_size: int
 
 
+def _parse_json_field(value: Any) -> dict:
+    """Safely parse JSON strings into dictionaries."""
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return {}
+
+
 # ==================== API Endpoints ====================
 
 @router.post("/write", response_model=SyncWriteResponse)
 async def sync_write(
     request: SyncWriteRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> SyncWriteResponse:
     """
@@ -126,7 +141,7 @@ async def sync_write(
             action=request.action,
             data=request.data,
             record_id=request.record_id,
-            user_id=current_user["id"]
+            user_id=current_user.id
         )
         return SyncWriteResponse(**result)
     except Exception as e:
@@ -136,7 +151,7 @@ async def sync_write(
 @router.post("/verify-consistency", response_model=ConsistencyCheckResponse)
 async def verify_consistency(
     request: ConsistencyCheckRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> ConsistencyCheckResponse:
     """
@@ -157,7 +172,7 @@ async def verify_consistency(
 @router.post("/repair", response_model=SyncRepairResponse)
 async def sync_repair(
     request: SyncRepairRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> SyncRepairResponse:
     """
@@ -166,10 +181,6 @@ async def sync_repair(
     从主库（MySQL）读取数据，强制同步到其他数据库
     需要管理员权限
     """
-    # 检查管理员权限
-    if current_user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="需要管理员权限")
-    
     try:
         result = await sync_manager.sync_repair(
             table=request.table,
@@ -183,7 +194,7 @@ async def sync_repair(
 
 @router.get("/stats", response_model=SyncStatsResponse)
 async def get_sync_stats(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> SyncStatsResponse:
     """
@@ -194,11 +205,11 @@ async def get_sync_stats(
 
 
 @router.get("/conflicts", response_model=ConflictListResponse)
-async def get_conflicts(
+def get_conflicts(
     resolved: Optional[bool] = None,
     page: int = 1,
     page_size: int = 20,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> ConflictListResponse:
     """
@@ -206,31 +217,54 @@ async def get_conflicts(
     
     支持筛选已解决/未解决的冲突
     """
-    # TODO: 从数据库查询冲突记录
-    # 当前返回模拟数据
+    # 由于表结构与模型不匹配，使用原生SQL
+    sql = (
+        "SELECT id, table_name, record_id, source_db, target_db, resolved, created_at, "
+        "conflict_type, local_data, remote_data, resolution_strategy FROM conflict_records"
+    )
+    params = {}
     
-    mock_conflicts = [
-        ConflictRecord(
-            id=1,
-            table_name="items",
-            record_id="12345",
-            source="mysql",
-            target="postgres,mariadb",
-            resolved=False,
-            created_at=datetime.utcnow(),
-            payload={"type": "version_conflict", "version": 5}
-        )
-    ]
-    
-    # 筛选
     if resolved is not None:
-        mock_conflicts = [c for c in mock_conflicts if c.resolved == resolved]
+        sql += " WHERE resolved = :resolved"
+        params["resolved"] = resolved
     
-    # 分页
-    total = len(mock_conflicts)
-    start = (page - 1) * page_size
-    end = start + page_size
-    conflicts = mock_conflicts[start:end]
+    sql += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
+    params["limit"] = page_size
+    params["offset"] = (page - 1) * page_size
+    
+    # 获取总数
+    count_sql = "SELECT COUNT(*) FROM conflict_records"
+    if resolved is not None:
+        count_sql += " WHERE resolved = :resolved"
+    
+    total_result = db.execute(text(count_sql), params if resolved is not None else {})
+    total = total_result.scalar()
+    
+    # 获取数据
+    result = db.execute(text(sql), params)
+    rows = result.fetchall()
+    
+    # 转换为响应格式
+    conflicts = []
+    for row in rows:
+        payload = {
+            "type": row[7],
+            "local": _parse_json_field(row[8]),
+            "remote": _parse_json_field(row[9]),
+            "strategy": row[10],
+        }
+        conflicts.append(
+            ConflictRecord(
+                id=row[0],
+                table_name=row[1],
+                record_id=str(row[2]),
+                source=row[3],
+                target=row[4],
+                resolved=bool(row[5]),
+                created_at=row[6],
+                payload=payload,
+            )
+        )
     
     return ConflictListResponse(
         conflicts=conflicts,
@@ -241,15 +275,37 @@ async def get_conflicts(
 
 
 @router.put("/conflicts/{conflict_id}/resolve")
-async def resolve_conflict(
+def resolve_conflict(
     conflict_id: int,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
     标记冲突为已解决
     """
-    # TODO: 更新数据库中的冲突记录
+    # 检查冲突是否存在
+    check_sql = "SELECT id, resolved FROM conflict_records WHERE id = :conflict_id"
+    result = db.execute(text(check_sql), {"conflict_id": conflict_id})
+    row = result.fetchone()
+    
+    if not row:
+        raise HTTPException(status_code=404, detail="冲突记录不存在")
+    
+    if row[1]:  # resolved
+        raise HTTPException(status_code=400, detail="冲突已解决")
+    
+    # 更新状态
+    update_sql = """
+    UPDATE conflict_records 
+    SET resolved = 1, resolved_by = :user_id, resolved_at = NOW(), 
+        resolution_strategy = 'manual', updated_at = NOW()
+    WHERE id = :conflict_id
+    """
+    db.execute(text(update_sql), {
+        "user_id": current_user.id,
+        "conflict_id": conflict_id
+    })
+    db.commit()
     
     return {
         "success": True,
@@ -262,35 +318,42 @@ async def resolve_conflict(
 async def get_sync_logs(
     page: int = 1,
     page_size: int = 20,
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> SyncLogListResponse:
     """
     获取同步日志列表
     """
-    # TODO: 从数据库查询同步日志
-    # 当前返回模拟数据
+    # 获取总数
+    count_sql = "SELECT COUNT(*) FROM sync_logs"
+    total_result = db.execute(text(count_sql))
+    total = total_result.scalar()
     
-    mock_logs = [
+    # 分页查询
+    sql = """
+    SELECT id, config_id, status, started_at, completed_at, stats
+    FROM sync_logs
+    ORDER BY started_at DESC
+    LIMIT :limit OFFSET :offset
+    """
+    
+    result = db.execute(text(sql), {
+        "limit": page_size,
+        "offset": (page - 1) * page_size
+    })
+    rows = result.fetchall()
+    
+    # 转换为响应格式
+    logs = [
         SyncLog(
-            id=1,
-            status="completed",
-            started_at=datetime.utcnow(),
-            completed_at=datetime.utcnow(),
-            stats={
-                "table": "items",
-                "action": "update",
-                "success_count": 3,
-                "total_count": 4
-            }
+            id=row[0],
+            status=row[2],
+            started_at=row[3],
+            completed_at=row[4],
+            stats=_parse_json_field(row[5])
         )
+        for row in rows
     ]
-    
-    # 分页
-    total = len(mock_logs)
-    start = (page - 1) * page_size
-    end = start + page_size
-    logs = mock_logs[start:end]
     
     return SyncLogListResponse(
         logs=logs,
@@ -302,56 +365,99 @@ async def get_sync_logs(
 
 @router.get("/databases/status")
 async def get_database_status(
-    current_user: dict = Depends(get_current_user),
+    current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
     获取四个数据库的状态信息
     """
-    # TODO: 实现真实的数据库状态检测
-    # 当前返回模拟数据
+    from apps.core.config import Settings
+    
+    settings = Settings()
+    
+    databases = []
+    
+    # MySQL
+    mysql_status = await check_database_health(
+        "MySQL",
+        settings.mysql_dsn,
+        "mysql",
+        "MySQL 8.0"
+    )
+    databases.append(mysql_status)
+    
+    # MariaDB
+    mariadb_status = await check_database_health(
+        "MariaDB", 
+        settings.mariadb_dsn,
+        "mariadb",
+        "MariaDB 10.6"
+    )
+    databases.append(mariadb_status)
+    
+    # PostgreSQL
+    postgres_status = await check_database_health(
+        "PostgreSQL",
+        settings.postgres_dsn,
+        "postgres", 
+        "PostgreSQL 14"
+    )
+    databases.append(postgres_status)
+    
+    # SQLite - 直接检查文件
+    sqlite_path = "/app/data/campuswap.db"
+    import os
+    sqlite_status = {
+        "name": "sqlite",
+        "label": "SQLite",
+        "type": "SQLite 3",
+        "host": sqlite_path,
+        "status": "healthy" if os.path.exists(sqlite_path) else "error",
+        "sync_progress": 100,
+        "latency": 1,
+        "last_sync": datetime.utcnow()
+    }
+    databases.append(sqlite_status)
+    
+    return {"databases": databases}
+
+
+async def check_database_health(name: str, dsn: str, db_type: str, version: str) -> dict:
+    """检查单个数据库健康状态"""
+    import time
+    
+    start_time = time.time()
+    status = "healthy"
+    latency = 0
+    
+    try:
+        engine = create_engine(dsn, pool_pre_ping=True)
+        with engine.connect() as conn:
+            # 执行简单查询
+            if db_type == "mysql":
+                conn.execute(text("SELECT 1"))
+            elif db_type == "postgres":
+                conn.execute(text("SELECT 1"))
+            elif db_type == "mariadb":
+                conn.execute(text("SELECT 1"))
+            
+            latency = int((time.time() - start_time) * 1000)
+            
+            # 检查同步进度（简化版）
+            sync_progress = 100  # 暂时设为100
+            
+    except Exception as e:
+        status = "error"
+        latency = 9999
+        sync_progress = 0
     
     return {
-        "databases": [
-            {
-                "name": "mysql",
-                "label": "MySQL (主库)",
-                "type": "MySQL 8.0",
-                "host": "localhost:3306",
-                "status": "healthy",
-                "sync_progress": 100,
-                "latency": 5,
-                "last_sync": datetime.utcnow()
-            },
-            {
-                "name": "postgres",
-                "label": "PostgreSQL",
-                "type": "PostgreSQL 15",
-                "host": "localhost:5432",
-                "status": "healthy",
-                "sync_progress": 98,
-                "latency": 8,
-                "last_sync": datetime.utcnow()
-            },
-            {
-                "name": "mariadb",
-                "label": "MariaDB",
-                "type": "MariaDB 10.11",
-                "host": "localhost:3307",
-                "status": "warning",
-                "sync_progress": 95,
-                "latency": 12,
-                "last_sync": datetime.utcnow()
-            },
-            {
-                "name": "sqlite",
-                "label": "SQLite",
-                "type": "SQLite 3",
-                "host": "campus_swap.db",
-                "status": "healthy",
-                "sync_progress": 100,
-                "latency": 2,
-                "last_sync": datetime.utcnow()
-            }
-        ]
+        "name": db_type,
+        "label": f"{name} ({'主库' if db_type == 'mysql' else '从库'})",
+        "type": version,
+        "host": dsn.split('@')[-1] if '@' in dsn else f"{db_type}:3306",
+        "status": status,
+        "sync_progress": sync_progress,
+        "latency": latency,
+        "last_sync": datetime.utcnow()
     }

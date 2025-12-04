@@ -118,9 +118,8 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./backend/static:/app/static
       - gateway_data:/app/data
-      # ✅ 挂载 SQLite 初始化脚本
-      - ./backend/sql/init/sqlite_init.sql:/app/sql/sqlite_init.sql:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -130,6 +129,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - campuswap-network
+    restart: unless-stopped
+
+  # ========================================
+  # Frontend
+  # ========================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: campuswap-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
     networks:
       - campuswap-network
     restart: unless-stopped

@@ -833,3 +833,99 @@ CREATE INDEX IF NOT EXISTS idx_performance_metrics_type ON performance_metrics(m
 CREATE INDEX IF NOT EXISTS idx_performance_metrics_db ON performance_metrics(db_name);
 
 SELECT 'PostgreSQL schema created successfully!' AS message;
+
+-- ============================================
+-- Sync相关表
+-- ============================================
+
+-- sync_configs table
+CREATE TABLE IF NOT EXISTS sync_configs (
+    id SERIAL PRIMARY KEY,
+    source VARCHAR(64) NOT NULL,
+    target VARCHAR(64) NOT NULL,
+    mode VARCHAR(32) NOT NULL DEFAULT 'realtime',
+    interval_seconds INTEGER NOT NULL DEFAULT 300,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    last_run_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0
+);
+
+-- sync_logs table
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id SERIAL PRIMARY KEY,
+    config_id INTEGER NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP NULL,
+    stats JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    FOREIGN KEY (config_id) REFERENCES sync_configs(id)
+);
+
+-- conflict_records table
+CREATE TABLE IF NOT EXISTS conflict_records (
+    id SERIAL PRIMARY KEY,
+    table_name VARCHAR(128) NOT NULL,
+    record_id VARCHAR(64) NOT NULL,
+    source VARCHAR(64) NOT NULL,
+    target VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    resolved_by INTEGER NULL,
+    resolved_at TIMESTAMP NULL,
+    resolution_note VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0,
+    FOREIGN KEY (resolved_by) REFERENCES users(id)
+);
+
+-- daily_stats table
+CREATE TABLE IF NOT EXISTS daily_stats (
+    id SERIAL PRIMARY KEY,
+    stat_date DATE NOT NULL UNIQUE,
+    sync_success_count INTEGER NOT NULL DEFAULT 0,
+    sync_conflict_count INTEGER NOT NULL DEFAULT 0,
+    ai_request_count INTEGER NOT NULL DEFAULT 0,
+    inventory_changes INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sync_version INTEGER DEFAULT 0
+);
+
+-- 插入默认角色
+INSERT INTO roles (name, description) VALUES
+('admin', '系统管理员'),
+('moderator', '内容审核员'),
+('user', '普通用户'),
+('seller', '认证卖家')
+ON CONFLICT (name) DO NOTHING;
+
+-- 插入默认权限
+INSERT INTO permissions (name, resource, action, description) VALUES
+('user:read', 'user', 'read', '查看用户信息'),
+('user:write', 'user', 'write', '修改用户信息'),
+('user:delete', 'user', 'delete', '删除用户'),
+('item:read', 'item', 'read', '查看商品'),
+('item:write', 'item', 'write', '发布/修改商品'),
+('item:delete', 'item', 'delete', '删除商品'),
+('order:read', 'order', 'read', '查看订单'),
+('order:write', 'order', 'write', '创建/修改订单'),
+('admin:access', 'admin', 'access', '访问管理后台'),
+('report:handle', 'report', 'handle', '处理举报')
+ON CONFLICT (name) DO NOTHING;
+
+-- 角色权限关联
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+-- admin 拥有所有权限
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10),
+-- moderator 拥有审核权限
+(2, 1), (2, 4), (2, 6), (2, 7), (2, 9), (2, 10),
+-- user 拥有基本权限
+(3, 1), (3, 4), (3, 5), (3, 7), (3, 8),
+-- seller 拥有卖家权限
+(4, 1), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8)
+ON CONFLICT (role_id, permission_id) DO NOTHING;

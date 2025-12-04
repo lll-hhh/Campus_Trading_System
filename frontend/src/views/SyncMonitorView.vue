@@ -553,30 +553,53 @@ const refreshData = async () => {
 }
 
 const loadStats = async () => {
-  // TODO: 调用API加载统计数据
+  const response = await fetch('/api/v1/sync/stats', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  })
+  if (response.ok) {
+    const data = await response.json()
+    stats.value = data
+  }
 }
 
 const loadDatabaseStatus = async () => {
-  // TODO: 调用API加载数据库状态
+  const response = await fetch('/api/v1/sync/databases/status', {
+    headers: {
+      'Authorization': `Bearer ${localStorage.getItem('token')}`
+    }
+  })
+  if (response.ok) {
+    const data = await response.json()
+    databases.value = data.databases
+  }
 }
 
 const loadConflicts = async () => {
   conflictLoading.value = true
   try {
-    // TODO: 调用API加载冲突记录
-    // 模拟数据
-    conflicts.value = [
-      {
-        id: 1,
-        table_name: 'items',
-        record_id: '12345',
-        source: 'mysql',
-        target: 'postgres,mariadb',
-        resolved: false,
-        created_at: new Date(),
-        payload: { type: 'version_conflict', version: 5 }
+    const resolved = conflictFilter.value === 'resolved' ? true : 
+                    conflictFilter.value === 'unresolved' ? false : null
+    
+    const params = new URLSearchParams({
+      page: conflictPagination.value.page.toString(),
+      page_size: conflictPagination.value.pageSize.toString()
+    })
+    if (resolved !== null) {
+      params.append('resolved', resolved.toString())
+    }
+    
+    const response = await fetch(`/api/v1/sync/conflicts?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
-    ]
+    })
+    if (response.ok) {
+      const data = await response.json()
+      conflicts.value = data.conflicts
+      conflictPagination.value.pageCount = Math.ceil(data.total / data.page_size)
+    }
   } finally {
     conflictLoading.value = false
   }
@@ -585,22 +608,21 @@ const loadConflicts = async () => {
 const loadLogs = async () => {
   logLoading.value = true
   try {
-    // TODO: 调用API加载同步日志
-    // 模拟数据
-    logs.value = [
-      {
-        id: 1,
-        status: 'completed',
-        started_at: new Date(),
-        completed_at: new Date(),
-        stats: {
-          table: 'items',
-          action: 'update',
-          success_count: 3,
-          total_count: 4
-        }
+    const params = new URLSearchParams({
+      page: logPagination.value.page.toString(),
+      page_size: logPagination.value.pageSize.toString()
+    })
+    
+    const response = await fetch(`/api/v1/sync/logs?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
-    ]
+    })
+    if (response.ok) {
+      const data = await response.json()
+      logs.value = data.logs
+      logPagination.value.pageCount = Math.ceil(data.total / data.page_size)
+    }
   } finally {
     logLoading.value = false
   }
@@ -614,11 +636,24 @@ const handleSyncRepair = async () => {
 
   repairLoading.value = true
   try {
-    // TODO: 调用同步修复API
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    message.success('同步修复成功')
-    showSyncRepairModal.value = false
-    refreshData()
+    const response = await fetch('/api/v1/sync/repair', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(repairForm.value)
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      message.success('同步修复成功')
+      showSyncRepairModal.value = false
+      refreshData()
+    } else {
+      const error = await response.json()
+      message.error(error.detail || '修复失败')
+    }
   } catch (error) {
     console.error('修复失败:', error)
     message.error('修复失败')
@@ -635,11 +670,22 @@ const viewConflictDetail = (conflict: any) => {
 const resolveConflict = async (conflictId: number) => {
   resolveLoading.value = true
   try {
-    // TODO: 调用API标记冲突为已解决
-    await new Promise(resolve => setTimeout(resolve, 500))
-    message.success('已标记为已解决')
-    showConflictDetailModal.value = false
-    loadConflicts()
+    const response = await fetch(`/api/v1/sync/conflicts/${conflictId}/resolve`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    
+    if (response.ok) {
+      const data = await response.json()
+      message.success(data.message || '已标记为已解决')
+      showConflictDetailModal.value = false
+      loadConflicts()
+    } else {
+      const error = await response.json()
+      message.error(error.detail || '操作失败')
+    }
   } catch (error) {
     console.error('操作失败:', error)
     message.error('操作失败')

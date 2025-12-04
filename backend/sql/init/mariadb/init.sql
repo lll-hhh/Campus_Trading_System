@@ -1,18 +1,18 @@
 -- ============================================
--- MySQL/MariaDB 校园交易系统完整数据库脚本
+-- MariaDB 校园交易系统完整数据库脚本
 -- ============================================
 -- 版本: 2.1
 -- 日期: 2025-12-01
--- 说明: 包含所有表、索引、触发器、存储过程
+-- 说明: MariaDB专用特性,与MySQL基本兼容但有优化
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ============================================
--- 1. 核心业务表
+-- 1. 核心业务表 (MariaDB优化版)
 -- ============================================
 
--- 用户表
+-- 用户表 (使用MariaDB的动态列功能)
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) UNIQUE NOT NULL COMMENT '用户名',
@@ -22,24 +22,31 @@ CREATE TABLE IF NOT EXISTS users (
     phone VARCHAR(20) COMMENT '手机号',
     avatar_url VARCHAR(500) COMMENT '头像URL',
     real_name VARCHAR(50) COMMENT '真实姓名',
+    
     is_active BOOLEAN DEFAULT TRUE COMMENT '账号是否激活',
     is_verified BOOLEAN DEFAULT FALSE COMMENT '是否实名认证',
     is_banned BOOLEAN DEFAULT FALSE COMMENT '是否被封禁',
+    
     credit_score INT DEFAULT 100 COMMENT '信用分(0-100)',
     seller_rating DECIMAL(3,2) DEFAULT 5.00 COMMENT '卖家评分(0-5)',
     buyer_rating DECIMAL(3,2) DEFAULT 5.00 COMMENT '买家评分(0-5)',
+    
     total_sales INT DEFAULT 0 COMMENT '总销售数',
     total_purchases INT DEFAULT 0 COMMENT '总购买数',
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login_at TIMESTAMP NULL,
+    
     sync_version INT DEFAULT 0 COMMENT '同步版本号',
+    
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_student_id (student_id),
     INDEX idx_credit (credit_score),
     INDEX idx_active (is_active, is_banned)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci 
+ROW_FORMAT=DYNAMIC COMMENT='用户表';
 
 -- 角色表 (RBAC)
 CREATE TABLE IF NOT EXISTS roles (
@@ -50,7 +57,7 @@ CREATE TABLE IF NOT EXISTS roles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 1,
     INDEX idx_name (name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='角色表';
 
 -- 权限表 (RBAC)
 CREATE TABLE IF NOT EXISTS permissions (
@@ -64,7 +71,7 @@ CREATE TABLE IF NOT EXISTS permissions (
     sync_version INT DEFAULT 1,
     INDEX idx_name (name),
     INDEX idx_resource_action (resource, action)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='权限表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='权限表';
 
 -- 用户角色关联表
 CREATE TABLE IF NOT EXISTS user_roles (
@@ -79,7 +86,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
     INDEX idx_role (role_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='用户角色关联表';
 
 -- 角色权限关联表
 CREATE TABLE IF NOT EXISTS role_permissions (
@@ -94,7 +101,7 @@ CREATE TABLE IF NOT EXISTS role_permissions (
     INDEX idx_permission (permission_id),
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='角色权限关联表';
 
 -- 用户资料表
 CREATE TABLE IF NOT EXISTS user_profiles (
@@ -110,7 +117,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     sync_version INT DEFAULT 1,
     INDEX idx_user (user_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户资料表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 ROW_FORMAT=DYNAMIC COMMENT='用户资料表';
 
 -- 商品分类表
 CREATE TABLE IF NOT EXISTS categories (
@@ -133,30 +140,39 @@ CREATE TABLE IF NOT EXISTS items (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     seller_id BIGINT NOT NULL COMMENT '卖家ID',
     category_id BIGINT COMMENT '分类ID',
+    
     title VARCHAR(200) NOT NULL COMMENT '商品标题',
     description TEXT COMMENT '商品描述',
     price DECIMAL(10, 2) NOT NULL COMMENT '价格',
     original_price DECIMAL(10, 2) COMMENT '原价',
+    
     condition_type ENUM('全新', '99新', '95新', '9成新', '二手') DEFAULT '二手' COMMENT '成色',
     location VARCHAR(100) COMMENT '交易地点',
     contact_info VARCHAR(200) COMMENT '联系方式(加密)',
+    
     tags JSON COMMENT '商品标签数组',
+    
     status ENUM('available', 'reserved', 'sold', 'deleted') DEFAULT 'available' COMMENT '商品状态',
     is_negotiable BOOLEAN DEFAULT FALSE COMMENT '是否可议价',
     is_shipped BOOLEAN DEFAULT FALSE COMMENT '是否包邮',
+    
     view_count INT DEFAULT 0 COMMENT '浏览量',
     favorite_count INT DEFAULT 0 COMMENT '收藏量',
     inquiry_count INT DEFAULT 0 COMMENT '咨询量',
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sold_at TIMESTAMP NULL COMMENT '售出时间',
+    
     sync_version INT DEFAULT 0,
+    
     INDEX idx_seller (seller_id),
     INDEX idx_category (category_id),
     INDEX idx_status (status),
     INDEX idx_created (created_at),
     INDEX idx_price (price),
     FULLTEXT idx_title_desc (title, description),
+    
     FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品表';
@@ -171,8 +187,10 @@ CREATE TABLE IF NOT EXISTS item_images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_item (item_id),
     INDEX idx_cover (item_id, is_cover),
+    
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品图片表';
 
@@ -182,48 +200,61 @@ CREATE TABLE IF NOT EXISTS comments (
     item_id BIGINT NOT NULL COMMENT '商品ID',
     user_id BIGINT NOT NULL COMMENT '评论用户ID',
     parent_id BIGINT NULL COMMENT '父评论ID(回复)',
+    
     content TEXT NOT NULL COMMENT '评论内容',
+    
     is_deleted BOOLEAN DEFAULT FALSE,
     is_reported BOOLEAN DEFAULT FALSE,
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_item (item_id),
     INDEX idx_user (user_id),
     INDEX idx_parent (parent_id),
     INDEX idx_created (created_at),
+    
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
--- 交易表 (不使用分区，因为MySQL分区不支持外键)
+-- ✅ 修复：交易表 - 移除分区，保留外键
 CREATE TABLE IF NOT EXISTS transactions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     item_id BIGINT NOT NULL,
     buyer_id BIGINT NOT NULL,
     seller_id BIGINT NOT NULL,
+    
     item_price DECIMAL(10, 2) NOT NULL COMMENT '商品价格',
     final_amount DECIMAL(10, 2) NOT NULL COMMENT '最终成交价',
+    
     status ENUM('pending', 'contacted', 'meeting', 'completed', 'cancelled') DEFAULT 'pending' COMMENT '交易状态',
+    
     buyer_contact VARCHAR(200) COMMENT '买家联系方式(加密)',
     seller_contact VARCHAR(200) COMMENT '卖家联系方式(加密)',
     meeting_location VARCHAR(200) COMMENT '约定见面地点',
     meeting_time TIMESTAMP NULL COMMENT '约定见面时间',
+    
     buyer_rating TINYINT COMMENT '买家评分1-5',
     seller_rating TINYINT COMMENT '卖家评分1-5',
     buyer_review TEXT COMMENT '买家评价',
     seller_review TEXT COMMENT '卖家评价',
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '交易创建时间',
     contacted_at TIMESTAMP NULL COMMENT '获取联系方式时间',
     completed_at TIMESTAMP NULL COMMENT '交易完成时间',
     cancelled_at TIMESTAMP NULL COMMENT '取消时间',
+    
     sync_version INT DEFAULT 0,
+    
     INDEX idx_buyer (buyer_id),
     INDEX idx_seller (seller_id),
     INDEX idx_item (item_id),
     INDEX idx_status (status),
     INDEX idx_created (created_at),
+    
     FOREIGN KEY (item_id) REFERENCES items(id),
     FOREIGN KEY (buyer_id) REFERENCES users(id),
     FOREIGN KEY (seller_id) REFERENCES users(id)
@@ -235,19 +266,24 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id BIGINT NOT NULL,
     receiver_id BIGINT NOT NULL,
     item_id BIGINT COMMENT '关联商品',
+    
     content TEXT NOT NULL COMMENT '消息内容',
+    
     is_read BOOLEAN DEFAULT FALSE,
     is_deleted_by_sender BOOLEAN DEFAULT FALSE,
     is_deleted_by_receiver BOOLEAN DEFAULT FALSE,
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     read_at TIMESTAMP NULL,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_sender (sender_id),
     INDEX idx_receiver (receiver_id),
     INDEX idx_conversation (sender_id, receiver_id),
     INDEX idx_item (item_id),
     INDEX idx_created (created_at),
+    
     FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
@@ -261,9 +297,11 @@ CREATE TABLE IF NOT EXISTS favorites (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     UNIQUE KEY uk_user_item (user_id, item_id),
     INDEX idx_user (user_id),
     INDEX idx_item (item_id),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收藏表';
@@ -275,17 +313,22 @@ CREATE TABLE IF NOT EXISTS reports (
     reported_user_id BIGINT COMMENT '被举报用户',
     item_id BIGINT COMMENT '被举报商品',
     comment_id BIGINT COMMENT '被举报评论',
+    
     report_type ENUM('fraud', 'fake_item', 'harassment', 'spam', 'other') NOT NULL,
     reason TEXT NOT NULL,
+    
     status ENUM('pending', 'processing', 'resolved', 'rejected') DEFAULT 'pending',
     admin_note TEXT COMMENT '管理员备注',
+    
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     resolved_at TIMESTAMP NULL,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_reporter (reporter_id),
     INDEX idx_reported_user (reported_user_id),
     INDEX idx_status (status),
+    
     FOREIGN KEY (reporter_id) REFERENCES users(id),
     FOREIGN KEY (reported_user_id) REFERENCES users(id),
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
@@ -309,10 +352,12 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     user_agent TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     INDEX idx_user (user_id),
     INDEX idx_table (table_name, operation),
     INDEX idx_created (created_at),
     INDEX idx_record (table_name, record_id),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
 
@@ -332,10 +377,12 @@ CREATE TABLE IF NOT EXISTS conflict_records (
     resolved_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     INDEX idx_resolved (resolved),
     INDEX idx_table_record (table_name, record_id),
     INDEX idx_created (created_at),
     INDEX idx_resolved_by (resolved_by),
+    
     FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='同步冲突表';
 
@@ -348,6 +395,7 @@ CREATE TABLE IF NOT EXISTS system_configs (
     is_public BOOLEAN DEFAULT FALSE COMMENT '是否公开',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     INDEX idx_key (config_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
@@ -356,11 +404,10 @@ CREATE TABLE IF NOT EXISTS system_configs (
 -- ============================================
 
 DROP TRIGGER IF EXISTS trg_after_user_insert;
-DROP TRIGGER IF EXISTS trg_before_item_view_update;
-DROP TRIGGER IF EXISTS trg_after_transaction_complete;
 DROP TRIGGER IF EXISTS trg_after_comment_insert;
 DROP TRIGGER IF EXISTS trg_after_favorite_insert;
 DROP TRIGGER IF EXISTS trg_after_favorite_delete;
+DROP TRIGGER IF EXISTS trg_after_transaction_complete;
 DROP TRIGGER IF EXISTS trg_after_transaction_rating;
 
 DELIMITER //
@@ -374,26 +421,6 @@ BEGIN
         'username', NEW.username,
         'email', NEW.email
     ));
-END//
-
-CREATE TRIGGER trg_before_item_view_update
-BEFORE UPDATE ON items
-FOR EACH ROW
-BEGIN
-    IF NEW.view_count != OLD.view_count THEN
-        SET NEW.updated_at = CURRENT_TIMESTAMP;
-    END IF;
-END//
-
-CREATE TRIGGER trg_after_transaction_complete
-AFTER UPDATE ON transactions
-FOR EACH ROW
-BEGIN
-    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-        UPDATE users SET total_sales = total_sales + 1 WHERE id = NEW.seller_id;
-        UPDATE users SET total_purchases = total_purchases + 1 WHERE id = NEW.buyer_id;
-        UPDATE items SET status = 'sold', sold_at = CURRENT_TIMESTAMP WHERE id = NEW.item_id;
-    END IF;
 END//
 
 CREATE TRIGGER trg_after_comment_insert
@@ -417,6 +444,17 @@ BEGIN
     UPDATE items SET favorite_count = favorite_count - 1 WHERE id = OLD.item_id;
 END//
 
+CREATE TRIGGER trg_after_transaction_complete
+AFTER UPDATE ON transactions
+FOR EACH ROW
+BEGIN
+    IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
+        UPDATE users SET total_sales = total_sales + 1 WHERE id = NEW.seller_id;
+        UPDATE users SET total_purchases = total_purchases + 1 WHERE id = NEW.buyer_id;
+        UPDATE items SET status = 'sold', sold_at = CURRENT_TIMESTAMP WHERE id = NEW.item_id;
+    END IF;
+END//
+
 CREATE TRIGGER trg_after_transaction_rating
 AFTER UPDATE ON transactions
 FOR EACH ROW
@@ -430,6 +468,7 @@ BEGIN
         )
         WHERE id = NEW.seller_id;
     END IF;
+    
     IF NEW.buyer_rating IS NOT NULL AND OLD.buyer_rating IS NULL THEN
         UPDATE users 
         SET buyer_rating = (
@@ -491,6 +530,7 @@ BEGIN
         
         SET p_transaction_id = LAST_INSERT_ID();
         UPDATE items SET status = 'reserved' WHERE id = p_item_id;
+        
         COMMIT;
         SET p_error_msg = NULL;
     END IF;
@@ -499,12 +539,8 @@ END//
 CREATE PROCEDURE sp_get_user_stats(IN p_user_id BIGINT)
 BEGIN
     SELECT 
-        u.username,
-        u.credit_score,
-        u.seller_rating,
-        u.buyer_rating,
-        u.total_sales,
-        u.total_purchases,
+        u.username, u.credit_score, u.seller_rating, u.buyer_rating,
+        u.total_sales, u.total_purchases,
         COUNT(DISTINCT i.id) AS active_items,
         COUNT(DISTINCT f.id) AS favorites_count,
         COUNT(DISTINCT t.id) AS transaction_count
@@ -527,10 +563,7 @@ CREATE PROCEDURE sp_search_items(
 )
 BEGIN
     SELECT 
-        i.*,
-        u.username AS seller_username,
-        u.seller_rating,
-        u.is_verified,
+        i.*, u.username AS seller_username, u.seller_rating, u.is_verified,
         c.name AS category_name,
         (SELECT image_url FROM item_images WHERE item_id = i.id AND is_cover = TRUE LIMIT 1) AS cover_image
     FROM items i
@@ -580,28 +613,12 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE OR REPLACE VIEW v_item_details AS
 SELECT 
-    i.id,
-    i.title,
-    i.description,
-    i.price,
-    i.original_price,
-    i.condition_type,
-    i.location,
-    i.status,
-    i.is_negotiable,
-    i.is_shipped,
-    i.view_count,
-    i.favorite_count,
-    i.inquiry_count,
-    i.created_at,
-    u.id AS seller_id,
-    u.username AS seller_username,
-    u.avatar_url AS seller_avatar,
-    u.seller_rating,
-    u.is_verified AS seller_verified,
-    u.total_sales AS seller_total_sales,
-    c.name AS category_name,
-    c.slug AS category_slug
+    i.id, i.title, i.description, i.price, i.original_price, i.condition_type,
+    i.location, i.status, i.is_negotiable, i.is_shipped,
+    i.view_count, i.favorite_count, i.inquiry_count, i.created_at,
+    u.id AS seller_id, u.username AS seller_username, u.avatar_url AS seller_avatar,
+    u.seller_rating, u.is_verified AS seller_verified, u.total_sales AS seller_total_sales,
+    c.name AS category_name, c.slug AS category_slug
 FROM items i
 INNER JOIN users u ON i.seller_id = u.id
 LEFT JOIN categories c ON i.category_id = c.id;
@@ -642,14 +659,16 @@ GROUP BY u.id, u.username, u.credit_score, u.seller_rating, u.total_sales, u.tot
 
 CREATE TABLE IF NOT EXISTS user_follows (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    follower_id BIGINT NOT NULL,
-    following_id BIGINT NOT NULL,
+    follower_id BIGINT NOT NULL COMMENT '关注者ID',
+    following_id BIGINT NOT NULL COMMENT '被关注者ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     UNIQUE KEY uk_follower_following (follower_id, following_id),
     INDEX idx_follower (follower_id),
     INDEX idx_following (following_id),
+    
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户关注表';
@@ -658,11 +677,14 @@ CREATE TABLE IF NOT EXISTS item_view_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     item_id BIGINT NOT NULL,
-    view_duration INT DEFAULT 0,
+    view_duration INT DEFAULT 0 COMMENT '浏览时长(秒)',
     viewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_user (user_id),
     INDEX idx_item (item_id),
+    INDEX idx_viewed_at (viewed_at),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品浏览历史表';
@@ -671,16 +693,19 @@ CREATE TABLE IF NOT EXISTS user_addresses (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     address_type ENUM('dormitory', 'home', 'other') DEFAULT 'dormitory',
-    building VARCHAR(50),
-    room VARCHAR(20),
-    detail_address VARCHAR(200),
-    contact_name VARCHAR(50),
-    contact_phone VARCHAR(20),
-    is_default BOOLEAN DEFAULT FALSE,
+    building VARCHAR(50) COMMENT '楼栋',
+    room VARCHAR(20) COMMENT '房间号',
+    detail_address VARCHAR(200) COMMENT '详细地址',
+    contact_name VARCHAR(50) COMMENT '联系人',
+    contact_phone VARCHAR(20) COMMENT '联系电话',
+    is_default BOOLEAN DEFAULT FALSE COMMENT '是否默认地址',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_user (user_id),
+    INDEX idx_default (user_id, is_default),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户地址表';
 
@@ -689,10 +714,13 @@ CREATE TABLE IF NOT EXISTS item_price_history (
     item_id BIGINT NOT NULL,
     old_price DECIMAL(10, 2),
     new_price DECIMAL(10, 2) NOT NULL,
-    change_reason VARCHAR(200),
+    change_reason VARCHAR(200) COMMENT '改价原因',
     changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_item (item_id),
+    INDEX idx_changed_at (changed_at),
+    
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品价格历史表';
 
@@ -703,7 +731,9 @@ CREATE TABLE IF NOT EXISTS comment_likes (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     UNIQUE KEY uk_comment_user (comment_id, user_id),
+    
     FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论点赞表';
@@ -714,22 +744,29 @@ CREATE TABLE IF NOT EXISTS message_attachments (
     file_type ENUM('image', 'video', 'document', 'other') DEFAULT 'image',
     file_url VARCHAR(500) NOT NULL,
     file_name VARCHAR(200),
-    file_size BIGINT,
+    file_size BIGINT COMMENT '文件大小(字节)',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
+    INDEX idx_message (message_id),
+    
     FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息附件表';
 
 CREATE TABLE IF NOT EXISTS report_actions (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     report_id BIGINT NOT NULL,
-    admin_id BIGINT NOT NULL,
+    admin_id BIGINT NOT NULL COMMENT '处理管理员',
     action_type ENUM('warn', 'delete_content', 'suspend_user', 'ban_user', 'reject') NOT NULL,
-    action_note TEXT,
+    action_note TEXT COMMENT '处理说明',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
+    INDEX idx_report (report_id),
+    INDEX idx_admin (admin_id),
+    
     FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
     FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='举报处理记录表';
@@ -742,6 +779,9 @@ CREATE TABLE IF NOT EXISTS transaction_review_images (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
+    INDEX idx_transaction (transaction_id),
+    
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易评价图片表';
 
@@ -751,13 +791,16 @@ CREATE TABLE IF NOT EXISTS notifications (
     type ENUM('system', 'transaction', 'message', 'comment', 'follow', 'like') NOT NULL,
     title VARCHAR(200) NOT NULL,
     content TEXT,
-    related_id BIGINT,
-    related_type VARCHAR(50),
+    related_id BIGINT COMMENT '关联对象ID',
+    related_type VARCHAR(50) COMMENT '关联对象类型',
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_user (user_id),
+    INDEX idx_read (user_id, is_read),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知表';
 
@@ -766,10 +809,13 @@ CREATE TABLE IF NOT EXISTS search_history (
     user_id BIGINT,
     keyword VARCHAR(200) NOT NULL,
     result_count INT DEFAULT 0,
-    clicked_item_id BIGINT,
+    clicked_item_id BIGINT COMMENT '点击的商品ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     INDEX idx_user (user_id),
+    INDEX idx_keyword (keyword),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搜索历史表';
@@ -779,15 +825,18 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     user_id BIGINT NOT NULL,
     old_score INT NOT NULL,
     new_score INT NOT NULL,
-    change_amount INT NOT NULL,
-    change_reason VARCHAR(200) NOT NULL,
-    related_transaction_id BIGINT,
-    related_report_id BIGINT,
-    admin_id BIGINT,
+    change_amount INT NOT NULL COMMENT '变化量(+/-)',
+    change_reason VARCHAR(200) NOT NULL COMMENT '变更原因',
+    related_transaction_id BIGINT COMMENT '关联交易',
+    related_report_id BIGINT COMMENT '关联举报',
+    admin_id BIGINT COMMENT '操作管理员',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     sync_version INT DEFAULT 0,
+    
     INDEX idx_user (user_id),
+    INDEX idx_created (created_at),
+    
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (related_transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
     FOREIGN KEY (related_report_id) REFERENCES reports(id) ON DELETE SET NULL,
@@ -809,6 +858,7 @@ CREATE TABLE IF NOT EXISTS sync_tasks (
     completed_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库同步任务表';
 
@@ -817,13 +867,107 @@ CREATE TABLE IF NOT EXISTS performance_metrics (
     metric_type ENUM('query_time', 'connection_pool', 'sync_latency', 'error_rate') NOT NULL,
     db_name VARCHAR(50) NOT NULL,
     metric_value DECIMAL(10, 2) NOT NULL,
-    threshold_value DECIMAL(10, 2),
-    is_alert BOOLEAN DEFAULT FALSE,
+    threshold_value DECIMAL(10, 2) COMMENT '阈值',
+    is_alert BOOLEAN DEFAULT FALSE COMMENT '是否告警',
     details JSON,
     recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
     INDEX idx_type (metric_type),
     INDEX idx_db (db_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='性能监控表';
 
+-- ============================================
+-- Sync相关表
+-- ============================================
+
+-- sync_configs table
+CREATE TABLE IF NOT EXISTS sync_configs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    source VARCHAR(64) NOT NULL,
+    target VARCHAR(64) NOT NULL,
+    mode VARCHAR(32) NOT NULL DEFAULT 'realtime',
+    interval_seconds INT NOT NULL DEFAULT 300,
+    enabled BOOLEAN NOT NULL DEFAULT 1,
+    last_run_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- sync_logs table
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    config_id BIGINT NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP NULL,
+    stats JSON NOT NULL DEFAULT ('{}'),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    FOREIGN KEY (config_id) REFERENCES sync_configs(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- conflict_records table
+CREATE TABLE IF NOT EXISTS conflict_records (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    table_name VARCHAR(128) NOT NULL,
+    record_id VARCHAR(64) NOT NULL,
+    source VARCHAR(64) NOT NULL,
+    target VARCHAR(64) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    resolved_by BIGINT NULL,
+    resolved_at TIMESTAMP NULL,
+    resolution_note VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0,
+    FOREIGN KEY (resolved_by) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- daily_stats table
+CREATE TABLE IF NOT EXISTS daily_stats (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    stat_date DATE NOT NULL UNIQUE,
+    sync_success_count INT NOT NULL DEFAULT 0,
+    sync_conflict_count INT NOT NULL DEFAULT 0,
+    ai_request_count INT NOT NULL DEFAULT 0,
+    inventory_changes INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    sync_version INT DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- 完成
-SELECT 'MySQL/MariaDB schema created successfully!' AS message;
+SELECT 'MariaDB schema created successfully!' AS message;
+
+-- 插入默认角色
+INSERT IGNORE INTO roles (name, description) VALUES
+('admin', '系统管理员'),
+('moderator', '内容审核员'),
+('user', '普通用户'),
+('seller', '认证卖家');
+
+-- 插入默认权限
+INSERT IGNORE INTO permissions (name, resource, action, description) VALUES
+('user:read', 'user', 'read', '查看用户信息'),
+('user:write', 'user', 'write', '修改用户信息'),
+('user:delete', 'user', 'delete', '删除用户'),
+('item:read', 'item', 'read', '查看商品'),
+('item:write', 'item', 'write', '发布/修改商品'),
+('item:delete', 'item', 'delete', '删除商品'),
+('order:read', 'order', 'read', '查看订单'),
+('order:write', 'order', 'write', '创建/修改订单'),
+('admin:access', 'admin', 'access', '访问管理后台'),
+('report:handle', 'report', 'handle', '处理举报');
+
+-- 角色权限关联
+INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
+-- admin 拥有所有权限
+(1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6), (1, 7), (1, 8), (1, 9), (1, 10),
+-- moderator 拥有审核权限
+(2, 1), (2, 4), (2, 6), (2, 7), (2, 9), (2, 10),
+-- user 拥有基本权限
+(3, 1), (3, 4), (3, 5), (3, 7), (3, 8),
+-- seller 拥有卖家权限
+(4, 1), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8);

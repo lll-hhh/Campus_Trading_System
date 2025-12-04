@@ -32,7 +32,7 @@ const fileList = ref<UploadFileInfo[]>([])
 const formData = reactive({
   title: '',
   category: null as string | null,
-  condition: '全新',
+  condition: 'used',
   price: null as number | null,
   originalPrice: null as number | null,
   description: '',
@@ -61,12 +61,12 @@ const categoryOptions = [
 
 // 成色选项
 const conditionOptions = [
-  { label: '全新', value: '全新' },
-  { label: '99新', value: '99新' },
-  { label: '95新', value: '95新' },
-  { label: '9成新', value: '9成新' },
-  { label: '8成新', value: '8成新' },
-  { label: '7成新以下', value: '7成新以下' }
+  { label: '全新', value: 'new' },
+  { label: '99新', value: 'like-new' },
+  { label: '95新', value: 'excellent' },
+  { label: '9成新', value: 'good' },
+  { label: '8成新', value: 'used' },
+  { label: '7成新以下', value: 'used' }
 ]
 
 // 联系方式选项

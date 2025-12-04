@@ -13,7 +13,7 @@ import {
   NPopconfirm,
   useMessage,
 } from 'naive-ui'
-import api from '../lib/http'
+import { http as api } from '@/lib/http'
 
 const router = useRouter()
 const message = useMessage()

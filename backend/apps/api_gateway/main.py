@@ -1,8 +1,10 @@
 """FastAPI entrypoint for the API Gateway."""
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from apps.api_gateway.routers import (
     analytics, auth, dashboard, database, health, market, sync,
@@ -36,6 +38,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
         expose_headers=["*"],
     )
+
+    # ✅ 挂载静态文件目录用于图片服务
+    static_dir = Path(__file__).parent.parent.parent / "static"
+    static_dir.mkdir(exist_ok=True)
+    images_dir = static_dir / "images"
+    images_dir.mkdir(exist_ok=True)
+    app.mount("/images", StaticFiles(directory=str(images_dir)), name="images")
 
     app.include_router(health.router)
     app.include_router(auth.router, prefix=settings.api_v1_prefix)

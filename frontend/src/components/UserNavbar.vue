@@ -3,13 +3,11 @@ import { ref, computed, h } from 'vue'  // ✅ 添加 h
 import { useRouter, RouterLink } from 'vue-router'  // ✅ 添加 RouterLink
 import { NLayout, NLayoutHeader, NMenu, NButton, NSpace, NAvatar, NDropdown, NBadge } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
-import SearchAutocomplete from './SearchAutocomplete.vue'
 import NotificationCenter from './NotificationCenter.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
-const searchKeyword = ref('')
 const unreadMessages = ref(5)
 
 const isLoggedIn = computed(() => authStore.isAuthenticated)
@@ -101,16 +99,6 @@ const activeKey = computed(() => {
 
 // ✅ 删除 handleMenuSelect，因为 RouterLink 会自动处理导航
 
-const handleSearch = (query?: string) => {
-  const searchTerm = query || searchKeyword.value
-  if (searchTerm && searchTerm.trim()) {
-    router.push({
-      path: '/search',
-      query: { q: searchTerm }
-    })
-  }
-}
-
 const handleLogout = () => {
   authStore.logout()
   router.push('/login')
@@ -128,17 +116,8 @@ const handlePublish = () => {
 <template>
   <n-layout-header bordered class="user-navbar">
     <div class="navbar-container">
-      <!-- Logo -->
-      <div class="logo" @click="router.push('/marketplace')">
-        <span class="logo-icon">🎓</span>
-        <span class="logo-text">校园交易</span>
-      </div>
-
-      <!-- 搜索框 -->
-      <div class="search-bar">
-        <SearchAutocomplete v-model="searchKeyword" @search="handleSearch" />
-      </div>
-
+      <!-- 移除 Logo，只保留导航菜单 -->
+      
       <!-- ✅ 修复：移除 @update:value，RouterLink 会自动处理 -->
       <n-menu
         :value="activeKey"
@@ -190,7 +169,7 @@ const handlePublish = () => {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 40; /* 降低z-index，让App.vue的header显示在上面 */
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
@@ -201,43 +180,13 @@ const handlePublish = () => {
   padding: 0 24px;
   display: flex;
   align-items: center;
-  gap: 24px;
+  justify-content: space-between;
   height: 64px;
-}
-
-.logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-  transition: transform 0.2s;
-}
-
-.logo:hover {
-  transform: scale(1.05);
-}
-
-.logo-icon {
-  font-size: 28px;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: bold;
-  background: linear-gradient(135deg, #18a058 0%, #36ad6a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.search-bar {
-  flex: 1;
-  max-width: 500px;
 }
 
 .nav-menu {
   flex: 1;
+  justify-content: center;
 }
 
 .user-avatar-container {

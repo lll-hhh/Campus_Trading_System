@@ -9,11 +9,16 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "0.0.0.0",
-    // 代理配置：Docker 环境使用 gateway，本地开发改为 localhost
+    // 代理配置：Docker 环境使用 gateway 容器名
     proxy: {
       '/api/v1': {
-        // Docker 内部使用 gateway:8000
-        target: 'http://gateway:8000', 
+        // Docker 内部使用 gateway 容器名
+        target: 'http://gateway:8000',
+        changeOrigin: true,
+      },
+      '/images': {
+        // 代理图片请求到后端服务器
+        target: 'http://gateway:8000',
         changeOrigin: true,
       }
     }

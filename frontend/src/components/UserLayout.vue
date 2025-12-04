@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutContent, NLayoutFooter, NSpace, NButton } from 'naive-ui'
 import { useRouter } from 'vue-router'
-import UserNavbar from './UserNavbar.vue'
 
 const router = useRouter()
 
@@ -19,8 +18,7 @@ const navigateToLink = (path: string) => {
 
 <template>
   <n-layout class="user-layout">
-    <!-- 顶部导航栏 -->
-    <UserNavbar />
+    <!-- 移除顶部导航栏，使用App.vue的全局导航 -->
 
     <!-- 主要内容区域 -->
     <n-layout-content class="main-content">
@@ -37,7 +35,7 @@ const navigateToLink = (path: string) => {
     <n-layout-footer bordered class="footer">
       <div class="footer-content">
         <div class="footer-section">
-          <h4>🎓 校园交易平台</h4>
+          <h4>🎓 CampuSwap</h4>
           <p>安全、便捷、高效的校园二手交易平台</p>
           <p style="color: #999; font-size: 12px">让校园资源流动起来</p>
         </div>
@@ -77,7 +75,7 @@ const navigateToLink = (path: string) => {
       </div>
 
       <div class="footer-bottom">
-        <p>© 2024 校园交易平台 All Rights Reserved</p>
+        <p>© 2024 CampuSwap All Rights Reserved</p>
         <p>备案号: 京ICP备12345678号</p>
       </div>
     </n-layout-footer>
@@ -91,8 +89,7 @@ const navigateToLink = (path: string) => {
 }
 
 .main-content {
-  margin-top: 64px; /* UserNavbar 高度 */
-  min-height: calc(100vh - 64px - 250px); /* 减去导航栏和页脚高度 */
+  min-height: calc(100vh - 250px); /* 只减去页脚高度 */
   padding: 24px 0;
 }
 
