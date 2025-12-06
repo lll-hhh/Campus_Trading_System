@@ -28,7 +28,7 @@
             <td colspan="5" class="py-6 text-center text-slate-400">暂无冲突，运行稳定。</td>
           </tr>
           <tr v-for="conflict in conflicts" :key="conflict.id" class="border-t">
-            <td class="py-2 font-mono text-xs">{{ conflict.table }}</td>
+            <td class="py-2 font-mono text-xs">{{ conflict.table_name }}</td>
             <td class="py-2">#{{ conflict.record_id }}</td>
             <td class="py-2">
               <span class="font-semibold">{{ conflict.source }}</span>
@@ -39,16 +39,18 @@
             <td class="py-2">
               <div class="flex gap-2 text-xs">
                 <button
-                  class="rounded bg-emerald-100 px-2 py-1 text-emerald-700"
-                  @click="() => resolve(conflict.id, 'source')"
+                  class="rounded bg-emerald-100 px-2 py-1 text-emerald-700 disabled:opacity-60"
+                  :disabled="resolvingConflictId === conflict.id"
+                  @click="() => resolveAction(conflict.id, 'source')"
                 >
-                  采纳来源
+                  {{ resolvingConflictId === conflict.id ? '处理中…' : '采纳来源' }}
                 </button>
                 <button
-                  class="rounded bg-amber-100 px-2 py-1 text-amber-700"
-                  @click="() => resolve(conflict.id, 'target')"
+                  class="rounded bg-amber-100 px-2 py-1 text-amber-700 disabled:opacity-60"
+                  :disabled="resolvingConflictId === conflict.id"
+                  @click="() => resolveAction(conflict.id, 'target')"
                 >
-                  保留目标
+                  {{ resolvingConflictId === conflict.id ? '处理中…' : '保留目标' }}
                 </button>
               </div>
             </td>
@@ -62,21 +64,29 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useMessage } from 'naive-ui';
 
 import { useAuthStore } from '@/stores/auth';
 import { useSyncStore } from '@/stores/sync';
 
+const message = useMessage();
 const authStore = useAuthStore();
 const syncStore = useSyncStore();
-const { conflicts, loadingConflicts } = storeToRefs(syncStore);
+const { conflicts, loadingConflicts, resolvingConflictId } = storeToRefs(syncStore);
 const isAdmin = computed(() => authStore.isAdmin);
 
 function fetch() {
   syncStore.fetchConflicts();
 }
 
-async function resolve(id: number, strategy: 'source' | 'target') {
-  await syncStore.resolveConflict(id, strategy);
+async function resolveAction(id: number, strategy: 'source' | 'target') {
+  try {
+    await syncStore.resolveConflict(id, strategy);
+    message.success(strategy === 'source' ? '已采纳来源版本' : '已保留目标版本');
+  } catch (error) {
+    console.error(error);
+    message.error('冲突处理失败');
+  }
 }
 
 function formatDate(input: string) {

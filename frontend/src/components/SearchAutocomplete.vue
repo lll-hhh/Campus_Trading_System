@@ -97,7 +97,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import {
@@ -106,9 +106,12 @@ import {
   TrendingUpOutline,
   TrendingDownOutline
 } from '@vicons/ionicons5'
+import { http } from '@/lib/http'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
 const message = useMessage()
+const authStore = useAuthStore()
 
 // Props
 const props = defineProps<{
@@ -141,7 +144,7 @@ const hotSearches = ref([
 const searchHistory = ref<any[]>([])
 
 // 防抖定时器
-let debounceTimer: NodeJS.Timeout | null = null
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 // 监听值变化
 watch(() => props.modelValue, (newVal) => {
@@ -181,24 +184,13 @@ const fetchAutocomplete = async (query: string) => {
   loading.value = true
 
   try {
-    // TODO: 调用真实的自动补全API
-    // const response = await fetch(`/api/v1/search/autocomplete?query=${query}`)
-    // const data = await response.json()
-
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 200))
-
-    // 模拟数据
-    const mockSuggestions = [
-      { text: `${query} Pro`, type: 'keyword', count: 100 },
-      { text: `${query} Max`, type: 'keyword', count: 80 },
-      { text: `${query} 二手`, type: 'keyword', count: 60 },
-      { text: `${query} 全新`, type: 'keyword', count: 50 },
-      { text: '数码产品', type: 'category', count: 200 }
-    ]
-
+    // 调用真实的自动补全API
+    const response = await http.get('/search/autocomplete', {
+      params: { query, limit: 10 }
+    })
+    
     // 转换为autocomplete选项格式
-    autocompleteOptions.value = mockSuggestions.map(item => ({
+    autocompleteOptions.value = response.data.suggestions.map((item: any) => ({
       label: formatLabel(item),
       value: item.text,
       type: item.type,
@@ -206,6 +198,8 @@ const fetchAutocomplete = async (query: string) => {
     }))
   } catch (error) {
     console.error('自动补全失败:', error)
+    // 降级使用本地模糊匹配
+    autocompleteOptions.value = []
   } finally {
     loading.value = false
   }
@@ -277,20 +271,42 @@ const addToHistory = (keyword: string) => {
       searchHistory.value = searchHistory.value.slice(0, 10)
     }
   }
-
-  // TODO: 保存到服务器
+  
+  // 保存到 localStorage
+  try {
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory.value))
+  } catch (e) {
+    console.error('保存搜索历史失败:', e)
+  }
 }
 
 const deleteHistoryItem = async (id: number) => {
   searchHistory.value = searchHistory.value.filter(item => item.id !== id)
-  // TODO: 调用API删除
+  // 如果用户已登录，调用API删除
+  if (authStore.isAuthenticated) {
+    try {
+      await http.delete(`/search/history/${id}`)
+    } catch (error) {
+      console.error('删除搜索历史失败:', error)
+    }
+  }
+  // 更新 localStorage
+  localStorage.setItem('searchHistory', JSON.stringify(searchHistory.value))
 }
 
 const clearHistory = async () => {
+  // 如果用户已登录，调用API清空
+  if (authStore.isAuthenticated) {
+    try {
+      await http.delete('/search/history')
+    } catch (error) {
+      console.error('清空搜索历史失败:', error)
+    }
+  }
   searchHistory.value = []
   showHistory.value = false
+  localStorage.removeItem('searchHistory')
   message.success('搜索历史已清空')
-  // TODO: 调用API清空
 }
 
 const getTrendType = (trend: string) => {
@@ -307,9 +323,29 @@ const getTrendType = (trend: string) => {
 // 加载搜索历史
 const loadSearchHistory = async () => {
   try {
-    // TODO: 从API加载
-    // const response = await fetch('/api/v1/search/history')
-    // searchHistory.value = await response.json()
+    // 优先从 localStorage 加载
+    const localHistory = localStorage.getItem('searchHistory')
+    if (localHistory) {
+      searchHistory.value = JSON.parse(localHistory)
+    }
+    
+    // 如果用户已登录，从API加载并合并
+    if (authStore.isAuthenticated) {
+      const response = await http.get('/search/history', {
+        params: { page: 1, page_size: 10 }
+      })
+      if (response.data.history && response.data.history.length > 0) {
+        // 合并服务器历史和本地历史
+        const serverHistory = response.data.history
+        const merged = [...serverHistory]
+        searchHistory.value.forEach((item: any) => {
+          if (!merged.find((h: any) => h.keyword === item.keyword)) {
+            merged.push(item)
+          }
+        })
+        searchHistory.value = merged.slice(0, 10)
+      }
+    }
   } catch (error) {
     console.error('加载搜索历史失败:', error)
   }
@@ -318,17 +354,23 @@ const loadSearchHistory = async () => {
 // 加载热门搜索
 const loadHotSearches = async () => {
   try {
-    // TODO: 从API加载
-    // const response = await fetch('/api/v1/search/popular')
-    // hotSearches.value = await response.json()
+    const response = await http.get('/search/popular', {
+      params: { limit: 10 }
+    })
+    if (response.data.keywords && response.data.keywords.length > 0) {
+      hotSearches.value = response.data.keywords
+    }
   } catch (error) {
     console.error('加载热门搜索失败:', error)
+    // 使用默认热搜
   }
 }
 
 // 初始化
-loadSearchHistory()
-loadHotSearches()
+onMounted(() => {
+  loadSearchHistory()
+  loadHotSearches()
+})
 </script>
 
 <style scoped>

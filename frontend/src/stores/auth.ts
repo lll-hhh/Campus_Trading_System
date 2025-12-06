@@ -51,16 +51,25 @@ export const useAuthStore = defineStore('auth', {
     token: getSafeStoredToken(),
     user: getSafeStoredUser() as User | null,
     loading: false,
-    error: ''
+    error: '',
+    lastLoginAt: null as string | null,
   }),
 
   getters: {
     isAuthenticated: (state) => !!state.token && !!state.user,
     // ✅ 修复：检查 roles 数组是否包含 'admin'
-    isAdmin: (state) => state.user?.roles?.includes('admin') ?? false
+    isAdmin: (state) => state.user?.roles?.includes('admin') ?? false,
+    displayName: (state) => state.user?.displayName ?? null,
+    roles: (state) => state.user?.roles ?? [],
   },
 
   actions: {
+    /** 恢复登录状态 */
+    init() {
+      this.token = getSafeStoredToken();
+      this.user = getSafeStoredUser();
+    },
+
     async login(payload: LoginPayload) {
       this.loading = true;
       this.error = '';
@@ -83,6 +92,9 @@ export const useAuthStore = defineStore('auth', {
         // 持久化存储
         localStorage.setItem(STORAGE_KEY, data.access_token);
         localStorage.setItem(USER_KEY, JSON.stringify(userObj));
+
+        // 记录登录时间
+        this.lastLoginAt = new Date().toISOString();
 
         // ✅ 返回数据，供调用方判断角色
         return { user: userObj, isAdmin: userObj.roles.includes('admin') };

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard,
@@ -14,6 +14,12 @@ import {
   NRadioGroup,
   NRadio,
   NCheckbox,
+  NModal,
+  NImage,
+  NTag,
+  NDivider,
+  NGrid,
+  NGridItem,
   useMessage,
   type UploadFileInfo,
   type FormRules
@@ -26,6 +32,7 @@ const message = useMessage()
 const authStore = useAuthStore()
 
 const loading = ref(false)
+const showPreview = ref(false)
 const fileList = ref<UploadFileInfo[]>([])
 
 // 表单数据
@@ -129,24 +136,37 @@ const handleBeforeUpload = (data: { file: UploadFileInfo }) => {
 }
 
 // 自定义上传
-const customUpload = ({ file, onFinish, onError }: any) => {
-  // TODO: 实际上传到服务器
-  // 这里模拟上传过程
-  setTimeout(() => {
+const customUpload = async ({ file, onFinish, onError }: any) => {
+  try {
+    // 创建 FormData 上传到服务器
+    const uploadData = new FormData()
+    uploadData.append('file', file.file as File)
+    
+    // 尝试上传到服务器
     try {
+      const response = await http.post('/upload/image', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      file.url = response.data.url
+      formData.images = Array.from(new Set([...formData.images, response.data.url]))
+      onFinish()
+      message.success('图片上传成功')
+    } catch (uploadError) {
+      // 如果服务器上传失败，使用本地预览
+      console.warn('服务器上传失败，使用本地预览:', uploadError)
       if (file.file) {
         const url = URL.createObjectURL(file.file as File)
         file.url = url
         formData.images = Array.from(new Set([...formData.images, url]))
       }
       onFinish()
-      message.success('图片上传成功')
-    } catch (error) {
-      console.error('图片上传失败', error)
-      onError()
-      message.error('图片上传失败')
+      message.info('已使用本地预览')
     }
-  }, 1000)
+  } catch (error) {
+    console.error('图片上传失败', error)
+    onError()
+    message.error('图片上传失败')
+  }
 }
 
 // 提交表单
@@ -194,12 +214,50 @@ const handleSubmit = async () => {
 
 // 保存草稿
 const handleSaveDraft = () => {
-  message.success('草稿已保存')
+  // 保存到 localStorage
+  const draft = {
+    ...formData,
+    savedAt: new Date().toISOString()
+  }
+  localStorage.setItem('publishItemDraft', JSON.stringify(draft))
+  message.success('草稿已保存到本地')
 }
+
+// 获取分类标签
+const getCategoryLabel = computed(() => {
+  const option = categoryOptions.find(o => o.value === formData.category)
+  return option?.label || '未选择'
+})
+
+// 获取成色标签
+const getConditionLabel = computed(() => {
+  const option = conditionOptions.find(o => o.value === formData.condition)
+  return option?.label || '未选择'
+})
+
+// 获取预览图片列表
+const previewImages = computed(() => {
+  return fileList.value
+    .filter(f => f.status === 'finished' && f.url)
+    .map(f => f.url as string)
+})
 
 // 预览
 const handlePreview = () => {
-  message.info('预览功能开发中...')
+  // 基本验证
+  if (!formData.title) {
+    message.warning('请先输入商品标题')
+    return
+  }
+  if (!formData.category) {
+    message.warning('请先选择商品分类')
+    return
+  }
+  if (!formData.price) {
+    message.warning('请先输入商品价格')
+    return
+  }
+  showPreview.value = true
 }
 </script>
 
@@ -386,6 +444,88 @@ const handlePreview = () => {
         <li>商品发布后可在"我的商品"中管理</li>
       </ul>
     </n-card>
+
+    <!-- 预览弹窗 -->
+    <n-modal
+      v-model:show="showPreview"
+      preset="card"
+      title="👁️ 商品预览"
+      style="width: 600px; max-width: 90vw"
+      :bordered="false"
+    >
+      <div class="preview-content">
+        <!-- 商品图片 -->
+        <div class="preview-images" v-if="previewImages.length > 0">
+          <n-image
+            v-for="(img, index) in previewImages"
+            :key="index"
+            :src="img"
+            width="100"
+            height="100"
+            object-fit="cover"
+            style="margin: 4px; border-radius: 8px"
+          />
+        </div>
+        <div v-else class="no-images">
+          <span style="color: #999">暂无商品图片</span>
+        </div>
+
+        <n-divider />
+
+        <!-- 商品信息 -->
+        <h2 style="margin: 0 0 12px 0">{{ formData.title || '商品标题' }}</h2>
+        
+        <div class="preview-price">
+          <span class="price">¥{{ formData.price || 0 }}</span>
+          <span class="original-price" v-if="formData.originalPrice">
+            原价 ¥{{ formData.originalPrice }}
+          </span>
+        </div>
+
+        <n-space style="margin: 12px 0">
+          <n-tag type="info" size="small">{{ getCategoryLabel }}</n-tag>
+          <n-tag type="success" size="small">{{ getConditionLabel }}</n-tag>
+          <n-tag v-if="formData.allowBargain" type="warning" size="small">可议价</n-tag>
+          <n-tag v-if="formData.acceptReturn" type="primary" size="small">可退换</n-tag>
+        </n-space>
+
+        <n-divider />
+
+        <div class="preview-section">
+          <h4>📝 商品描述</h4>
+          <p style="white-space: pre-wrap; color: #666">
+            {{ formData.description || '暂无描述' }}
+          </p>
+        </div>
+
+        <div class="preview-section">
+          <h4>📍 交易地点</h4>
+          <p style="color: #666">{{ formData.location || '未填写' }}</p>
+        </div>
+
+        <div class="preview-section">
+          <h4>📞 联系方式</h4>
+          <p style="color: #666">
+            <template v-if="formData.contactMethod === 'chat'">站内聊天</template>
+            <template v-else-if="formData.contactMethod === 'phone'">电话: {{ formData.phone }}</template>
+            <template v-else-if="formData.contactMethod === 'wechat'">微信: {{ formData.wechat }}</template>
+            <template v-else>
+              <span v-if="formData.phone">电话: {{ formData.phone }}</span>
+              <span v-if="formData.wechat"> | 微信: {{ formData.wechat }}</span>
+            </template>
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <n-space justify="end">
+          <n-button @click="showPreview = false">关闭预览</n-button>
+          <n-button type="primary" @click="showPreview = false; handleSubmit()">
+            确认发布
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </div>
 </template>
 
@@ -393,5 +533,49 @@ const handlePreview = () => {
 .publish-item-view {
   max-width: 900px;
   margin: 0 auto;
+}
+
+.preview-content {
+  padding: 8px 0;
+}
+
+.preview-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.no-images {
+  padding: 40px;
+  text-align: center;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.preview-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.preview-price .price {
+  font-size: 28px;
+  font-weight: bold;
+  color: #e74c3c;
+}
+
+.preview-price .original-price {
+  font-size: 14px;
+  color: #999;
+  text-decoration: line-through;
+}
+
+.preview-section {
+  margin-bottom: 16px;
+}
+
+.preview-section h4 {
+  margin: 0 0 8px 0;
+  color: #333;
 }
 </style>

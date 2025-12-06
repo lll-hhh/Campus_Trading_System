@@ -1,15 +1,61 @@
 """Dashboard aggregation endpoints."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_db_session
-from apps.core.models import Category, DailyStat, Item, SyncLog
+from apps.core.models import Category, DailyStat, Item, SyncLog, User, Transaction
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+
+
+@router.get("/stats")
+def get_dashboard_stats(session: Session = Depends(get_db_session)) -> Dict[str, Any]:
+    """Return comprehensive dashboard statistics."""
+    
+    now = datetime.now()
+    today_start = datetime(now.year, now.month, now.day)
+    
+    # 用户统计
+    total_users = session.execute(select(func.count(User.id))).scalar() or 0
+    
+    # 商品统计
+    total_items = session.execute(select(func.count(Item.id))).scalar() or 0
+    available_items = session.execute(
+        select(func.count(Item.id)).where(Item.status == 'available')
+    ).scalar() or 0
+    today_new_items = session.execute(
+        select(func.count(Item.id)).where(Item.created_at >= today_start)
+    ).scalar() or 0
+    
+    # 交易统计
+    total_transactions = session.execute(select(func.count(Transaction.id))).scalar() or 0
+    total_amount = session.execute(select(func.sum(Transaction.final_amount))).scalar() or 0
+    today_completed = session.execute(
+        select(func.count(Transaction.id)).where(
+            Transaction.status == 'completed',
+            Transaction.completed_at >= today_start
+        )
+    ).scalar() or 0
+    
+    return {
+        "users": {
+            "total": total_users,
+        },
+        "items": {
+            "total": total_items,
+            "available": available_items,
+            "today_new": today_new_items,
+        },
+        "transactions": {
+            "total": total_transactions,
+            "total_amount": float(total_amount) if total_amount else 0,
+            "today_completed": today_completed,
+        }
+    }
 
 
 @router.get("/daily-stats")

@@ -1,7 +1,7 @@
 """
 数据库同步API路由 - 同步管理、冲突解决、一致性验证
 """
-from typing import Optional, Any
+from typing import Optional, Any, Literal
 from datetime import datetime
 import json
 
@@ -107,6 +107,13 @@ class SyncLogListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class ConflictResolvePayload(BaseModel):
+    """冲突解决请求"""
+    strategy: Literal["source", "target", "manual"] = Field(
+        default="manual", description="解决策略：采纳来源/source、保留目标/target、手动/manual"
+    )
 
 
 def _parse_json_field(value: Any) -> dict:
@@ -277,11 +284,12 @@ def get_conflicts(
 @router.put("/conflicts/{conflict_id}/resolve")
 def resolve_conflict(
     conflict_id: int,
+    payload: ConflictResolvePayload,
     current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
-    标记冲突为已解决
+    标记冲突为已解决并记录策略
     """
     # 检查冲突是否存在
     check_sql = "SELECT id, resolved FROM conflict_records WHERE id = :conflict_id"
@@ -297,20 +305,25 @@ def resolve_conflict(
     # 更新状态
     update_sql = """
     UPDATE conflict_records 
-    SET resolved = 1, resolved_by = :user_id, resolved_at = NOW(), 
-        resolution_strategy = 'manual', updated_at = NOW()
+    SET resolved = 1,
+        resolved_by = :user_id,
+        resolved_at = NOW(), 
+        resolution_strategy = :strategy,
+        updated_at = NOW()
     WHERE id = :conflict_id
     """
     db.execute(text(update_sql), {
         "user_id": current_user.id,
-        "conflict_id": conflict_id
+        "conflict_id": conflict_id,
+        "strategy": payload.strategy
     })
     db.commit()
     
     return {
         "success": True,
         "message": "冲突已标记为已解决",
-        "conflict_id": conflict_id
+        "conflict_id": conflict_id,
+        "strategy": payload.strategy
     }
 
 

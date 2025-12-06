@@ -93,18 +93,19 @@ def get_top_sellers(
         cutoff_date = datetime.now() - timedelta(days=days)
         
         # 复杂SQL: 多表连接 + 聚合 + 子查询
+        # 使用 transactions 表中的 seller_rating 字段作为评分
         query = text("""
             SELECT 
                 u.id as user_id,
                 u.username,
                 COUNT(DISTINCT t.id) as total_sales,
-                COALESCE(SUM(t.total_amount), 0) as total_revenue,
+                COALESCE(SUM(t.final_amount), 0) as total_revenue,
                 COALESCE(AVG(i.price), 0) as avg_price,
                 COALESCE(
-                    (SELECT AVG(r.rating) 
-                     FROM reviews r 
-                     JOIN transactions t2 ON r.transaction_id = t2.id 
-                     WHERE t2.seller_id = u.id), 
+                    (SELECT AVG(t2.seller_rating) 
+                     FROM transactions t2 
+                     WHERE t2.seller_id = u.id 
+                       AND t2.seller_rating IS NOT NULL), 
                     0
                 ) as rating
             FROM users u
@@ -220,7 +221,7 @@ def get_user_behavior_pattern() -> List[UserBehaviorResponse]:
                 HOUR(t.created_at) as hour,
                 COUNT(DISTINCT t.buyer_id) as active_users,
                 COUNT(t.id) as transactions,
-                COALESCE(AVG(t.total_amount), 0) as avg_transaction_amount
+                COALESCE(AVG(t.final_amount), 0) as avg_transaction_amount
             FROM transactions t
             WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                 AND t.status != 'cancelled'
@@ -267,7 +268,7 @@ def get_category_analysis() -> List[CategoryAnalysisResponse]:
                  NULLIF(COUNT(i.id), 0)) as sell_through_rate,
                 COALESCE(AVG(i.price), 0) as avg_price,
                 COALESCE(
-                    (SELECT SUM(t.total_amount) 
+                    (SELECT SUM(t.final_amount) 
                      FROM transactions t 
                      JOIN items i2 ON t.item_id = i2.id 
                      WHERE i2.category_id = c.id 
@@ -315,7 +316,7 @@ def complex_item_search(
     超复杂多条件商品搜索
     
     使用技术:
-    - 5表JOIN (items + users + categories + transactions + reviews)
+    - 4表JOIN (items + users + categories + transactions)
     - 动态WHERE条件
     - 聚合函数 + HAVING
     - 多字段排序
@@ -349,6 +350,7 @@ def complex_item_search(
         }
         order_clause = order_by_map.get(sort_by, "view_count DESC")
         
+        # 使用 transactions 表中的 seller_rating 作为评分来源
         query = text(f"""
             SELECT 
                 i.id as item_id,
@@ -358,14 +360,13 @@ def complex_item_search(
                 c.name as category_name,
                 i.view_count,
                 COUNT(DISTINCT t.id) as transaction_count,
-                COALESCE(AVG(r.rating), 0) as avg_rating,
+                COALESCE(AVG(t.seller_rating), 0) as avg_rating,
                 DATEDIFF(NOW(), i.created_at) as days_listed
             FROM items i
             JOIN users u ON i.seller_id = u.id
             LEFT JOIN categories c ON i.category_id = c.id
             LEFT JOIN transactions t ON i.id = t.item_id 
                 AND t.status != 'cancelled'
-            LEFT JOIN reviews r ON t.id = r.transaction_id
             WHERE {where_clause}
             GROUP BY i.id, i.title, i.price, u.username, c.name, 
                      i.view_count, i.created_at

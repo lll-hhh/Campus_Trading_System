@@ -527,7 +527,7 @@ const showHotSearches = ref(false)
 const showSearchHistory = ref(false)
 const hotSearches = ref<any[]>([])
 const searchHistory = ref<string[]>([])
-let debounceTimer: number | null = null
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 // 分类数据
 const categories = ref([
@@ -726,24 +726,13 @@ const fetchAutocomplete = async (query: string) => {
   searchLoading.value = true
 
   try {
-    // TODO: 调用真实的自动补全API
-    // const response = await fetch(`/api/v1/search/autocomplete?query=${query}`)
-    // const data = await response.json()
-
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 200))
-
-    // 模拟数据
-    const mockSuggestions = [
-      { text: `${query} Pro`, type: 'keyword', count: 100 },
-      { text: `${query} Max`, type: 'keyword', count: 80 },
-      { text: `${query} 二手`, type: 'keyword', count: 60 },
-      { text: `${query} 全新`, type: 'keyword', count: 50 },
-      { text: '数码产品', type: 'category', count: 200 }
-    ]
-
+    // 调用真实的自动补全API
+    const response = await http.get('/search/autocomplete', {
+      params: { query, limit: 10 }
+    })
+    
     // 转换为autocomplete选项格式
-    autocompleteOptions.value = mockSuggestions.map(item => ({
+    autocompleteOptions.value = response.data.suggestions.map((item: any) => ({
       label: formatLabel(item),
       value: item.text,
       type: item.type,
@@ -751,6 +740,7 @@ const fetchAutocomplete = async (query: string) => {
     }))
   } catch (error) {
     console.error('自动补全失败:', error)
+    autocompleteOptions.value = []
   } finally {
     searchLoading.value = false
   }
@@ -796,34 +786,44 @@ const getTrendType = (trend: string) => {
 // 加载热门搜索
 const loadHotSearches = async () => {
   try {
-    // TODO: 从API加载
-    // const response = await fetch('/api/v1/search/popular')
-    // hotSearches.value = await response.json()
-
-    // 模拟数据
+    // 调用真实API加载热门搜索
+    const response = await http.get('/search/popular', { params: { limit: 10 } })
+    if (response.data.keywords && response.data.keywords.length > 0) {
+      hotSearches.value = response.data.keywords
+    }
+  } catch (error) {
+    console.error('加载热门搜索失败:', error)
+    // 使用默认数据
     hotSearches.value = [
       { keyword: 'iPhone', count: 150, trend: 'up' },
       { keyword: '自行车', count: 120, trend: 'down' },
-      { keyword: '教材', count: 100, trend: 'up' },
-      { keyword: '显示器', count: 80, trend: 'default' },
-      { keyword: '二手书', count: 60, trend: 'up' }
+      { keyword: '教材', count: 100, trend: 'up' }
     ]
-  } catch (error) {
-    console.error('加载热门搜索失败:', error)
   }
 }
 
 // 加载搜索历史
 const loadSearchHistory = async () => {
   try {
-    // TODO: 从API加载
-    // const response = await fetch('/api/v1/search/history')
-    // searchHistory.value = await response.json()
-
     // 从localStorage加载
     const history = localStorage.getItem('searchHistory')
     if (history) {
       searchHistory.value = JSON.parse(history)
+    }
+    
+    // 如果用户已登录，尝试从服务器加载
+    if (authStore.isAuthenticated) {
+      try {
+        const response = await http.get('/search/history', { params: { page_size: 10 } })
+        if (response.data.history && response.data.history.length > 0) {
+          // 合并服务器历史和本地历史
+          const serverKeywords = response.data.history.map((h: any) => h.keyword)
+          const merged = [...new Set([...serverKeywords, ...searchHistory.value])]
+          searchHistory.value = merged.slice(0, 10)
+        }
+      } catch {
+        // 忽略服务器加载错误
+      }
     }
   } catch (error) {
     console.error('加载搜索历史失败:', error)
@@ -1000,7 +1000,7 @@ const newItem = ref({
 const categoryOptions = computed(() => 
   categories.value
     .filter(c => c.id !== null)
-    .map(c => ({ label: `${c.icon} ${c.name}`, value: c.id }))
+    .map(c => ({ label: `${c.icon} ${c.name}`, value: c.id! })) as { label: string; value: number }[]
 )
 
 const handlePublish = async () => {

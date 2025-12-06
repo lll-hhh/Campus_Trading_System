@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
-from typing import Dict, Generator
+from typing import Dict, Generator, Optional
 
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -25,47 +25,47 @@ class DatabaseManager:
     """
 
     def __init__(self) -> None:
-        settings = get_settings()
+        self._settings = get_settings()
         
         # 创建引擎,使用优化的连接池配置
         self._engines: Dict[str, Engine] = {
             "mysql": create_engine(
-                settings.mysql_dsn,
+                self._settings.mysql_dsn,
                 pool_pre_ping=True,
                 pool_size=TransactionConfig.POOL_SIZE,
                 max_overflow=TransactionConfig.MAX_OVERFLOW,
                 pool_timeout=TransactionConfig.POOL_TIMEOUT,
                 pool_recycle=TransactionConfig.POOL_RECYCLE,
-                echo=settings.debug,
+                echo=self._settings.debug,
                 future=True,
             ),
             "mariadb": create_engine(
-                settings.mariadb_dsn,
+                self._settings.mariadb_dsn,
                 pool_pre_ping=True,
                 pool_size=TransactionConfig.POOL_SIZE,
                 max_overflow=TransactionConfig.MAX_OVERFLOW,
                 pool_timeout=TransactionConfig.POOL_TIMEOUT,
                 pool_recycle=TransactionConfig.POOL_RECYCLE,
-                echo=settings.debug,
+                echo=self._settings.debug,
                 future=True,
             ),
             "postgres": create_engine(
-                settings.postgres_dsn,
+                self._settings.postgres_dsn,
                 pool_pre_ping=True,
                 pool_size=TransactionConfig.POOL_SIZE,
                 max_overflow=TransactionConfig.MAX_OVERFLOW,
                 pool_timeout=TransactionConfig.POOL_TIMEOUT,
                 pool_recycle=TransactionConfig.POOL_RECYCLE,
-                echo=settings.debug,
+                echo=self._settings.debug,
                 future=True,
             ),
             "sqlite": create_engine(
-                settings.sqlite_dsn,
+                self._settings.sqlite_dsn,
                 pool_pre_ping=True,
                 # SQLite 特殊配置:单写入器,较小的连接池
                 pool_size=1,
                 max_overflow=0,
-                echo=settings.debug,
+                echo=self._settings.debug,
                 future=True,
             ),
         }
@@ -87,6 +87,47 @@ class DatabaseManager:
         """Return the engine for the given database name."""
 
         return self._engines[name]
+
+    def reconfigure_engine(self, name: str, dsn: str, pool_size: Optional[int] = None) -> None:
+        """Hot-reload a database engine with a new DSN."""
+
+        if name not in self._engines:
+            raise KeyError(f"Unknown database engine: {name}")
+
+        if name == "sqlite":
+            engine = create_engine(
+                dsn,
+                pool_pre_ping=True,
+                pool_size=1,
+                max_overflow=0,
+                echo=self._settings.debug,
+                future=True,
+            )
+        else:
+            effective_pool = pool_size or TransactionConfig.POOL_SIZE
+            engine = create_engine(
+                dsn,
+                pool_pre_ping=True,
+                pool_size=effective_pool,
+                max_overflow=TransactionConfig.MAX_OVERFLOW,
+                pool_timeout=TransactionConfig.POOL_TIMEOUT,
+                pool_recycle=TransactionConfig.POOL_RECYCLE,
+                echo=self._settings.debug,
+                future=True,
+            )
+
+        configure_engine_isolation(engine, name)
+        session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+        old_engine = self._engines.get(name)
+        if old_engine is not None:
+            old_engine.dispose()
+
+        self._engines[name] = engine
+        self._sessions[name] = session_factory
+
+        if name == "mysql":
+            register_sync_listeners(session_factory)
 
     @contextmanager
     def session_scope(self, name: str) -> Generator[Session, None, None]:

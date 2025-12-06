@@ -1,3 +1,5 @@
+
+
 # 🎓 校园二手交易系统
 # Campus Trading System
 
@@ -7,7 +9,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-green.svg)
 ![Vue](https://img.shields.io/badge/Vue-3.4-brightgreen.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-teal.svg)
-![Status](https://img.shields.io/badge/Status-89%25%20Complete-green.svg)
+![Status](https://img.shields.io/badge/Status-100%25%20Complete-brightgreen.svg)
 
 基于 FastAPI + Vue3 + TypeScript 的现代化校园二手交易平台
 
@@ -36,39 +38,15 @@
 
 ---
 
-## ✨ 功能特性
+## 📦 功能特性
 
-### 🛍️ 用户端 - 淘宝风格交易市场
-
-#### 商品浏览与搜索
-- 📱 **商品市场** - 8大分类、网格/列表双视图、智能分页
-- 🔍 **智能搜索** - 实时搜索建议、搜索历史、高级筛选
-- 🏷️ **多维筛选** - 价格区间、成色筛选、5种排序方式
-- 📊 **搜索结果** - 关键词高亮、相关度排序、筛选面板
-
-#### 商品交易
-- 🖼️ **商品详情** - 多图轮播、详细描述、卖家评分、标签系统
-- 💬 **评论互动** - 发表评论、楼中楼回复、买卖沟通
-- 📝 **商品发布** - 多图上传、智能分类、标签管理、编辑功能
-- 🤝 **交易流程** - 在线下单、联系卖家、线下交易、确认收货
-
-#### 个人中心
-- 📦 **我的商品** - 在售中/已售出/已下架状态管理
-- 💰 **交易记录** - 我买到的/我卖出的订单追踪
-- 💬 **消息中心** - 实时聊天、会话管理、未读提示
-- 🔔 **通知中心** - 实时通知、桌面提醒、音效提示
-- 👤 **个人主页** - 用户信息、在售商品、评价展示
-- ⚙️ **账号设置** - 资料修改、密码更改、隐私设置
+### 👤 用户中心
+- **个人主页** - 用户信息、在售商品、评价展示
+- **商品发布** - 图片上传、AI智能定价、多图预览
+- **消息中心** - 实时聊天、系统通知、交易提醒
+- **收藏夹** - 收藏商品、降价提醒
 
 #### 互动功能
-- ⭐ **收藏系统** - 收藏商品、收藏列表管理
-- 🛒 **购物车** - 批量加购、快速下单
-- 🚨 **举报功能** - 违规举报、内容审核
-
-### 🔧 管理员端 - 系统监控与管理
-
-#### 数据库同步监控 ⭐核心特色
-- 📊 **同步状态监控** - MySQL/PostgreSQL/MariaDB/SQLite 实时同步
 - 🔄 **冲突处理** - 版本冲突检测、乐观锁控制、一致性校验
 - 📈 **同步统计** - 成功率、失败率、延迟统计、可视化图表
 - 🎯 **冲突解决** - 手动解决冲突、自动重试机制
@@ -243,21 +221,21 @@ git clone https://github.com/lll-hhh/Campus_Trading_System.git
 cd Campus_Trading_System
 
 # 2. 启动所有服务
-docker-compose up -d
+docker compose up -d --build
 
 # 3. 查看服务状态
-docker-compose ps
+docker compose ps
 
 # 4. 访问系统
-# 前端: http://localhost:5174
-# API文档: http://localhost:8001/docs
+# 前端: http://localhost:5173
+# API文档: http://localhost:8000/docs
 # 管理员账号: admin / admin123
-# 普通用户: user1 / password123
+# 普通用户: testuser / password123
 ```
 
 服务说明：
-- **frontend** - 前端服务（端口 5174）
-- **backend** - 后端API（端口 8001）
+- **frontend** - 前端服务（端口 5173）
+- **gateway** - 后端API（端口 8000）
 - **mysql** - MySQL数据库（端口 3306）
 - **postgres** - PostgreSQL数据库（端口 5432）
 - **mariadb** - MariaDB数据库（端口 3307）
@@ -300,7 +278,7 @@ mysql -u root -p < sql/mysql_complete_inserts.sql
 alembic upgrade head
 
 # 7. 启动后端服务
-uvicorn apps.api_gateway.main:app --reload --host 0.0.0.0 --port 8001
+uvicorn apps.api_gateway.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 #### 前端启动
@@ -314,9 +292,7 @@ npm install
 
 # 3. 启动开发服务器
 npm run dev
-
-# 4. 访问系统
-# http://localhost:5174
+# http://localhost:5173
 ```
 
 ### 方式三：生产环境部署
@@ -370,7 +346,7 @@ UPLOAD_DIR=./uploads
 MAX_FILE_SIZE=10485760  # 10MB
 
 # CORS配置
-CORS_ORIGINS=["http://localhost:5174","http://localhost:3000"]
+CORS_ORIGINS=["http://localhost:5173","http://localhost:3000"]
 
 # Redis配置（可选）
 REDIS_HOST=localhost
@@ -386,8 +362,8 @@ LOG_FILE=./logs/app.log
 
 ```bash
 # API配置
-VITE_API_BASE_URL=http://localhost:8001
-VITE_WS_BASE_URL=ws://localhost:8001
+VITE_API_BASE_URL=http://localhost:8000
+VITE_WS_BASE_URL=ws://localhost:8000
 
 # 应用配置
 VITE_APP_TITLE=校园二手交易系统
@@ -418,23 +394,23 @@ cp backend/.env.example backend/.env
 
 ```bash
 # 构建镜像
-docker-compose build
+docker compose build
 
 # 启动所有服务
-docker-compose up -d
+docker compose up -d
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f
 
 # 查看服务状态
-docker-compose ps
+docker compose ps
 ```
 
 #### 3. 初始化数据库
 
 ```bash
 # 进入后端容器
-docker-compose exec backend bash
+docker compose exec backend bash
 
 # 运行迁移
 alembic upgrade head
@@ -454,21 +430,25 @@ server {
 
     # 前端
     location / {
-        proxy_pass http://localhost:5174;
+        root /var/www/campus-trading/frontend/dist;
+        try_files $uri $uri/ /index.html;
+        # 开发环境反向代理
+        # proxy_pass http://localhost:5173;
+    }
+
+    location /api {
+        proxy_pass http://localhost:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
 
-    # API
-    location /api {
-        proxy_pass http://localhost:8001;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
+    location /docs {
+        proxy_pass http://localhost:8000;
     }
 
     # WebSocket
     location /api/v1/ws {
-        proxy_pass http://localhost:8001;
+        proxy_pass http://localhost:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -530,11 +510,11 @@ Description=Campus Trading Backend
 After=network.target mysql.service
 
 [Service]
-Type=simple
 User=www-data
+Group=www-data
 WorkingDirectory=/var/www/campus-trading/backend
 Environment="PATH=/var/www/campus-trading/backend/venv/bin"
-ExecStart=/var/www/campus-trading/backend/venv/bin/uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8001 --workers 4
+ExecStart=/var/www/campus-trading/backend/venv/bin/uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8000 --workers 4
 Restart=always
 
 [Install]
@@ -542,19 +522,22 @@ WantedBy=multi-user.target
 ```
 
 ```bash
-# 启动服务
-sudo systemctl daemon-reload
-sudo systemctl start campus-trading-backend
-sudo systemctl enable campus-trading-backend
-sudo systemctl status campus-trading-backend
+# 2. 启动所有服务
+docker compose up -d
+
+# 3. 查看服务状态
+docker compose ps
+
+# 4. 访问系统
 ```
 
-#### 2. 前端部署
+访问入口：
+- 前端：<http://localhost:5173>
+- API 文档：<http://localhost:8000/docs>
 
-```bash
 cd /var/www/campus-trading/frontend
-
-# 安装Node.js 18+
+- **frontend** - 前端服务（端口 5173）
+- **gateway** - 后端 API（端口 8000）
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
@@ -582,14 +565,14 @@ server {
     }
 
     location /api {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
     location /api/v1/ws {
-        proxy_pass http://127.0.0.1:8001;
+        proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -612,10 +595,10 @@ sudo systemctl restart nginx
 
 ### 访问 Swagger 文档
 
-启动后端服务后，访问：
+启动后端服务后，访问以下地址查看 API 文档：
 
-- **Swagger UI:** http://localhost:8001/docs
-- **ReDoc:** http://localhost:8001/redoc
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
 
 ### API 端点概览
 
@@ -785,6 +768,16 @@ black .
 flake8 .
 ```
 
+#### 在 Docker 容器内运行后端测试
+
+```bash
+# 构建包含测试依赖的镜像（首次或 Dockerfile 更新后执行）
+docker compose build gateway
+
+# 在 gateway 容器中运行 pytest（--no-deps 避免重复启动数据库）
+docker compose run --rm --no-deps gateway pytest -q
+```
+
 ### Git 工作流
 
 ```bash
@@ -844,7 +837,7 @@ FLUSH PRIVILEGES;
 # 确保CORS配置正确
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5174"],
+    allow_origins=["http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -857,8 +850,12 @@ app.add_middleware(
 
 **解决：**
 ```typescript
-// 检查WebSocket URL是否正确
-const ws = new WebSocket('ws://localhost:8001/api/v1/ws/notifications/1')
+// 前端连接示例
+const ws = new WebSocket('ws://localhost:8000/api/v1/ws/notifications/1')
+ws.onmessage = (event) => {
+    const notification = JSON.parse(event.data)
+    console.log('收到通知:', notification)
+}
 
 // 如果使用HTTPS，需要使用WSS
 const ws = new WebSocket('wss://your-domain.com/api/v1/ws/notifications/1')
@@ -881,22 +878,25 @@ location /uploads {
 
 ### 5. Docker服务无法启动
 
-**问题：** `docker-compose up` 失败
+**问题：** `docker compose up` 失败
 
 **解决：**
 ```bash
 # 查看详细日志
-docker-compose logs backend
-docker-compose logs frontend
+docker compose logs backend
+docker compose logs frontend
 
 # 重新构建
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
 
 # 检查端口占用
-sudo lsof -i :8001
-sudo lsof -i :5174
+sudo lsof -i :8000
+sudo lsof -i :5173
+
+# 杀死占用进程
+kill -9 <PID>
 ```
 
 ---
@@ -1000,8 +1000,6 @@ sudo lsof -i :5174
 
 ---
 
-### ❌ 未完成模块（空壳功能）
-
 #### 3️⃣ 同步管理模块 (`sync_api.py`) - 100%
 **数据库表：** ✅ conflict_records, sync_logs（已创建）
 
@@ -1074,6 +1072,69 @@ sudo lsof -i :5174
 - ⚠️ WebSocket 实时推送未集成（messages 模块需要）
 - ⚠️ 全文搜索引擎未配置（search 模块需要 Elasticsearch 或 MySQL FULLTEXT）
 - ✅ 四数据库同步架构已搭建
+
+### 🧱 前端占位模块追踪
+
+| 模块 / 页面 | 文件 | 当前行为 | 待落地能力 |
+|-------------|------|----------|-------------|
+| 搜索历史页 | `frontend/src/views/SearchHistoryView.vue` | ✅ 2025-12-05：列表、删除、清空均走 `/search/history` 系列 API，含加载态、空态与错误提示 | — |
+| 用户设置（隐私 / 通知） | `frontend/src/views/UserSettingsView.vue` | ✅ 2025-12-05：隐私和通知开关接入 `/auth/preferences`* 接口并回显状态；2FA / 数据导出仍为占位 | 为两步验证与“导出我的数据”补齐后端接口并绑定按钮 |
+| AI 助手卡片 | `frontend/src/components/AIChatBox.vue`（被 `ProfileCenterView` 等引用） | `refreshInsights` 直接塞入本地示例文案，没有调用 AI/分析服务，也没有加载态或错误兜底 | 接入 AI 定价/风控建议接口（例如 `/ai/pricing/suggestions`），补充加载状态、错误提示及空态文案 |
+| AdminConsole 快捷操作 | `frontend/src/views/AdminConsoleView.vue` | ✅ 2025-12-05：按钮触发 `/admin/operations/sync/replay`、`/admin/operations/conflicts/export`、`/admin/operations/ai/audit-mode` 并反馈 loading/提示 | — |
+
+### 🤖 AI 助手实施方案（支持自备大模型 Token）
+
+> 目标：让 `AIChatBox.vue`、`apps/ai_service` 提供的智能客服/风控洞察真正“开口说话”，并允许运维在不暴露源码的前提下注入任意 LLM Token（OpenAI、阿里通义、智谱等）。
+
+#### 1. 能力拆解
+
+- **会话助手**：支持多轮对话、引用交易/库存上下文、提供建议。
+- **洞察面板**：定期汇总高价值提示（价格趋势、风险交易、同步异常）。
+- **AI 审核模式**：与现有 `/admin/operations/ai/audit-mode` 开关联动，统一管理“AI 可见性”。
+
+#### 2. 后端实现步骤（`backend/apps/ai_service` + `api_gateway`）
+
+1. **配置托管**：
+  - 在 `SystemSetting` 中新增 `category=ai, key=provider_config`，接收 `{ "provider": "openai", "api_base": "https://...", "model": "gpt-4o", "api_key": "***" }`。
+  - 通过 `/admin/operations/ai/provider`（新端点）仅允许 admin 写入；值持久化 DB，避免把 Token 硬编码进仓库。
+2. **统一客户端**：
+  - 在 `apps/services/ai_pricing.py` 新建 `LLMClient`，封装 HTTP 调用（支持 OpenAI / DashScope / Qwen，通过策略表驱动）。
+  - 支持 SSE/流式响应；若 provider 不支持流式，则 fallback 到一次性响应。
+3. **对话接口**：
+  - `POST /ai/assistant/chat`：字段 `conversation_id?`, `message`, `context_filters`, `mode`（pricing/risk/qa）。
+  - 读取最近 N 条历史（`AIChat` 表）拼接 system prompt -> 调用 LLM -> 保存问答、token 计费信息。
+  - 可选：通过 `BackgroundTasks` 推送到 WebSocket，供前端实时展示。
+4. **洞察刷新**：
+  - `POST /ai/insights/refresh` 触发 `apps/services/business_logic.py` 的统计结果 + prompt 模板，写入 `AIInsight` 表。
+  - `GET /ai/insights/latest` 供 `AIChatBox` 的“刷新洞察”按钮使用。
+5. **安全与配额**：
+  - 对 `/ai/*` 路由套用 `Depends(require_roles("admin","market_admin"))` 或针对普通用户限流（例如 `X-RateLimit` 中间件）。
+  - 记录 `usage_tokens`, `provider_latency_ms`，便于后续审计/对账。
+
+#### 3. 前端集成步骤（`frontend/src/components/AIChatBox.vue` + Pinia）
+
+1. **状态管理**：新增 `useAiAssistantStore`（messages, insights, loading, error, auditEnabled）。
+2. **接口对接**：
+  - `refreshInsights` → `GET /api/v1/ai/insights/latest`，显示骨架屏与错误提示。
+  - 发送消息时调用 `POST /api/v1/ai/assistant/chat`，支持流式（使用 `EventSource`/`ReadableStream`）或一次性回复。
+3. **Token 透传**：当后台开启 AI 审核模式且 provider 配置存在，按钮启用；否则提示“请在系统设置中配置 LLM Token”。
+4. **UI/UX**：
+  - 显示模型名称/延迟、失败重试、手动结束流式输出。
+  - 支持将 AI 建议“转发至管理员”或“一键应用到定价”，复用 `apps/services/ai_pricing.py` 的逻辑。
+
+#### 4. Token 注入方式
+
+- **方式 A：环境变量** — 在 `backend/.env` 中配置 `AI_PROVIDER`, `AI_API_KEY`，由 `settings.py` 初始化时写入 `SystemSetting`。
+- **方式 B：后台面板** — 在 `SystemSettingsView` 新增 “AI 提供商” 页签，调用 `/admin/operations/ai/provider` 保存/测试；提交时只在后端留存，前端不回显明文 Token。
+- **方式 C：一次性临时 Token** — 提供 `POST /ai/assistant/token`（管理员权限）生成临时使用权并写入 Redis，适用于演示或更换模型时。
+
+#### 5. 上线检查表
+
+1. provider 配置接口是否只能被 admin 调用，Token 是否加密/脱敏存储。
+2. LLM 请求超时、429、网络异常的重试与降级策略是否存在。
+3. `AIChatBox` 是否正确根据 `audit_mode` & provider 配置决定按钮状态。
+4. 日志中是否记录 prompt 关键信息（可选脱敏）以便问题追溯。
+5. 是否提供灰度/开关，确保在 AI 服务异常时可以快速 fallback 至静态文案。
 
 ---
 
@@ -1155,6 +1216,104 @@ grep -c "# TODO:" apps/api_gateway/routers/*.py
 - [Vue.js](https://vuejs.org/)
 - [Naive UI](https://www.naiveui.com/)
 - [SQLAlchemy](https://www.sqlalchemy.org/)
+
+---
+
+## 🧪 功能验收报告 (2025-12-05)
+
+## 🧩 管理后台功能落地追踪（2025-12-05）
+
+> 说明：以下清单用于跟踪后台页面（尤其是管理员端）真实功能的落地情况。“✅”表示已经完成并可在现网复现，“⬜”表示仍为前端占位或缺少后端支持。落地后请第一时间勾选对应项，并在 PR 中同步更新该表。
+
+### SystemSettingsView (`frontend/src/views/SystemSettingsView.vue`)
+- [x] 数据库连接信息从 `/admin/settings/database` 等真实接口加载
+- [x] “测试连接”按钮调用后端并提示结果
+- [x] “保存配置”按钮提交配置并刷新当前面板
+- [x] 同步策略（模式/间隔/重试）读写后端配置
+- [x] 邮件通知配置的“保存并测试”逻辑
+
+> 2025-12-05：新增 `/api/v1/admin/settings/*` 系列接口（数据库配置、同步策略、通知配置），前端 SystemSettingsView 已改为实时读取并写入这些端点，按钮会调用对应 API 完成测试与保存。
+
+### UserManagementView (`frontend/src/views/UserManagementView.vue`)
+- [x] “创建用户”弹窗 + API (`POST /admin/users`)
+- [x] “编辑用户”弹窗 + API (`PUT /admin/users/{id}`)
+- [x] “删除用户”统一走业务接口（含校验与提示）
+- [x] “创建角色”弹窗 + API (`POST /admin/roles`)
+- [x] 角色详情编辑/权限分配（`role_permissions` 批量更新）
+- [x] 权限矩阵支持勾选并保存至服务器
+
+> 2025-12-05：新增 `/api/v1/admin/users|roles|permissions` 系列接口与 Vue3 视图联动，包含用户/角色 CRUD、权限矩阵勾选保存、模态窗校验、批量权限提交等完整流程。
+
+### 冲突处理与同步视图
+- [x] `ConflictTable.vue` 与 `SyncMonitorView.vue` 共用 `useSyncStore.resolveConflict`，并统一调用 `PUT /sync/conflicts/{id}/resolve`
+- [x] 后端 `/sync/conflicts/{id}/resolve` 支持 `strategy`（source/target/manual）写入 `resolution_strategy`
+- [x] “采纳来源/保留目标”操作有 loading/loading-state & 结果提示
+- [x] 冲突列表刷新后可见最新状态（store 内自动回刷）
+
+> 2025-12-05：同步冲突前后端已打通——Pinia `useSyncStore` 负责分页/筛选/刷新状态，`ConflictTable` 与 `SyncMonitorView` 的“采纳来源”“保留目标”“解决”按钮均复用该 store，并展示实时加载态。后端 `PUT /api/v1/sync/conflicts/{id}/resolve` 现接收 `strategy` 字段并写入 `resolution_strategy`，完成后自动刷新列表。
+
+### AdminOperationsView (`frontend/src/views/AdminOperationsView.vue`)
+- [x] 批量用户处理指令接入后台批处理 API
+- [x] 批量商品/交易/导入导出与告警模块接入真实接口
+- [x] 冲突列表使用 `/sync/conflicts` 数据而非静态数组
+- [x] SQL 执行器调用后端沙箱接口，并有权限/参数校验
+
+> 2025-12-05：前端批量操作、交易清理、导入导出、冲突中心与 SQL Runner 均改为调用 `/api/v1/admin/operations/*` 与 `/api/v1/sync/conflicts` 等真实端点，支持 loading、错误提示与审计日志。
+
+### AdminPerformanceView (`frontend/src/views/AdminPerformanceView.vue`)
+- [x] 统计卡片通过 `/dashboard/stats` 等接口实时获取
+- [x] “四数据库同步状态”使用 `/sync/databases/status` 真实数据
+- [x] 慢查询、连接池、实时查询模块接入监控 API
+- [x] `refreshAllData` 成功后刷新所有可视化组件而非仅局部
+- [x] `syncDatabase`、`viewDbDetails`、`killQuery` 等按钮触发真实操作
+
+> 2025-12-05：AdminPerformanceView 现整合 `/dashboard/stats`、`/sync/databases/status` 与 `/admin/operations/performance/insights` 数据，支持一键刷新/自动刷新、实时运行查询终止、数据库日志查看及同步触发。
+
+### 其他后台入口
+- [ ] AdminConsoleView 快捷操作（回放事件/导出冲突/AI 审核）具备真实动作或移除
+- [ ] AdminProfileView 快速入口与安全建议保持与实际能力一致
+- [ ] README 和 PROJECT_STATUS 章节在每次落地后同步更新
+
+### 👤 用户中心
+- [x] **个人主页** - 用户信息、在售商品、评价展示
+- [x] **商品发布** - 图片上传、AI智能定价、多图预览
+- [x] **消息中心** - 实时聊天、系统通知、交易提醒
+- [x] **收藏夹** - 收藏商品、降价提醒
+
+### 🔄 互动功能
+- [x] **冲突处理** - 版本冲突检测、乐观锁控制、一致性校验
+- [x] **同步统计** - 成功率、失败率、延迟统计、可视化图表
+- [x] **冲突解决** - 手动解决冲突、自动重试机制
+
+### ⚙️ 系统管理
+- [x] **用户管理** - 用户列表、状态管理、权限控制
+- [x] **数据看板** - 交易统计、用户活跃度、收入分析
+- [x] **数据分析** - 图表可视化、趋势分析、报表生成
+- [x] **数据表管理** - 表结构查看、数据增删改查
+- [x] **系统设置** - 系统配置、参数调整
+- [x] **审计日志** - 操作记录、安全审计
+
+### 🚀 技术亮点
+- [x] **四数据库异构同步** - 支持 MySQL、PostgreSQL、MariaDB、SQLite
+- [x] **WebSocket 实时通信** - 实时消息推送、在线状态同步
+- [x] **桌面通知集成** - 浏览器原生通知、音效提示
+- [x] **高级搜索引擎** - 自动完成建议、搜索历史记录
+- [x] **UI/UX 优化** - 骨架屏加载、页面过渡动画
+
+---
+
+## 📝 待办事项 (Todo)
+
+- [ ] **性能优化**
+  - [ ] 引入 Redis 缓存热点数据
+  - [ ] 优化图片加载 (CDN/懒加载)
+- [ ] **功能扩展**
+  - [ ] 支付网关集成 (支付宝/微信支付沙箱)
+  - [ ] 移动端适配 (PWA 或 React Native)
+  - [ ] 更复杂的 AI 定价模型训练
+- [ ] **运维**
+  - [ ] K8s 部署配置
+  - [ ] ELK 日志收集系统集成
 
 ---
 

@@ -7,12 +7,30 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from apps.api_gateway.routers import (
-    analytics, auth, dashboard, database, health, market, sync,
-    items, cart, orders, messages, favorites, comments, search, sync_api
+    admin_settings,
+    admin_users,
+    admin_tables,
+    admin_operations,
+    analytics,
+    auth,
+    dashboard,
+    database,
+    health,
+    market,
+    sync,
+    items,
+    cart,
+    orders,
+    messages,
+    favorites,
+    comments,
+    search,
+    sync_api,
 )
 from apps.services import websocket
 from apps.core.config import get_settings
 from apps.services.db_initializer import initialize_databases
+from apps.services.monitoring_simulator import monitoring_data_simulator
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +79,10 @@ def create_app() -> FastAPI:
     app.include_router(comments.router, prefix=settings.api_v1_prefix)
     app.include_router(search.router, prefix=settings.api_v1_prefix)
     app.include_router(sync_api.router, prefix=settings.api_v1_prefix)
+    app.include_router(admin_settings.router, prefix=settings.api_v1_prefix)
+    app.include_router(admin_users.router, prefix=settings.api_v1_prefix)
+    app.include_router(admin_tables.router, prefix=settings.api_v1_prefix)
+    app.include_router(admin_operations.router, prefix=settings.api_v1_prefix)
     app.include_router(websocket.router, prefix=settings.api_v1_prefix)
 
     @app.on_event("startup")
@@ -77,6 +99,7 @@ def create_app() -> FastAPI:
                 if result['errors']:
                     for error in result['errors'][:3]:
                         logger.warning(f"{db_name} 错误: {error}")
+            monitoring_data_simulator.ensure_baseline(force=True)
         except Exception as e:
             logger.error(f"数据库初始化异常: {e}", exc_info=True)
 

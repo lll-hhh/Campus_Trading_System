@@ -484,8 +484,8 @@ class MessageService:
                 user1_id=user1_id,
                 user2_id=user2_id,
                 item_id=item_id,
-                unread_count_user1=0,
-                unread_count_user2=0
+                user1_unread_count=0,
+                user2_unread_count=0
             )
             session.add(conv)
             session.flush()
@@ -524,16 +524,18 @@ class MessageService:
             is_read=False
         )
         session.add(message)
+        session.flush()  # 获取 message.id
         
         # 更新会话的未读计数和最后消息
-        conv.last_message = content[:100] if len(content) > 100 else content
-        conv.last_message_time = datetime.utcnow()
+        conv.last_message_content = content[:100] if len(content) > 100 else content
+        conv.last_message_at = datetime.utcnow()
+        conv.last_message_id = message.id
         
         # 增加对方的未读计数
         if conv.user1_id == sender_id:
-            conv.unread_count_user2 = (conv.unread_count_user2 or 0) + 1
+            conv.user2_unread_count = (conv.user2_unread_count or 0) + 1
         else:
-            conv.unread_count_user1 = (conv.unread_count_user1 or 0) + 1
+            conv.user1_unread_count = (conv.user1_unread_count or 0) + 1
         
         session.flush()
         session.refresh(message)
@@ -569,7 +571,7 @@ class MessageService:
                     Conversation.user1_id == user_id,
                     Conversation.user2_id == user_id
                 )
-            ).order_by(desc(Conversation.last_message_time))
+            ).order_by(desc(Conversation.last_message_at))
         ).scalars().all()
         
         result = []
@@ -592,15 +594,15 @@ class MessageService:
         from apps.core.models import User
         other_user_id = conv.user2_id if conv.user1_id == user_id else conv.user1_id
         other_user = session.get(User, other_user_id)
-        unread_count = conv.unread_count_user1 if conv.user1_id == user_id else conv.unread_count_user2
+        unread_count = conv.user1_unread_count if conv.user1_id == user_id else conv.user2_unread_count
         unread_count = unread_count or 0
         return {
             "id": conv.id,
             "other_user_id": other_user_id,
             "other_user_name": other_user.username if other_user else "未知用户",
             "other_user_avatar": other_user.avatar_url if other_user else None,
-            "last_message": conv.last_message,
-            "last_message_time": conv.last_message_time,
+            "last_message": conv.last_message_content,
+            "last_message_time": conv.last_message_at,
             "unread_count": unread_count,
             "created_at": conv.created_at
         }

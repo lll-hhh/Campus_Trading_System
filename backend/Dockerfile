@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件
-COPY requirements.txt .
+COPY requirements.txt requirements-dev.txt ./
 
-# 安装 Python 依赖
-RUN pip install --no-cache-dir -r requirements.txt
+# 安装 Python 依赖（包含测试所需）
+RUN pip install --no-cache-dir -r requirements-dev.txt
 
 # 复制应用代码
 COPY . .

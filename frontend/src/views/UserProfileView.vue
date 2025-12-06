@@ -60,13 +60,13 @@ const loadUserData = async () => {
     userInfo.value = {
       id: response.data.user_id,
       username: response.data.display_name || '用户',
-      email: '已登录用户', // 出于安全考虑不显示真实邮箱
-      student_id: '已认证', // 出于安全考虑不显示真实学号
-      avatar: '',
-      credit_score: 95, // TODO: 从API获取
+      email: response.data.email || '已登录用户',
+      student_id: response.data.student_id || '已认证',
+      avatar: response.data.avatar || '',
+      credit_score: response.data.credit_score || 95,
       role: response.data.roles?.[0] || 'user',
-      created_at: new Date().toISOString(), // TODO: 从API获取
-      is_verified: true
+      created_at: response.data.created_at || new Date().toISOString(),
+      is_verified: response.data.is_verified !== false
     }
   } catch (error: any) {
     message.error('加载用户数据失败')
@@ -92,8 +92,13 @@ const loadStats = async () => {
     const sellingResponse = await api.get('/orders', { params: { role: 'seller', page_size: 100 } })
     stats.value.sold_count = sellingResponse.data.orders.filter((order: any) => order.status === 'completed').length
 
-    // TODO: 加载未读消息数量
-    stats.value.messages_unread = 0
+    // 加载未读消息数量
+    try {
+      const messagesResponse = await api.get('/messages/unread/count')
+      stats.value.messages_unread = messagesResponse.data.count || 0
+    } catch {
+      stats.value.messages_unread = 0
+    }
   } catch (error: any) {
     console.error('加载统计数据失败:', error)
     message.error('加载统计数据失败')

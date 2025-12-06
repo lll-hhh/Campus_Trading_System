@@ -155,84 +155,261 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useMessage } from 'naive-ui'
 import SyncTrendChart from '@/components/charts/SyncTrendChart.vue'
 import ConflictPieChart from '@/components/charts/ConflictPieChart.vue'
 import DatabaseStatusChart from '@/components/charts/DatabaseStatusChart.vue'
 import HeatmapChart from '@/components/charts/HeatmapChart.vue'
+import { http } from '@/lib/http'
+
+const message = useMessage()
+const loading = ref(false)
 
 // 关键指标
 const keyMetrics = ref([
-  { label: '今日同步', value: '1,234', trend: 12.5, icon: '🔄', gradient: 'from-blue-500 to-blue-600' },
-  { label: '冲突数量', value: '23', trend: -8.3, icon: '⚠️', gradient: 'from-red-500 to-red-600' },
-  { label: '活跃用户', value: '856', trend: 15.7, icon: '👥', gradient: 'from-green-500 to-green-600' },
-  { label: '总交易额', value: '¥45.2K', trend: 23.1, icon: '💰', gradient: 'from-purple-500 to-purple-600' }
+  { label: '今日同步', value: '0', trend: 0, icon: '🔄', gradient: 'from-blue-500 to-blue-600' },
+  { label: '冲突数量', value: '0', trend: 0, icon: '⚠️', gradient: 'from-red-500 to-red-600' },
+  { label: '活跃用户', value: '0', trend: 0, icon: '👥', gradient: 'from-green-500 to-green-600' },
+  { label: '总交易额', value: '¥0', trend: 0, icon: '💰', gradient: 'from-purple-500 to-purple-600' }
 ])
 
 // 同步趋势数据
-const syncTrendData = ref([
-  { date: '2025-01-12', sync_success: 450, sync_conflicts: 12, ai_requests: 89, inventory_changes: 234 },
-  { date: '2025-01-13', sync_success: 520, sync_conflicts: 8, ai_requests: 102, inventory_changes: 267 },
-  { date: '2025-01-14', sync_success: 490, sync_conflicts: 15, ai_requests: 95, inventory_changes: 221 },
-  { date: '2025-01-15', sync_success: 610, sync_conflicts: 6, ai_requests: 118, inventory_changes: 289 },
-  { date: '2025-01-16', sync_success: 580, sync_conflicts: 10, ai_requests: 110, inventory_changes: 256 },
-  { date: '2025-01-17', sync_success: 670, sync_conflicts: 4, ai_requests: 132, inventory_changes: 312 },
-  { date: '2025-01-18', sync_success: 720, sync_conflicts: 3, ai_requests: 145, inventory_changes: 345 }
-])
+const syncTrendData = ref<any[]>([])
 
 // 冲突数据
-const conflictData = ref([
-  { type: '版本冲突', count: 45 },
-  { type: '数据不一致', count: 23 },
-  { type: '约束违反', count: 12 },
-  { type: '其他', count: 8 }
-])
+const conflictData = ref<any[]>([])
 
 // 数据库状态
-const databaseStatus = ref([
-  { name: 'MySQL', connections: 85, syncLatency: 12, errorRate: 0.5 },
-  { name: 'MariaDB', connections: 78, syncLatency: 15, errorRate: 0.3 },
-  { name: 'PostgreSQL', connections: 92, syncLatency: 10, errorRate: 0.2 },
-  { name: 'SQLite', connections: 45, syncLatency: 5, errorRate: 0.1 }
-])
+const databaseStatus = ref<any[]>([])
 
 // 热力图数据
-const heatmapData = ref(
-  Array.from({ length: 168 }, (_, i) => ({
+const heatmapData = ref<any[]>([])
+
+// 顶级卖家
+const topSellers = ref<any[]>([])
+
+// 分类分析
+const categoryAnalysis = ref<any[]>([])
+
+// 加载关键指标数据
+const loadKeyMetrics = async () => {
+  try {
+    // 从 dashboard API 获取统计数据
+    const response = await http.get('/dashboard/stats')
+    const stats = response.data
+    
+    keyMetrics.value = [
+      { 
+        label: '今日同步', 
+        value: stats.today_sync_count?.toLocaleString() || '0', 
+        trend: stats.sync_trend || 0, 
+        icon: '🔄', 
+        gradient: 'from-blue-500 to-blue-600' 
+      },
+      { 
+        label: '冲突数量', 
+        value: stats.conflict_count?.toString() || '0', 
+        trend: stats.conflict_trend || 0, 
+        icon: '⚠️', 
+        gradient: 'from-red-500 to-red-600' 
+      },
+      { 
+        label: '活跃用户', 
+        value: stats.active_users?.toLocaleString() || '0', 
+        trend: stats.user_trend || 0, 
+        icon: '👥', 
+        gradient: 'from-green-500 to-green-600' 
+      },
+      { 
+        label: '总交易额', 
+        value: `¥${((stats.total_revenue || 0) / 1000).toFixed(1)}K`, 
+        trend: stats.revenue_trend || 0, 
+        icon: '💰', 
+        gradient: 'from-purple-500 to-purple-600' 
+      }
+    ]
+  } catch (error) {
+    console.error('加载指标失败:', error)
+  }
+}
+
+// 加载顶级卖家
+const loadTopSellers = async () => {
+  try {
+    const response = await http.get('/analytics/top-sellers', { params: { limit: 5, days: 30 } })
+    topSellers.value = response.data
+  } catch (error) {
+    console.error('加载顶级卖家失败:', error)
+    // 使用默认数据
+    topSellers.value = [
+      { user_id: 1, username: '暂无数据', total_sales: 0, total_revenue: 0, rating: 0 }
+    ]
+  }
+}
+
+// 加载分类分析
+const loadCategoryAnalysis = async () => {
+  try {
+    const response = await http.get('/analytics/category-analysis')
+    categoryAnalysis.value = response.data
+  } catch (error) {
+    console.error('加载分类分析失败:', error)
+  }
+}
+
+// 加载同步趋势数据
+const loadSyncTrends = async () => {
+  try {
+    // 从 daily_stats 表获取数据
+    const response = await http.get('/admin/tables/daily_stats', {
+      params: { page: 1, page_size: 14, sort_by: 'stat_date', sort_order: 'desc' }
+    })
+    const rows = response.data.items || response.data.data || []
+    if (rows.length > 0) {
+      syncTrendData.value = rows.map((row: any) => ({
+        date: row.stat_date,
+        sync_success: row.sync_success_count || 0,
+        sync_conflicts: row.sync_conflict_count || 0,
+        ai_requests: row.ai_request_count || 0,
+        inventory_changes: row.inventory_changes ?? row.inventory_change_count ?? 0
+      })).reverse()
+    }
+  } catch (error) {
+    console.error('加载同步趋势失败:', error)
+  }
+}
+
+// 加载冲突数据
+const loadConflictData = async () => {
+  try {
+    const response = await http.get('/admin/tables/conflict_records', {
+      params: { page: 1, page_size: 100 }
+    })
+    const rows = response.data.items || response.data.data || []
+    if (rows.length > 0) {
+      // 按冲突类型分组统计
+      const typeCount: Record<string, number> = {}
+      rows.forEach((row: any) => {
+        const type = row.conflict_type || '其他'
+        typeCount[type] = (typeCount[type] || 0) + 1
+      })
+      conflictData.value = Object.entries(typeCount).map(([type, count]) => ({
+        type,
+        count
+      }))
+    }
+  } catch (error) {
+    console.error('加载冲突数据失败:', error)
+  }
+}
+
+// 加载数据库状态
+const loadDatabaseStatus = async () => {
+  try {
+    const response = await http.get('/admin/database/status')
+    const payload = response.data
+    if (payload && typeof payload === 'object') {
+      databaseStatus.value = Object.entries(payload).map(([key, info]: [string, any]) => ({
+        name: info?.db_type ? `${key.toUpperCase()} (${info.db_type})` : key.toUpperCase(),
+        connections: info?.active_connections ?? info?.object_count ?? 0,
+        syncLatency: info?.latency ?? info?.avg_latency ?? 0,
+        errorRate: Array.isArray(info?.errors) ? info.errors.length : (info?.error_count ?? 0)
+      }))
+    }
+  } catch (error) {
+    console.error('加载数据库状态失败:', error)
+    // 使用默认数据
+    databaseStatus.value = [
+      { name: 'MySQL', connections: 0, syncLatency: 0, errorRate: 0 },
+      { name: 'MariaDB', connections: 0, syncLatency: 0, errorRate: 0 },
+      { name: 'PostgreSQL', connections: 0, syncLatency: 0, errorRate: 0 },
+      { name: 'SQLite', connections: 0, syncLatency: 0, errorRate: 0 }
+    ]
+  }
+}
+
+// 同步活动热力图
+const loadHeatmapData = async () => {
+  try {
+    const { data } = await http.get('/admin/operations/performance/heatmap', { params: { days: 7 } })
+    if (Array.isArray(data?.data) && data.data.length) {
+      heatmapData.value = data.data.map((item: any) => ({
+        hour: Number(item.hour ?? item.Hour ?? 0),
+        day: String(item.day ?? item.Day ?? 0),
+        value: Number(item.value ?? 0)
+      }))
+      return
+    }
+  } catch (error) {
+    console.error('加载同步热力图失败:', error)
+  }
+  // fallback 随机数据
+  heatmapData.value = Array.from({ length: 168 }, (_, i) => ({
     hour: i % 24,
     day: Math.floor(i / 24).toString(),
     value: Math.floor(Math.random() * 100)
   }))
-)
+}
 
-// 顶级卖家
-const topSellers = ref([
-  { user_id: 1, username: '张同学', total_sales: 45, total_revenue: 12500, rating: 4.8 },
-  { user_id: 2, username: '李老板', total_sales: 38, total_revenue: 10800, rating: 4.9 },
-  { user_id: 3, username: '王大妈', total_sales: 32, total_revenue: 8900, rating: 4.7 },
-  { user_id: 4, username: '赵小姐', total_sales: 28, total_revenue: 7600, rating: 4.6 },
-  { user_id: 5, username: '钱先生', total_sales: 25, total_revenue: 6800, rating: 4.5 }
-])
-
-// 分类分析
-const categoryAnalysis = ref([
-  { category_id: 1, category_name: '电子产品', item_count: 234, sold_count: 189, sell_through_rate: 80.8, avg_price: 450, total_revenue: 85050 },
-  { category_id: 2, category_name: '图书教材', item_count: 512, sold_count: 287, sell_through_rate: 56.1, avg_price: 35, total_revenue: 10045 },
-  { category_id: 3, category_name: '生活用品', item_count: 178, sold_count: 98, sell_through_rate: 55.1, avg_price: 68, total_revenue: 6664 },
-  { category_id: 4, category_name: '运动器材', item_count: 89, sold_count: 56, sell_through_rate: 62.9, avg_price: 120, total_revenue: 6720 },
-  { category_id: 5, category_name: '服装配饰', item_count: 156, sold_count: 112, sell_through_rate: 71.8, avg_price: 85, total_revenue: 9520 }
-])
-
-const refreshData = () => {
-  console.log('刷新数据...')
-  // TODO: 调用API刷新数据
+const refreshData = async () => {
+  loading.value = true
+  message.loading('正在刷新数据...')
+  try {
+    await Promise.all([
+      loadKeyMetrics(),
+      loadTopSellers(),
+      loadCategoryAnalysis(),
+      loadSyncTrends(),
+      loadConflictData(),
+      loadDatabaseStatus(),
+      loadHeatmapData()
+    ])
+    message.success('数据刷新成功')
+  } catch (error) {
+    message.error('刷新数据失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 const exportReport = () => {
-  console.log('导出报表...')
-  // TODO: 实现报表导出功能
+  // 构建 CSV 内容
+  let csvContent = '数据分析报表\n\n'
+  
+  // 关键指标
+  csvContent += '关键指标\n'
+  csvContent += '指标,数值,趋势\n'
+  keyMetrics.value.forEach(m => {
+    csvContent += `${m.label},${m.value},${m.trend}%\n`
+  })
+  
+  // 顶级卖家
+  csvContent += '\n顶级卖家\n'
+  csvContent += '用户名,销售量,销售额,评分\n'
+  topSellers.value.forEach(s => {
+    csvContent += `${s.username},${s.total_sales},¥${s.total_revenue},${s.rating}\n`
+  })
+  
+  // 分类分析
+  csvContent += '\n分类分析\n'
+  csvContent += '分类,商品数,已售,售罄率,均价,总收入\n'
+  categoryAnalysis.value.forEach(c => {
+    csvContent += `${c.category_name},${c.item_count},${c.sold_count},${c.sell_through_rate}%,¥${c.avg_price},¥${c.total_revenue}\n`
+  })
+  
+  // 下载
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `数据分析报表_${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+  
+  message.success('报表导出成功')
 }
 
-onMounted(() => {
-  // TODO: 从API加载数据
+onMounted(async () => {
+  await refreshData()
 })
 </script>

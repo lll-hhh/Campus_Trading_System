@@ -8,7 +8,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const collapsed = ref(false)
 
-const userName = computed(() => authStore.displayName || '管理员')
+const userName = computed(() => authStore.displayName ?? '管理员')
 
 const menuOptions = [
   {
@@ -67,12 +67,7 @@ const menuOptions = [
   {
     label: '👤 个人中心',
     key: 'profile',
-    path: '/user/profile'
-  },
-  {
-    label: '🏪 返回市场',
-    key: 'marketplace',
-    path: '/marketplace'
+    path: '/admin/profile'
   }
 ]
 

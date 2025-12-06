@@ -34,17 +34,36 @@
             </button>
           </header>
           <ul class="mt-4 space-y-3 text-sm text-slate-600">
-            <li class="flex items-center justify-between rounded border border-slate-100 p-3">
-              <span>回放滞留事件</span>
-              <span class="text-xs text-slate-400">Redis Stream</span>
+            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span>回放滞留事件</span>
+                <span class="ml-2 text-xs text-slate-400">Redis Stream</span>
+              </div>
+              <n-button size="small" type="primary" secondary :loading="replaying" @click="replayStalled">
+                回放最近失败任务
+              </n-button>
             </li>
-            <li class="flex items-center justify-between rounded border border-slate-100 p-3">
-              <span>导出冲突报告</span>
-              <span class="text-xs text-slate-400">CSV</span>
+            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span>导出冲突报告</span>
+                <span class="ml-2 text-xs text-slate-400">CSV</span>
+              </div>
+              <n-button size="small" ghost :loading="exportingConflicts" @click="exportConflicts">
+                下载最新报告
+              </n-button>
             </li>
-            <li class="flex items-center justify-between rounded border border-slate-100 p-3">
-              <span>开启 AI 审核模式</span>
-              <span class="text-xs text-slate-400">实验室</span>
+            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <span>开启 AI 审核模式</span>
+                <span class="ml-2 text-xs text-slate-400">实验室</span>
+              </div>
+              <n-button
+                size="small"
+                type="success"
+                :loading="aiAuditLoading"
+                :secondary="aiAuditEnabled"
+                @click="toggleAiAudit"
+              >{{ aiAuditEnabled ? '关闭 AI 审核' : '立即开启' }}</n-button>
             </li>
           </ul>
         </article>
@@ -76,20 +95,110 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { storeToRefs } from 'pinia';
+import { useMessage } from 'naive-ui';
 
 import ConflictTable from '@/components/ConflictTable.vue';
 import SyncStatChart from '@/components/SyncStatChart.vue';
 import SyncStatusCard from '@/components/SyncStatusCard.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useSyncStore } from '@/stores/sync';
+import { http as api } from '@/lib/http';
 
 const authStore = useAuthStore();
 const syncStore = useSyncStore();
 const { runningManual } = storeToRefs(syncStore);
 const isAdmin = computed(() => authStore.isAdmin);
 const triggering = computed(() => runningManual.value);
+const message = useMessage();
+
+const replaying = ref(false);
+const exportingConflicts = ref(false);
+const aiAuditEnabled = ref(false);
+const aiAuditLoading = ref(false);
+
+async function replayStalled() {
+  if (replaying.value) return;
+  replaying.value = true;
+  try {
+    await api.post('/admin/operations/sync/replay');
+    message.success('已触发回放最近失败任务');
+  } catch (error) {
+    console.error('回放滞留事件失败:', error);
+    message.error('回放失败，请稍后重试');
+  } finally {
+    replaying.value = false;
+  }
+}
+
+async function exportConflicts() {
+  if (exportingConflicts.value) return;
+  exportingConflicts.value = true;
+  try {
+    const response = await api.get('/admin/operations/conflicts/export', {
+      responseType: 'blob',
+    });
+    const disposition = response.headers['content-disposition'] as string | undefined;
+    let filename = `conflicts-${Date.now()}.csv`;
+    if (disposition) {
+      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+      const encoded = match?.[1] || match?.[2];
+      if (encoded) {
+        filename = decodeURIComponent(encoded);
+      }
+    }
+    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+    message.success('冲突报告已导出');
+  } catch (error) {
+    console.error('导出冲突报告失败:', error);
+    message.error('导出失败，请稍后再试');
+  } finally {
+    exportingConflicts.value = false;
+  }
+}
+
+async function fetchAiAuditStatus() {
+  try {
+    const { data } = await api.get('/admin/operations/ai/audit-mode');
+    aiAuditEnabled.value = Boolean(data?.enabled);
+  } catch (error) {
+    console.error('获取 AI 审核状态失败:', error);
+  }
+}
+
+async function toggleAiAudit() {
+  if (aiAuditLoading.value) return;
+  aiAuditLoading.value = true;
+  try {
+    const next = !aiAuditEnabled.value;
+    await api.post('/admin/operations/ai/audit-mode', { enabled: next });
+    aiAuditEnabled.value = next;
+    message.success(next ? 'AI 审核模式已开启' : 'AI 审核模式已关闭');
+  } catch (error) {
+    console.error('切换 AI 审核模式失败:', error);
+    message.error('操作失败，请稍后重试');
+  } finally {
+    aiAuditLoading.value = false;
+  }
+}
+
+watch(
+  () => isAdmin.value,
+  (authorized) => {
+    if (authorized) {
+      fetchAiAuditStatus();
+    }
+  },
+  { immediate: true }
+);
 
 function triggerSync() {
   syncStore.triggerManualRun();

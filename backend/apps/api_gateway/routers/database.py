@@ -14,7 +14,7 @@ router = APIRouter(prefix="/admin/database", tags=["Database Admin"])
 
 @router.post("/initialize", response_model=Dict[str, Dict])
 def initialize_all_databases(
-    _: User = Depends(require_roles("market_admin"))
+    _: User = Depends(require_roles("admin", "market_admin"))
 ) -> Dict[str, Dict]:
     """
     初始化所有数据库（执行触发器、存储过程、函数脚本）
@@ -32,7 +32,7 @@ def initialize_all_databases(
 @router.post("/initialize/{db_name}", response_model=Dict[str, Any])
 def initialize_single_database(
     db_name: str,
-    _: User = Depends(require_roles("market_admin"))
+    _: User = Depends(require_roles("admin", "market_admin"))
 ) -> Dict[str, Any]:
     """
     初始化单个数据库
@@ -60,7 +60,7 @@ def initialize_single_database(
 @router.get("/verify/{db_name}", response_model=Dict[str, Any])
 def verify_database_objects(
     db_name: str,
-    _: User = Depends(require_roles("market_admin"))
+    _: User = Depends(require_roles("admin", "market_admin"))
 ) -> Dict[str, Any]:
     """
     验证数据库对象（触发器、存储过程、函数、视图）是否创建成功
@@ -87,7 +87,7 @@ def verify_database_objects(
 
 @router.get("/status", response_model=Dict[str, Dict])
 def get_database_status(
-    _: User = Depends(require_roles("market_admin"))
+    _: User = Depends(require_roles("admin", "market_admin"))
 ) -> Dict[str, Dict]:
     """
     获取所有数据库的对象创建状态

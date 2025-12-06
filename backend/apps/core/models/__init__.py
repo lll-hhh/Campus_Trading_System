@@ -1,5 +1,13 @@
 """Aggregate models for CampuSwap."""
-from .additional import CartItem, Conversation, Message, RefreshToken, SearchHistory, SearchTrending
+from .additional import (
+    CartItem,
+    Conversation,
+    Message,
+    RefreshToken,
+    SearchHistory,
+    SearchTrending,
+    SystemSetting,
+)
 from .ai import AIAction, AIChat, AIInsight, AIModel, FraudPattern
 from .base import Base, BaseModel, PrimaryKeyMixin, SyncVersionMixin, TimestampMixin
 from .inventory import (
@@ -16,7 +24,7 @@ from .inventory import (
 from .operations import AuditLog, Blacklist, ConfigItem, ModerationTask, Report
 from .sync import ConflictRecord, DailyStat, SyncConfig, SyncLog
 from .transactions import Delivery, Offer, Payment, Review, Transaction, TransactionLog
-from .users import Permission, Role, RolePermission, User, UserProfile, UserRole
+from .users import Permission, Role, RolePermission, User, UserPreference, UserProfile, UserRole
 
 __all__ = [
     "AIAction",
@@ -54,12 +62,14 @@ __all__ = [
     "RolePermission",
     "SearchHistory",
     "SearchTrending",
+    "SystemSetting",
     "SyncConfig",
     "SyncLog",
     "Tag",
     "Transaction",
     "TransactionLog",
     "User",
+    "UserPreference",
     "UserProfile",
     "UserRole",
 ]

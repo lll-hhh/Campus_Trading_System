@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 
-import api from '@/lib/http';
+import { http as api } from '@/lib/http';
 
 export interface SearchFilters {
   keyword: string;

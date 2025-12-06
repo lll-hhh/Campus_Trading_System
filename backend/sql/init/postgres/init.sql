@@ -929,3 +929,102 @@ INSERT INTO role_permissions (role_id, permission_id) VALUES
 -- seller 拥有卖家权限
 (4, 1), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8)
 ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ============================================
+-- 同步配置示例数据
+-- ============================================
+INSERT INTO sync_configs (id, source, target, mode, interval_seconds, enabled, last_run_at) VALUES
+(1, 'mysql', 'mariadb', 'realtime', 60, true, NOW() - INTERVAL '5 minutes'),
+(2, 'mysql', 'postgres', 'scheduled', 300, true, NOW() - INTERVAL '10 minutes'),
+(3, 'mysql', 'sqlite', 'manual', 3600, true, NOW() - INTERVAL '1 hour'),
+(4, 'mariadb', 'postgres', 'realtime', 60, true, NOW() - INTERVAL '3 minutes'),
+(5, 'postgres', 'sqlite', 'scheduled', 600, false, NOW() - INTERVAL '2 hours')
+ON CONFLICT (id) DO NOTHING;
+
+-- ============================================
+-- 同步日志示例数据
+-- ============================================
+INSERT INTO sync_logs (config_id, status, started_at, completed_at, stats) VALUES
+(1, 'completed', NOW() - INTERVAL '5 minutes', NOW() - INTERVAL '4 minutes', '{"rows_synced": 156, "conflicts": 2}'),
+(2, 'completed', NOW() - INTERVAL '10 minutes', NOW() - INTERVAL '8 minutes', '{"rows_synced": 89, "conflicts": 0}'),
+(1, 'completed', NOW() - INTERVAL '15 minutes', NOW() - INTERVAL '14 minutes', '{"rows_synced": 203, "conflicts": 1}'),
+(3, 'completed', NOW() - INTERVAL '1 hour', NOW() - INTERVAL '58 minutes', '{"rows_synced": 45, "conflicts": 0}'),
+(4, 'completed', NOW() - INTERVAL '3 minutes', NOW() - INTERVAL '2 minutes', '{"rows_synced": 78, "conflicts": 3}'),
+(1, 'completed', NOW() - INTERVAL '20 minutes', NOW() - INTERVAL '19 minutes', '{"rows_synced": 112, "conflicts": 0}'),
+(2, 'failed', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '1 hour 55 minutes', '{"error": "Connection timeout"}'),
+(1, 'completed', NOW() - INTERVAL '25 minutes', NOW() - INTERVAL '24 minutes', '{"rows_synced": 67, "conflicts": 1}'),
+(4, 'completed', NOW() - INTERVAL '8 minutes', NOW() - INTERVAL '7 minutes', '{"rows_synced": 134, "conflicts": 0}'),
+(1, 'running', NOW() - INTERVAL '1 minute', NULL, '{"rows_synced": 0, "conflicts": 0}');
+
+-- ============================================
+-- 每日统计示例数据 (最近14天)
+-- ============================================
+INSERT INTO daily_stats (stat_date, sync_success_count, sync_conflict_count, ai_request_count, inventory_changes) VALUES
+(CURRENT_DATE - INTERVAL '13 days', 245, 12, 89, 156),
+(CURRENT_DATE - INTERVAL '12 days', 312, 8, 102, 203),
+(CURRENT_DATE - INTERVAL '11 days', 287, 15, 78, 189),
+(CURRENT_DATE - INTERVAL '10 days', 198, 5, 134, 145),
+(CURRENT_DATE - INTERVAL '9 days', 356, 18, 156, 267),
+(CURRENT_DATE - INTERVAL '8 days', 423, 22, 189, 312),
+(CURRENT_DATE - INTERVAL '7 days', 389, 9, 167, 278),
+(CURRENT_DATE - INTERVAL '6 days', 267, 11, 145, 198),
+(CURRENT_DATE - INTERVAL '5 days', 445, 14, 201, 334),
+(CURRENT_DATE - INTERVAL '4 days', 378, 7, 178, 289),
+(CURRENT_DATE - INTERVAL '3 days', 412, 16, 223, 356),
+(CURRENT_DATE - INTERVAL '2 days', 356, 10, 198, 267),
+(CURRENT_DATE - INTERVAL '1 day', 489, 13, 245, 398),
+(CURRENT_DATE, 234, 6, 112, 178)
+ON CONFLICT (stat_date) DO NOTHING;
+
+-- ============================================
+-- 冲突记录示例数据
+-- ============================================
+INSERT INTO conflict_records (table_name, record_id, source, target, status, payload) VALUES
+('users', '15', 'mysql', 'mariadb', 'pending', '{"field": "email", "mysql_value": "user15@a.edu", "mariadb_value": "user15@b.edu"}'),
+('items', '42', 'mysql', 'postgres', 'pending', '{"field": "price", "mysql_value": 199.00, "postgres_value": 189.00}'),
+('items', '78', 'mariadb', 'postgres', 'resolved', '{"field": "status", "mariadb_value": "active", "postgres_value": "sold"}'),
+('transactions', '123', 'mysql', 'mariadb', 'pending', '{"field": "status", "mysql_value": "completed", "mariadb_value": "pending"}'),
+('users', '88', 'postgres', 'sqlite', 'resolved', '{"field": "credit_score", "postgres_value": 85, "sqlite_value": 90}');
+
+-- ============================================
+-- 管理员账户 (密码: admin123)
+-- ============================================
+INSERT INTO users (id, username, email, password_hash, is_active, is_verified, credit_score) VALUES
+(9999, 'admin', 'admin@campus.edu', '$5$rounds=535000$abcdefghijklmnop$Y8L5Y1N3PxM7Q2R4T6V8W0X2Z4A6C8E0G2I4K6M8O0', true, true, 100)
+ON CONFLICT (id) DO NOTHING;
+
+-- 为管理员分配admin角色
+INSERT INTO user_roles (user_id, role_id) 
+SELECT 9999, id FROM roles WHERE name = 'admin'
+ON CONFLICT (user_id, role_id) DO NOTHING;
+
+-- ============================================
+-- 性能指标示例数据
+-- ============================================
+INSERT INTO performance_metrics (db_name, metric_type, metric_value, recorded_at) VALUES
+('mysql', 'query_time_avg', 12.5, NOW() - INTERVAL '1 hour'),
+('mysql', 'connections', 45, NOW() - INTERVAL '1 hour'),
+('mysql', 'query_time_avg', 15.2, NOW() - INTERVAL '30 minutes'),
+('mysql', 'connections', 52, NOW() - INTERVAL '30 minutes'),
+('mysql', 'query_time_avg', 11.8, NOW()),
+('mysql', 'connections', 48, NOW()),
+('mariadb', 'query_time_avg', 10.3, NOW() - INTERVAL '1 hour'),
+('mariadb', 'connections', 38, NOW() - INTERVAL '1 hour'),
+('mariadb', 'query_time_avg', 13.1, NOW() - INTERVAL '30 minutes'),
+('mariadb', 'connections', 42, NOW() - INTERVAL '30 minutes'),
+('mariadb', 'query_time_avg', 9.7, NOW()),
+('mariadb', 'connections', 40, NOW()),
+('postgres', 'query_time_avg', 8.9, NOW() - INTERVAL '1 hour'),
+('postgres', 'connections', 32, NOW() - INTERVAL '1 hour'),
+('postgres', 'query_time_avg', 11.2, NOW() - INTERVAL '30 minutes'),
+('postgres', 'connections', 35, NOW() - INTERVAL '30 minutes'),
+('postgres', 'query_time_avg', 7.5, NOW()),
+('postgres', 'connections', 30, NOW()),
+('sqlite', 'query_time_avg', 5.2, NOW() - INTERVAL '1 hour'),
+('sqlite', 'connections', 1, NOW() - INTERVAL '1 hour'),
+('sqlite', 'query_time_avg', 6.1, NOW() - INTERVAL '30 minutes'),
+('sqlite', 'connections', 1, NOW() - INTERVAL '30 minutes'),
+('sqlite', 'query_time_avg', 4.8, NOW()),
+('sqlite', 'connections', 1, NOW());
+
+SELECT 'PostgreSQL sample data inserted successfully!' AS message;

@@ -71,7 +71,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="db in databases" :key="db.name">
+          <tr v-for="db in databases" :key="db.key">
             <td><strong>{{ db.name }}</strong></td>
             <td>
               <n-tag :type="db.status === 'online' ? 'success' : 'error'" size="small">
@@ -84,8 +84,8 @@
             <td>{{ db.lastSync }}</td>
             <td>
               <n-space>
-                <n-button size="small" @click="syncDatabase(db.name)">同步</n-button>
-                <n-button size="small" type="primary" @click="viewDbDetails(db.name)">详情</n-button>
+                <n-button size="small" @click="syncDatabase(db)">同步</n-button>
+                <n-button size="small" type="primary" @click="viewDbDetails(db)">详情</n-button>
               </n-space>
             </td>
           </tr>
@@ -169,8 +169,8 @@
         <n-descriptions :column="2" size="small" style="margin-top: 10px;">
           <n-descriptions-item label="活跃连接">{{ sqlitePool.active }}/{{ sqlitePool.max }}</n-descriptions-item>
           <n-descriptions-item label="锁等待">{{ sqlitePool.waiting }}</n-descriptions-item>
-          <n-descriptions-item label="写入队列">{{ sqlitePool.writeQueue }}</n-descriptions-item>
-          <n-descriptions-item label="WAL大小">{{ sqlitePool.walSize }}MB</n-descriptions-item>
+          <n-descriptions-item label="写入队列">{{ sqlitePool.writeQueue ?? 0 }}</n-descriptions-item>
+          <n-descriptions-item label="WAL大小">{{ Number(sqlitePool.walSize ?? 0).toFixed(1) }}MB</n-descriptions-item>
         </n-descriptions>
       </n-card>
     </div>
@@ -192,7 +192,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(q, idx) in runningQueries" :key="idx">
+            <tr v-for="q in runningQueries" :key="q.id">
               <td><n-tag size="small">{{ q.database }}</n-tag></td>
               <td class="sql-query">{{ q.query }}</td>
               <td>
@@ -254,213 +254,282 @@
         </n-space>
       </n-card>
     </div>
+
+    <n-modal
+      v-model:show="dbLogsModalVisible"
+      preset="card"
+      :title="`${currentDbTitle} 同步日志`"
+      style="width: 640px"
+    >
+      <n-table v-if="currentDbLogs.length" size="small">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>状态</th>
+            <th>开始时间</th>
+            <th>完成时间</th>
+            <th>模式</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="log in currentDbLogs" :key="log.id">
+            <td>{{ log.id }}</td>
+            <td>
+              <n-tag :type="log.status === 'failed' ? 'error' : 'success'" size="small">
+                {{ log.status }}
+              </n-tag>
+            </td>
+            <td>{{ formatDateTime(log.started_at) }}</td>
+            <td>{{ formatDateTime(log.completed_at) }}</td>
+            <td>{{ log.mode || '-' }}</td>
+          </tr>
+        </tbody>
+      </n-table>
+      <n-empty v-else description="暂无日志数据" />
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { NCard, NStatistic, NDivider, NTable, NTag, NButton, NSpace, NProgress, NDescriptions, NDescriptionsItem, NTooltip, NAlert, NSpin, useMessage } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+
+import { http as api } from '@/lib/http'
+
+interface PoolSnapshot {
+  active: number
+  idle: number
+  max: number
+  waiting: number
+  timeouts: number
+  usage: number
+  writeQueue?: number
+  walSize?: number
+}
+
+interface DatabaseRow {
+  key: string
+  name: string
+  status: 'online' | 'offline'
+  latency: number
+  recordCount: number
+  syncVersion: number
+  lastSync: string
+}
+
+interface SlowQueryRow {
+  id: string
+  sql: string
+  count: number
+  avgTime: number
+  maxTime: number
+  rows: number
+  suggestion: string
+}
+
+interface RunningQueryRow {
+  id: string
+  database: string
+  query: string
+  status: string
+  duration: number
+}
+
+interface DbLogRow {
+  id: number
+  status: string
+  started_at: string | null
+  completed_at: string | null
+  mode?: string | null
+}
 
 const message = useMessage()
 
-// 统计数据
+const DATABASES = [
+  { key: 'mysql', label: 'MySQL' },
+  { key: 'postgres', label: 'PostgreSQL' },
+  { key: 'mariadb', label: 'MariaDB' },
+  { key: 'sqlite', label: 'SQLite' }
+]
+
+const makeEmptyPool = (): PoolSnapshot => ({ active: 0, idle: 0, max: 0, waiting: 0, timeouts: 0, usage: 0 })
+
 const stats = ref({
-  totalUsers: 200,
-  onlineUsers: 45,
-  availableItems: 437,
-  todayNewItems: 23,
-  totalTransactionAmount: 156780.5,
-  todayCompletedTransactions: 18,
-  avgQueryTime: 12.5,
-  qps: 342
+  totalUsers: 0,
+  onlineUsers: 0,
+  availableItems: 0,
+  todayNewItems: 0,
+  totalTransactionAmount: 0,
+  todayCompletedTransactions: 0,
+  avgQueryTime: 0,
+  qps: 0
 })
 
-// 数据库状态
-const databases = ref([
-  {
-    name: 'MySQL',
-    status: 'online',
-    latency: 8,
-    recordCount: 3247,
-    syncVersion: 1523,
-    lastSync: '2秒前'
-  },
-  {
-    name: 'PostgreSQL',
-    status: 'online',
-    latency: 12,
-    recordCount: 3245,
-    syncVersion: 1522,
-    lastSync: '5秒前'
-  },
-  {
-    name: 'MariaDB',
-    status: 'online',
-    latency: 10,
-    recordCount: 3247,
-    syncVersion: 1523,
-    lastSync: '3秒前'
-  },
-  {
-    name: 'SQLite',
-    status: 'online',
-    latency: 3,
-    recordCount: 3246,
-    syncVersion: 1523,
-    lastSync: '1秒前'
-  }
-])
+const databases = ref<DatabaseRow[]>([])
+const slowQueries = ref<SlowQueryRow[]>([])
+const runningQueries = ref<RunningQueryRow[]>([])
 
-// 慢查询
-const slowQueries = ref([
-  {
-    id: 'Q1001',
-    sql: 'SELECT * FROM items WHERE status = "available" ORDER BY created_at DESC LIMIT 1000',
-    count: 1523,
-    avgTime: 145,
-    maxTime: 320,
-    rows: 1000,
-    suggestion: '建议: 添加 (status, created_at) 复合索引'
-  },
-  {
-    id: 'Q1002',
-    sql: 'SELECT u.*, COUNT(i.id) FROM users u LEFT JOIN items i ON u.id = i.seller_id GROUP BY u.id',
-    count: 892,
-    avgTime: 89,
-    maxTime: 178,
-    rows: 200,
-    suggestion: '建议: 使用物化视图缓存聚合结果'
-  },
-  {
-    id: 'Q1003',
-    sql: 'UPDATE items SET view_count = view_count + 1 WHERE id = ?',
-    count: 8943,
-    avgTime: 5,
-    maxTime: 45,
-    rows: 1,
-    suggestion: '建议: 使用 Redis 缓存浏览计数，批量写入数据库'
-  },
-  {
-    id: 'Q1004',
-    sql: 'SELECT * FROM transactions WHERE buyer_id = ? OR seller_id = ?',
-    count: 2341,
-    avgTime: 67,
-    maxTime: 156,
-    rows: 50,
-    suggestion: '建议: 分别查询后合并，或使用 UNION'
-  },
-  {
-    id: 'Q1005',
-    sql: 'SELECT item_id, COUNT(*) FROM comments GROUP BY item_id HAVING COUNT(*) > 10',
-    count: 456,
-    avgTime: 123,
-    maxTime: 289,
-    rows: 87,
-    suggestion: '建议: 添加 item_id 索引，考虑分区表'
-  }
-])
+const mysqlPool = ref<PoolSnapshot>(makeEmptyPool())
+const postgresPool = ref<PoolSnapshot>(makeEmptyPool())
+const mariadbPool = ref<PoolSnapshot>(makeEmptyPool())
+const sqlitePool = ref<PoolSnapshot>(makeEmptyPool())
 
-// 连接池状态
-const mysqlPool = ref({
-  active: 8,
-  idle: 12,
-  max: 20,
-  waiting: 0,
-  timeouts: 3,
-  usage: 40
-})
-
-const postgresPool = ref({
-  active: 6,
-  idle: 14,
-  max: 20,
-  waiting: 0,
-  timeouts: 1,
-  usage: 30
-})
-
-const mariadbPool = ref({
-  active: 7,
-  idle: 13,
-  max: 20,
-  waiting: 0,
-  timeouts: 2,
-  usage: 35
-})
-
-const sqlitePool = ref({
-  active: 1,
-  idle: 0,
-  max: 1,
-  waiting: 0,
-  writeQueue: 5,
-  walSize: 12.3,
-  usage: 100
-})
-
-// 实时查询
-const runningQueries = ref([
-  {
-    id: 'RQ001',
-    database: 'MySQL',
-    query: 'SELECT * FROM items WHERE category_id = 2 AND price < 100',
-    status: 'running',
-    duration: 156
-  },
-  {
-    id: 'RQ002',
-    database: 'PostgreSQL',
-    query: 'INSERT INTO audit_logs (user_id, table_name, operation) VALUES (...)',
-    status: 'running',
-    duration: 23
-  }
-])
-
-// 健康度指标
 const healthMetrics = ref({
-  dbConnection: 98,
-  querySpeed: 92,
-  syncConsistency: 96,
-  resourceUsage: 65
+  dbConnection: 0,
+  querySpeed: 0,
+  syncConsistency: 0,
+  resourceUsage: 0,
+  score: 0
 })
 
 const systemHealth = computed(() => {
   const metrics = healthMetrics.value
+  if (metrics.score) return Math.round(metrics.score)
   return Math.round(
-    (metrics.dbConnection * 0.3 +
+    metrics.dbConnection * 0.3 +
     metrics.querySpeed * 0.3 +
     metrics.syncConsistency * 0.3 +
-    (100 - metrics.resourceUsage) * 0.1)
+    (100 - metrics.resourceUsage) * 0.1
   )
 })
 
-// 自动刷新
 const autoRefresh = ref(false)
-let refreshInterval: number | null = null
+const isLoading = ref(false)
+const dbLogsModalVisible = ref(false)
+const currentDbLogs = ref<DbLogRow[]>([])
+const currentDbTitle = ref('')
+let refreshInterval: number | undefined
 
-const refreshAllData = () => {
-  // 模拟数据刷新
-  stats.value.onlineUsers = Math.floor(Math.random() * 20) + 35
-  stats.value.todayNewItems = Math.floor(Math.random() * 10) + 15
-  stats.value.todayCompletedTransactions = Math.floor(Math.random() * 10) + 10
-  stats.value.avgQueryTime = (Math.random() * 10 + 8).toFixed(1) as any
-  stats.value.qps = Math.floor(Math.random() * 100) + 300
-  
-  databases.value.forEach(db => {
-    db.latency = Math.floor(Math.random() * 10) + 3
-    db.recordCount += Math.floor(Math.random() * 5)
+const handleError = (error: unknown, fallback: string) => {
+  console.error(error)
+  const detail = (error as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+  message.error(detail || fallback)
+}
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '未完成'
+  return new Date(value).toLocaleString()
+}
+
+const applyConnectionPools = (poolData: Record<string, PoolSnapshot>) => {
+  mysqlPool.value = poolData.mysql ?? makeEmptyPool()
+  postgresPool.value = poolData.postgres ?? makeEmptyPool()
+  mariadbPool.value = poolData.mariadb ?? makeEmptyPool()
+  sqlitePool.value = poolData.sqlite ?? makeEmptyPool()
+}
+
+const estimateLatency = (pool: PoolSnapshot) => {
+  if (!pool.max) return 0
+  return Math.max(1, Math.round((pool.active / pool.max) * 20))
+}
+
+const fetchLatestLogsByTarget = async () => {
+  try {
+    const { data } = await api.get('/sync/logs', { params: { page: 1, page_size: 40 } })
+    const map = new Map<string, any>()
+    for (const log of data.logs || []) {
+      const target = log.stats?.target
+      if (target && !map.has(target)) {
+        map.set(target, log)
+      }
+    }
+    return map
+  } catch (error) {
+    handleError(error, '无法获取同步日志')
+    return new Map<string, any>()
+  }
+}
+
+const refreshDatabases = async (
+  statusPayload: any,
+  poolData: Record<string, PoolSnapshot>
+) => {
+  const logsMap = await fetchLatestLogsByTarget()
+  const dbList: any[] = statusPayload?.databases || []
+  databases.value = DATABASES.map((descriptor) => {
+    const statusItem = dbList.find((item) => (item.name || '').includes(descriptor.key))
+    const pool = poolData[descriptor.key] ?? makeEmptyPool()
+    const latestLog = logsMap.get(descriptor.key)
+    const recordCount = Number(latestLog?.stats?.records || latestLog?.stats?.record_count || 0)
+    const syncVersion = Number(latestLog?.stats?.version || latestLog?.stats?.sync_version || 0)
+    const lastSync = latestLog
+      ? formatDateTime(latestLog.completed_at || latestLog.started_at)
+      : (statusItem?.last_sync ? formatDateTime(statusItem.last_sync) : '未知')
+    return {
+      key: descriptor.key,
+      name: statusItem?.label || descriptor.label,
+      status: statusItem?.status === 'error' ? 'offline' : 'online',
+      latency: statusItem?.latency ?? estimateLatency(pool),
+      recordCount,
+      syncVersion,
+      lastSync
+    }
   })
-  
-  message.success('数据已刷新')
+}
+
+const refreshAllData = async () => {
+  isLoading.value = true
+  try {
+    const [dashboardRes, databaseRes, performanceRes] = await Promise.allSettled([
+      api.get('/dashboard/stats'),
+      api.get('/sync/databases/status'),
+      api.get('/admin/operations/performance/insights')
+    ])
+
+    if (dashboardRes.status === 'fulfilled') {
+      const data = dashboardRes.value.data
+      stats.value.totalUsers = Number(data.users?.total ?? stats.value.totalUsers)
+      stats.value.availableItems = Number(data.items?.available ?? stats.value.availableItems)
+      stats.value.todayNewItems = Number(data.items?.today_new ?? stats.value.todayNewItems)
+      stats.value.totalTransactionAmount = Number(data.transactions?.total_amount ?? stats.value.totalTransactionAmount)
+      stats.value.todayCompletedTransactions = Number(data.transactions?.today_completed ?? stats.value.todayCompletedTransactions)
+      stats.value.onlineUsers = Number(data.users?.online ?? Math.max(1, Math.round((stats.value.totalUsers || 0) * 0.2)))
+    }
+
+    let poolData: Record<string, PoolSnapshot> = {}
+    if (performanceRes.status === 'fulfilled') {
+      const perf = performanceRes.value.data
+      slowQueries.value = perf.slow_queries || []
+      runningQueries.value = perf.running_queries || []
+      stats.value.avgQueryTime = perf.stats?.avg_query_time ?? stats.value.avgQueryTime
+      stats.value.qps = perf.stats?.qps ?? stats.value.qps
+      poolData = perf.connection_pools || {}
+      applyConnectionPools(poolData)
+      if (perf.health) {
+        healthMetrics.value = {
+          dbConnection: perf.health.dbConnection ?? healthMetrics.value.dbConnection,
+          querySpeed: perf.health.querySpeed ?? healthMetrics.value.querySpeed,
+          syncConsistency: perf.health.syncConsistency ?? healthMetrics.value.syncConsistency,
+          resourceUsage: perf.health.resourceUsage ?? healthMetrics.value.resourceUsage,
+          score: perf.health.score ?? systemHealth.value
+        }
+      }
+    } else {
+      slowQueries.value = []
+      runningQueries.value = []
+    }
+
+    if (databaseRes.status === 'fulfilled') {
+      await refreshDatabases(databaseRes.value.data, poolData)
+    }
+
+    message.success('性能数据已刷新')
+  } catch (error) {
+    handleError(error, '刷新性能数据失败')
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const toggleAutoRefresh = () => {
   autoRefresh.value = !autoRefresh.value
   if (autoRefresh.value) {
+    refreshAllData()
     refreshInterval = window.setInterval(refreshAllData, 5000)
     message.info('已启动自动刷新（每5秒）')
-  } else {
-    if (refreshInterval) clearInterval(refreshInterval)
+  } else if (refreshInterval) {
+    window.clearInterval(refreshInterval)
+    refreshInterval = undefined
     message.info('已停止自动刷新')
   }
 }
@@ -479,20 +548,40 @@ const getHealthLabel = (score: number) => {
   return '危险'
 }
 
-const syncDatabase = (dbName: string) => {
-  message.loading(`正在同步 ${dbName}...`)
-  setTimeout(() => {
-    message.success(`${dbName} 同步完成`)
-  }, 1500)
+const syncDatabase = async (db: DatabaseRow) => {
+  try {
+    await api.post(`/admin/operations/databases/${db.key}/sync`)
+    message.success(`${db.name} 同步任务已触发`)
+  } catch (error) {
+    handleError(error, `${db.name} 同步失败`)
+  }
 }
 
-const viewDbDetails = (dbName: string) => {
-  message.info(`查看 ${dbName} 详细信息`)
+const viewDbDetails = async (db: DatabaseRow) => {
+  try {
+    const { data } = await api.get(`/admin/operations/databases/${db.key}`)
+    currentDbLogs.value = (data.logs || []).map((log: any) => ({
+      id: log.id,
+      status: log.status,
+      started_at: log.started_at,
+      completed_at: log.completed_at,
+      mode: log.mode || null
+    }))
+    currentDbTitle.value = db.name
+    dbLogsModalVisible.value = true
+  } catch (error) {
+    handleError(error, `无法获取 ${db.name} 的日志`)
+  }
 }
 
-const killQuery = (queryId: string) => {
-  message.warning(`终止查询 ${queryId}`)
-  runningQueries.value = runningQueries.value.filter(q => q.id !== queryId)
+const killQuery = async (queryId: string) => {
+  try {
+    await api.post(`/admin/operations/queries/${queryId}/kill`)
+    runningQueries.value = runningQueries.value.filter((query) => String(query.id) !== String(queryId))
+    message.success(`查询 ${queryId} 已终止`)
+  } catch (error) {
+    handleError(error, '终止查询失败')
+  }
 }
 
 onMounted(() => {
@@ -500,7 +589,10 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (refreshInterval) clearInterval(refreshInterval)
+  if (refreshInterval) {
+    window.clearInterval(refreshInterval)
+    refreshInterval = undefined
+  }
 })
 </script>
 

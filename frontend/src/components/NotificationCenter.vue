@@ -138,8 +138,8 @@ const unreadCount = computed(() => notificationStore.unreadCount)
 
 // WebSocket连接
 let ws: WebSocket | null = null
-let reconnectTimer: NodeJS.Timeout | null = null
-let heartbeatTimer: NodeJS.Timeout | null = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let heartbeatTimer: ReturnType<typeof setTimeout> | null = null
 
 // 方法
 const togglePopover = () => {

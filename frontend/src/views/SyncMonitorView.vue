@@ -102,7 +102,7 @@
               v-model:value="conflictFilter"
               :options="conflictFilterOptions"
               style="width: 150px"
-              @update:value="loadConflicts"
+              @update:value="handleConflictFilterChange"
             />
           </n-space>
         </template>
@@ -110,7 +110,7 @@
         <n-data-table
           :columns="conflictColumns"
           :data="conflicts"
-          :loading="conflictLoading"
+          :loading="loadingConflicts"
           :pagination="conflictPagination"
           :row-key="(row: any) => row.id"
         />
@@ -197,8 +197,8 @@
           <n-button @click="showConflictDetailModal = false">关闭</n-button>
           <n-button
             type="warning"
-            @click="resolveConflict(selectedConflict.id)"
-            :loading="resolveLoading"
+            :loading="resolvingConflictId === selectedConflict?.id"
+            @click="resolveConflictRecord(selectedConflict.id, 'manual')"
           >
             标记为已解决
           </n-button>
@@ -209,25 +209,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, h, onMounted } from 'vue'
+import { ref, h, onMounted, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useMessage, NButton, NTag, NSpace } from 'naive-ui'
 import {
   RefreshOutline,
   BuildOutline,
-  ServerOutline,
-  CheckmarkCircleOutline,
-  CloseCircleOutline
+  ServerOutline
 } from '@vicons/ionicons5'
 import type { DataTableColumns } from 'naive-ui'
+import { useSyncStore } from '@/stores/sync'
 
 const message = useMessage()
+const syncStore = useSyncStore()
+const { conflicts, loadingConflicts, resolvingConflictId, conflictMeta } = storeToRefs(syncStore)
 
 // 状态
 const loading = ref(false)
-const conflictLoading = ref(false)
 const logLoading = ref(false)
 const repairLoading = ref(false)
-const resolveLoading = ref(false)
 
 // 统计数据
 const stats = ref({
@@ -282,26 +282,31 @@ const databases = ref([
 ])
 
 // 冲突记录
-const conflicts = ref<any[]>([])
-const conflictFilter = ref('unresolved')
+const conflictFilter = ref<'all' | 'resolved' | 'unresolved'>(conflictMeta.value.filter)
 const conflictFilterOptions = [
   { label: '未解决', value: 'unresolved' },
   { label: '已解决', value: 'resolved' },
   { label: '全部', value: 'all' }
 ]
 
-const conflictPagination = ref({
-  page: 1,
-  pageSize: 10,
+const conflictPagination = computed(() => ({
+  page: conflictMeta.value.page,
+  pageSize: conflictMeta.value.pageSize,
+  itemCount: conflictMeta.value.total,
   showSizePicker: true,
-  pageSizes: [10, 20, 50]
-})
+  pageSizes: [10, 20, 50],
+  onChange: (page: number) => loadConflicts({ page }),
+  onUpdatePage: (page: number) => loadConflicts({ page }),
+  onPageSizeChange: (pageSize: number) => loadConflicts({ pageSize, page: 1 }),
+  onUpdatePageSize: (pageSize: number) => loadConflicts({ pageSize, page: 1 })
+}))
 
 // 同步日志
 const logs = ref<any[]>([])
 const logPagination = ref({
   page: 1,
   pageSize: 10,
+  pageCount: 1,
   showSizePicker: true,
   pageSizes: [10, 20, 50]
 })
@@ -391,9 +396,10 @@ const conflictColumns: DataTableColumns<any> = [
               {
                 size: 'small',
                 type: 'warning',
-                onClick: () => resolveConflict(row.id)
+                loading: resolvingConflictId.value === row.id,
+                onClick: () => resolveConflictRecord(row.id, 'manual')
               },
-              { default: () => '解决' }
+              { default: () => resolvingConflictId.value === row.id ? '处理中…' : '解决' }
             )
           ]
         }
@@ -576,33 +582,17 @@ const loadDatabaseStatus = async () => {
   }
 }
 
-const loadConflicts = async () => {
-  conflictLoading.value = true
-  try {
-    const resolved = conflictFilter.value === 'resolved' ? true : 
-                    conflictFilter.value === 'unresolved' ? false : null
-    
-    const params = new URLSearchParams({
-      page: conflictPagination.value.page.toString(),
-      page_size: conflictPagination.value.pageSize.toString()
-    })
-    if (resolved !== null) {
-      params.append('resolved', resolved.toString())
-    }
-    
-    const response = await fetch(`/api/v1/sync/conflicts?${params}`, {
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    if (response.ok) {
-      const data = await response.json()
-      conflicts.value = data.conflicts
-      conflictPagination.value.pageCount = Math.ceil(data.total / data.page_size)
-    }
-  } finally {
-    conflictLoading.value = false
-  }
+async function loadConflicts(options?: { page?: number; pageSize?: number }) {
+  await syncStore.fetchConflicts({
+    page: options?.page,
+    pageSize: options?.pageSize,
+    filter: conflictFilter.value
+  })
+}
+
+function handleConflictFilterChange(value: 'all' | 'resolved' | 'unresolved') {
+  conflictFilter.value = value
+  loadConflicts({ page: 1 })
 }
 
 const loadLogs = async () => {
@@ -667,30 +657,16 @@ const viewConflictDetail = (conflict: any) => {
   showConflictDetailModal.value = true
 }
 
-const resolveConflict = async (conflictId: number) => {
-  resolveLoading.value = true
+async function resolveConflictRecord(conflictId: number, strategy: 'source' | 'target' | 'manual') {
   try {
-    const response = await fetch(`/api/v1/sync/conflicts/${conflictId}/resolve`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
-      }
-    })
-    
-    if (response.ok) {
-      const data = await response.json()
-      message.success(data.message || '已标记为已解决')
+    await syncStore.resolveConflict(conflictId, strategy)
+    message.success('冲突已解决')
+    if (selectedConflict.value?.id === conflictId) {
       showConflictDetailModal.value = false
-      loadConflicts()
-    } else {
-      const error = await response.json()
-      message.error(error.detail || '操作失败')
     }
   } catch (error) {
     console.error('操作失败:', error)
     message.error('操作失败')
-  } finally {
-    resolveLoading.value = false
   }
 }
 

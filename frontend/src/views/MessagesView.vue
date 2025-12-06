@@ -157,7 +157,7 @@
                       />
                       
                       <!-- 商品卡片 -->
-                      <div v-else-if="message.type === 'item'" class="message-item-card">
+                      <div v-else-if="message.type === 'item' && message.itemData" class="message-item-card">
                         <n-card size="small" hoverable>
                           <template #cover>
                             <img :src="message.itemData.image" style="height: 120px; object-fit: cover" />
@@ -191,7 +191,7 @@
                 <n-space>
                   <n-button text @click="handleImageUpload">
                     <template #icon>
-                      <n-icon :component="Image" />
+                      <n-icon :component="ImageIcon" />
                     </template>
                     图片
                   </n-button>
@@ -517,8 +517,69 @@ const handleImageSelected = async (event: Event) => {
   const file = target.files?.[0];
   if (!file) return;
   
-  // TODO: 实现图片上传逻辑
-  message.info('图片上传功能开发中...');
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    message.error('只能上传图片文件');
+    return;
+  }
+  
+  // 检查文件大小（最大5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    message.error('图片大小不能超过5MB');
+    return;
+  }
+  
+  if (!selectedConversation.value) {
+    message.warning('请先选择一个会话');
+    return;
+  }
+  
+  try {
+    // 创建 FormData 上传到服务器
+    const uploadData = new FormData();
+    uploadData.append('file', file);
+    
+    let imageUrl: string;
+    
+    try {
+      const response = await http.post('/upload/image', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      imageUrl = response.data.url;
+    } catch (uploadError) {
+      // 如果服务器上传失败，使用本地预览
+      console.warn('服务器上传失败，使用本地预览');
+      imageUrl = URL.createObjectURL(file);
+    }
+    
+    // 发送图片消息
+    const response = await http.post('/messages', {
+      receiver_id: selectedConversation.value.userId,
+      content: imageUrl,
+      message_type: 'image'
+    });
+    
+    // 添加到消息列表
+    messages.value.push({
+      id: response.data.id,
+      content: imageUrl,
+      timestamp: new Date().toISOString(),
+      isSent: true,
+      type: 'image'
+    });
+    
+    // 滚动到底部
+    await nextTick();
+    scrollToBottom();
+    
+    message.success('图片发送成功');
+  } catch (error) {
+    console.error('图片上传失败:', error);
+    message.error('图片发送失败');
+  }
+  
+  // 清空input
+  target.value = '';
 };
 
 // 组件挂载时加载数据

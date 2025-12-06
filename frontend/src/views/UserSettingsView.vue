@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import {
   NCard,
   NForm,
@@ -81,9 +81,67 @@ const loadUserProfile = async () => {
   }
 }
 
-const handleAvatarUpload = (options: { file: UploadFileInfo }) => {
-  message.info('上传头像功能开发中...')
-  return
+const loadUserPreferences = async () => {
+  try {
+    const { data } = await api.get('/auth/preferences')
+    if (data?.privacy) {
+      privacySettings.value = {
+        ...privacySettings.value,
+        ...data.privacy,
+      }
+    }
+    if (data?.notifications) {
+      notificationSettings.value = {
+        ...notificationSettings.value,
+        ...data.notifications,
+      }
+    }
+  } catch (error) {
+    console.error('加载偏好设置失败:', error)
+    message.error('加载偏好设置失败')
+  }
+}
+
+const handleAvatarUpload = async (options: { file: UploadFileInfo }) => {
+  const file = options.file.file
+  if (!file) {
+    message.error('请选择文件')
+    return
+  }
+  
+  // 检查文件类型
+  if (!file.type.startsWith('image/')) {
+    message.error('只能上传图片文件')
+    return
+  }
+  
+  // 检查文件大小（最大2MB）
+  if (file.size > 2 * 1024 * 1024) {
+    message.error('图片大小不能超过2MB')
+    return
+  }
+  
+  try {
+    // 创建 FormData 上传到服务器
+    const uploadData = new FormData()
+    uploadData.append('file', file)
+    
+    try {
+      const response = await api.post('/upload/avatar', uploadData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      avatarUrl.value = response.data.url
+      message.success('头像上传成功')
+    } catch (uploadError) {
+      // 如果服务器上传失败，使用本地预览
+      console.warn('服务器上传失败，使用本地预览')
+      avatarUrl.value = URL.createObjectURL(file)
+      message.info('已使用本地预览')
+    }
+  } catch (error) {
+    console.error('头像上传失败:', error)
+    message.error('头像上传失败')
+  }
 }
 
 const updateProfile = async () => {
@@ -124,7 +182,8 @@ const updatePassword = async () => {
 
 const updatePrivacy = async () => {
   try {
-    // await api.put('/api/users/privacy', privacySettings.value)
+    const { data } = await api.put('/auth/preferences/privacy', privacySettings.value)
+    privacySettings.value = { ...data }
     message.success('隐私设置已更新')
   } catch (error) {
     message.error('更新失败')
@@ -133,7 +192,8 @@ const updatePrivacy = async () => {
 
 const updateNotifications = async () => {
   try {
-    // await api.put('/api/users/notifications', notificationSettings.value)
+    const { data } = await api.put('/auth/preferences/notifications', notificationSettings.value)
+    notificationSettings.value = { ...data }
     message.success('通知设置已更新')
   } catch (error) {
     message.error('更新失败')
@@ -141,10 +201,9 @@ const updateNotifications = async () => {
 }
 
 // 页面加载时获取用户资料
-import { onMounted } from 'vue'
-
 onMounted(() => {
   loadUserProfile()
+  loadUserPreferences()
 })
 </script>
 

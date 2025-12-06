@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   NCard,
@@ -21,30 +21,16 @@ const message = useMessage()
 interface SearchRecord {
   id: number
   keyword: string
-  results_count: number
-  created_at: string
+  result_count: number
+  searched_at: string
 }
 
-const searchHistory = ref<SearchRecord[]>([
-  {
-    id: 1,
-    keyword: 'iPhone',
-    results_count: 25,
-    created_at: '2024-11-19T10:30:00',
-  },
-  {
-    id: 2,
-    keyword: 'MacBook',
-    results_count: 12,
-    created_at: '2024-11-19T09:15:00',
-  },
-  {
-    id: 3,
-    keyword: '自行车',
-    results_count: 8,
-    created_at: '2024-11-18T16:20:00',
-  },
-])
+const searchHistory = ref<SearchRecord[]>([])
+const loading = ref(false)
+const deletingId = ref<number | null>(null)
+const clearing = ref(false)
+
+const hasRecords = computed(() => searchHistory.value.length > 0)
 
 const searchAgain = (keyword: string) => {
   router.push({
@@ -55,7 +41,8 @@ const searchAgain = (keyword: string) => {
 
 const deleteRecord = async (id: number) => {
   try {
-    // await api.delete(`/api/search-history/${id}`)
+    deletingId.value = id
+    await api.delete(`/search/history/${id}`)
     const index = searchHistory.value.findIndex(r => r.id === id)
     if (index > -1) {
       searchHistory.value.splice(index, 1)
@@ -63,25 +50,44 @@ const deleteRecord = async (id: number) => {
     }
   } catch (error) {
     message.error('删除失败')
+  } finally {
+    deletingId.value = null
   }
 }
 
 const clearAll = async () => {
   try {
-    // await api.delete('/api/search-history')
+    if (!hasRecords.value) {
+      message.info('暂无可清空的历史记录')
+      return
+    }
+    clearing.value = true
+    await api.delete('/search/history')
     searchHistory.value = []
     message.success('已清空搜索历史')
   } catch (error) {
     message.error('清空失败')
+  } finally {
+    clearing.value = false
   }
 }
 
 const loadSearchHistory = async () => {
   try {
-    // const response = await api.get('/api/search-history')
-    // searchHistory.value = response.data
+    loading.value = true
+    const { data } = await api.get('/search/history', {
+      params: { page: 1, page_size: 50 },
+    })
+    searchHistory.value = (data?.history || []).map((item: any) => ({
+      id: item.id,
+      keyword: item.keyword,
+      result_count: item.result_count ?? item.results_count ?? 0,
+      searched_at: item.searched_at ?? item.created_at,
+    }))
   } catch (error) {
     message.error('加载搜索历史失败')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -94,22 +100,28 @@ onMounted(() => {
   <div class="search-history-page">
     <n-card title="搜索历史">
       <template #header-extra>
-        <n-popconfirm @positive-click="clearAll">
+        <n-popconfirm @positive-click="clearAll" :show-icon="hasRecords">
           <template #trigger>
-            <n-button type="error" secondary>清空全部</n-button>
+            <n-button
+              type="error"
+              secondary
+              :disabled="!hasRecords || loading"
+              :loading="clearing"
+            >清空全部</n-button>
           </template>
           确定要清空所有搜索历史吗？
         </n-popconfirm>
       </template>
 
-      <n-empty v-if="searchHistory.length === 0" description="暂无搜索历史">
+      <n-empty v-if="!loading && searchHistory.length === 0" description="暂无搜索历史">
         <template #extra>
           <n-button @click="router.push('/marketplace')">去搜索商品</n-button>
         </template>
       </n-empty>
 
-      <n-list v-else hoverable clickable>
-        <n-list-item v-for="record in searchHistory" :key="record.id">
+      <n-spin :show="loading">
+        <n-list v-if="searchHistory.length > 0" hoverable clickable>
+          <n-list-item v-for="record in searchHistory" :key="record.id">
           <template #prefix>
             <div style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #f0f9ff; border-radius: 50%">
               🔍
@@ -122,10 +134,10 @@ onMounted(() => {
             </div>
             <n-space align="center" :size="12">
               <span style="font-size: 14px; color: #666">
-                找到 {{ record.results_count }} 个结果
+                找到 {{ record.result_count }} 个结果
               </span>
               <span style="color: #999">•</span>
-              <n-time :time="new Date(record.created_at)" type="relative" />
+              <n-time :time="new Date(record.searched_at)" type="relative" />
             </n-space>
           </div>
 
@@ -136,14 +148,20 @@ onMounted(() => {
               </n-button>
               <n-popconfirm @positive-click="deleteRecord(record.id)">
                 <template #trigger>
-                  <n-button size="small" type="error" secondary>删除</n-button>
+                  <n-button
+                    size="small"
+                    type="error"
+                    secondary
+                    :loading="deletingId === record.id"
+                  >删除</n-button>
                 </template>
                 确定删除此条记录吗？
               </n-popconfirm>
             </n-space>
           </template>
         </n-list-item>
-      </n-list>
+        </n-list>
+      </n-spin>
     </n-card>
   </div>
 </template>

@@ -210,6 +210,7 @@ import {
   HeartOutline,
   CloseCircleOutline
 } from '@vicons/ionicons5'
+import { http } from '@/lib/http'
 
 const route = useRoute()
 const router = useRouter()
@@ -282,69 +283,50 @@ const handleSearch = async () => {
   currentPage.value = 1
 
   try {
-    // TODO: 调用真实的搜索API
-    const params = new URLSearchParams({
+    // 调用真实的搜索API
+    const params: Record<string, any> = {
       q: searchQuery.value,
-      page: currentPage.value.toString(),
-      page_size: pageSize.value.toString(),
+      page: currentPage.value,
+      page_size: pageSize.value,
       sort_by: filters.value.sortBy
-    })
+    }
 
     if (filters.value.category) {
-      params.append('category', filters.value.category)
+      params.category = filters.value.category
     }
     if (filters.value.minPrice !== null) {
-      params.append('min_price', filters.value.minPrice.toString())
+      params.min_price = filters.value.minPrice
     }
     if (filters.value.maxPrice !== null) {
-      params.append('max_price', filters.value.maxPrice.toString())
+      params.max_price = filters.value.maxPrice
     }
     if (filters.value.status) {
-      params.append('status', filters.value.status)
+      params.item_status = filters.value.status === '在售' ? 'available' : 'sold'
     }
 
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 500))
+    const response = await http.get('/search/search', { params })
+    
+    // 处理返回数据
+    items.value = response.data.items.map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      price: item.price,
+      image: item.image || `https://picsum.photos/300/300?random=${item.id}`,
+      category: item.category,
+      seller_name: item.seller_name,
+      seller_avatar: item.seller_avatar,
+      view_count: item.view_count || 0,
+      favorite_count: item.favorite_count || 0,
+      status: item.status === 'available' ? '在售' : '已售出',
+      highlight: item.highlight,
+      created_at: item.created_at
+    }))
 
-    // 模拟数据
-    items.value = [
-      {
-        id: 1,
-        title: `iPhone 15 Pro Max - ${searchQuery.value}`,
-        price: 8999,
-        image: 'https://via.placeholder.com/300',
-        category: '数码产品',
-        seller_name: '张三',
-        seller_avatar: null,
-        view_count: 1234,
-        favorite_count: 56,
-        status: '在售',
-        highlight: `全新未拆封，支持官方验机。关键词：<em>${searchQuery.value}</em>`
-      },
-      {
-        id: 2,
-        title: `MacBook Air M2 - ${searchQuery.value}`,
-        price: 7499,
-        image: 'https://via.placeholder.com/300',
-        category: '数码产品',
-        seller_name: '李四',
-        seller_avatar: null,
-        view_count: 890,
-        favorite_count: 34,
-        status: '在售',
-        highlight: `9成新，仅用3个月。包含：<em>${searchQuery.value}</em>`
-      }
-    ]
-
-    total.value = 45
-    suggestions.value = [
-      `${searchQuery.value} 二手`,
-      `${searchQuery.value} 全新`,
-      `便宜的${searchQuery.value}`
-    ]
-  } catch (error) {
+    total.value = response.data.total
+    suggestions.value = response.data.suggestions || []
+  } catch (error: any) {
     console.error('搜索失败:', error)
-    message.error('搜索失败，请重试')
+    message.error(error.response?.data?.detail || '搜索失败，请重试')
   } finally {
     loading.value = false
   }

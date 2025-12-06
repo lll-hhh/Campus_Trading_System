@@ -11,7 +11,7 @@
           <div class="min-h-screen bg-slate-50 text-slate-900">
             
             <!-- 顶部导航栏：只有登录后才显示详细菜单 -->
-            <header v-if="!isLoginPage" class="border-b bg-white/80 backdrop-blur sticky top-0 z-50">
+            <header v-if="!isLoginPage && !isAdminPage" class="border-b bg-white/80 backdrop-blur sticky top-0 z-50">
               <div class="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
                 
                 <!-- Logo -->
@@ -70,7 +70,7 @@
               <router-view />
             </main>
 
-            <footer v-if="!isLoginPage" class="border-t bg-white mt-12">
+            <footer v-if="!isLoginPage && !isAdminPage" class="border-t bg-white mt-12">
               <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-slate-500">
                 <p>© {{ currentYear }} CampuSwap · 校园二手交易平台</p>
               </div>
@@ -109,6 +109,8 @@ const currentUserName = computed(() => authStore.user?.username || '未登录用
 
 // 判断是否在登录页 (登录页通常不显示复杂的 Header)
 const isLoginPage = computed(() => route.path === '/login')
+// 判断是否在管理员页面
+const isAdminPage = computed(() => route.path.startsWith('/admin'))
 
 // 普通用户导航
 const userLinks = [

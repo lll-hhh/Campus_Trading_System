@@ -34,6 +34,7 @@ import AdminPerformanceView from '@/views/AdminPerformanceView.vue';
 import AdminOperationsView from '@/views/AdminOperationsView.vue';
 import AdminTablesView from '@/views/AdminTablesView.vue';
 import SyncMonitorView from '@/views/SyncMonitorView.vue';
+import AdminProfileView from '@/views/AdminProfileView.vue';
 
 // 1. 引入注册组件
 import RegisterView from '@/views/RegisterView.vue';
@@ -219,6 +220,12 @@ const router = createRouter({
           name: 'sync-monitor',
           component: SyncMonitorView,
           meta: { title: '同步监控', icon: '🔄', role: 'admin', requiresAdmin: true }
+        },
+        {
+          path: 'profile',
+          name: 'admin-profile',
+          component: AdminProfileView,
+          meta: { title: '管理员个人中心', icon: '👤', role: 'admin', requiresAdmin: true }
         }
       ]
     },
@@ -310,7 +317,15 @@ router.beforeEach(async (to, from, next) => {
       return;
     }
 
-    // ============ 规则 4: 需要管理员权限 ============
+    // ============ 规则 4: 管理员避免访问用户界面 ============
+    if (isAdmin && to.meta.role === 'user') {
+      console.warn('ℹ️ 管理员访问用户端页面，重定向到后台');
+      next('/admin/dashboard');
+      console.groupEnd();
+      return;
+    }
+
+    // ============ 规则 5: 需要管理员权限 ============
     if (to.meta.requiresAdmin === true) {
       if (!isAdmin) {
         console.warn('❌ 权限不足，拒绝访问');
@@ -320,7 +335,7 @@ router.beforeEach(async (to, from, next) => {
       }
     }
 
-    // ============ 规则 5: 放行所有其他情况 ============
+    // ============ 规则 6: 放行所有其他情况 ============
     console.log('✅ 检查通过，放行');
     next();
 

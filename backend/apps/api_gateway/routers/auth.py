@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User, UserProfile
+from apps.core.models import User, UserPreference, UserProfile
 from apps.core.security import create_access_token, verify_password, get_password_hash
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -210,6 +210,32 @@ class UserProfileResponse(BaseModel):
     avatar_url: Optional[str] = None
 
 
+class PrivacySettings(BaseModel):
+    """用户隐私设置"""
+
+    show_email: bool = False
+    show_phone: bool = False
+    allow_follow: bool = True
+    allow_message: bool = True
+
+
+class NotificationSettings(BaseModel):
+    """用户通知设置"""
+
+    email_notification: bool = True
+    message_notification: bool = True
+    transaction_notification: bool = True
+    comment_notification: bool = True
+    system_notification: bool = True
+
+
+class UserPreferencesResponse(BaseModel):
+    """组合偏好设置响应"""
+
+    privacy: PrivacySettings
+    notifications: NotificationSettings
+
+
 @router.get("/profile", response_model=UserProfileResponse)
 def get_user_profile(
     current_user: User = Depends(get_current_user),
@@ -297,4 +323,75 @@ def change_password(
     session.commit()
     
     return {"message": "密码修改成功"}
+
+
+def _get_or_create_preferences(session: Session, user_id: int) -> UserPreference:
+    prefs = session.execute(
+        select(UserPreference).where(UserPreference.user_id == user_id)
+    ).scalar_one_or_none()
+    if prefs is None:
+        prefs = UserPreference(user_id=user_id)
+        session.add(prefs)
+        session.commit()
+        session.refresh(prefs)
+    return prefs
+
+
+def _serialize_privacy(prefs: UserPreference) -> PrivacySettings:
+    return PrivacySettings(
+        show_email=prefs.show_email,
+        show_phone=prefs.show_phone,
+        allow_follow=prefs.allow_follow,
+        allow_message=prefs.allow_message,
+    )
+
+
+def _serialize_notifications(prefs: UserPreference) -> NotificationSettings:
+    return NotificationSettings(
+        email_notification=prefs.email_notification,
+        message_notification=prefs.message_notification,
+        transaction_notification=prefs.transaction_notification,
+        comment_notification=prefs.comment_notification,
+        system_notification=prefs.system_notification,
+    )
+
+
+@router.get("/preferences", response_model=UserPreferencesResponse)
+def get_user_preferences(
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session),
+):
+    prefs = _get_or_create_preferences(session, current_user.id)
+    return UserPreferencesResponse(
+        privacy=_serialize_privacy(prefs),
+        notifications=_serialize_notifications(prefs),
+    )
+
+
+@router.put("/preferences/privacy", response_model=PrivacySettings)
+def update_privacy_settings(
+    payload: PrivacySettings,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session),
+):
+    prefs = _get_or_create_preferences(session, current_user.id)
+    for field, value in payload.model_dump().items():
+        setattr(prefs, field, value)
+    session.commit()
+    session.refresh(prefs)
+    return _serialize_privacy(prefs)
+
+
+@router.put("/preferences/notifications", response_model=NotificationSettings)
+def update_notification_settings(
+    payload: NotificationSettings,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_db_session),
+):
+    prefs = _get_or_create_preferences(session, current_user.id)
+    for field, value in payload.model_dump().items():
+        setattr(prefs, field, value)
+    session.commit()
+    session.refresh(prefs)
+    return _serialize_notifications(prefs)
 

@@ -117,12 +117,17 @@ class Conversation(Base, TimestampMixin):
     item_id = Column(BigInteger, comment="关联商品ID（可选）")
     
     # 最后消息信息
-    last_message = Column(Text, comment="最后消息内容")
-    last_message_time = Column(DateTime, comment="最后消息时间")
+    last_message_id = Column(BigInteger, comment="最后一条消息ID")
+    last_message_content = Column(Text, comment="最后消息内容")
+    last_message_at = Column(DateTime, comment="最后消息时间")
     
     # 未读计数
-    unread_count_user1 = Column(Integer, default=0, comment="用户1未读消息数")
-    unread_count_user2 = Column(Integer, default=0, comment="用户2未读消息数")
+    user1_unread_count = Column(Integer, default=0, comment="用户1未读消息数")
+    user2_unread_count = Column(Integer, default=0, comment="用户2未读消息数")
+    
+    # 删除标记
+    user1_deleted = Column(Boolean, default=False, comment="用户1是否删除")
+    user2_deleted = Column(Boolean, default=False, comment="用户2是否删除")
     
     __table_args__ = (
         UniqueConstraint('user1_id', 'user2_id', name='unique_conversation'),
@@ -163,4 +168,23 @@ class RefreshToken(Base):
         Index('idx_user_id', 'user_id'),
         Index('idx_expires', 'expires_at'),
         Index('idx_revoked', 'is_revoked'),
+    )
+
+
+# ==================== 系统设置模型 ====================
+
+class SystemSetting(Base, TimestampMixin):
+    """系统运行时配置（管理员可在后台调整）"""
+
+    __tablename__ = "system_settings"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    category = Column(String(64), nullable=False, comment="设置分类")
+    key = Column(String(128), nullable=False, comment="设置键")
+    value = Column(JSON, nullable=False, default=dict, comment="配置内容(JSON)")
+    updated_by = Column(BigInteger, ForeignKey("users.id"), comment="最后修改人")
+
+    __table_args__ = (
+        UniqueConstraint('category', 'key', name='uq_system_settings_category_key'),
+        Index('ix_system_settings_category', 'category'),
     )

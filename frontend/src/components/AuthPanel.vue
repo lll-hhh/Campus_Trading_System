@@ -17,10 +17,10 @@
 
     <form v-if="!isAuthenticated" class="space-y-3" @submit.prevent="handleSubmit">
       <label class="block text-sm font-medium text-slate-600">
-        邮箱
+        用户名
         <input
-          v-model="form.email"
-          type="email"
+          v-model="form.username"
+          type="text"
           class="mt-1 w-full rounded border px-3 py-2"
           required
         />
@@ -63,9 +63,11 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const form = reactive({ email: 'admin@campuswap.dev', password: 'campuswap' });
+const form = reactive({ username: 'admin', password: 'campuswap' });
 
-const { loading, error, lastLoginAt, roles, displayName } = storeToRefs(authStore);
+const { loading, error, lastLoginAt } = storeToRefs(authStore);
+const displayName = computed(() => authStore.displayName);
+const roles = computed(() => authStore.roles);
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const lastLoginLabel = computed(() => lastLoginAt.value ? new Date(lastLoginAt.value).toLocaleString() : '—');
 

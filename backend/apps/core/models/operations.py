@@ -52,8 +52,8 @@ class AuditLog(BaseModel):
     actor_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     action: Mapped[str] = mapped_column(String(64), nullable=False)
     resource_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    resource_id: Mapped[int] = mapped_column(nullable=False)
-    extra_data: Mapped[dict] = mapped_column(JSON, nullable=False, server_default="{}")
+    resource_id: Mapped[Optional[int]] = mapped_column(nullable=True)
+    extra_data: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
 class ConfigItem(BaseModel):

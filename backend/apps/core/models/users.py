@@ -53,6 +53,11 @@ class User(BaseModel):
 
     # ✅ 关系
     profile: Mapped[Optional["UserProfile"]] = relationship(back_populates="user", uselist=False)
+    preferences: Mapped[Optional["UserPreference"]] = relationship(
+        back_populates="user",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
     roles: Mapped[List["Role"]] = relationship(
         secondary="user_roles",
         back_populates="users",
@@ -80,6 +85,25 @@ class UserProfile(BaseModel):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(512))
 
     user: Mapped[User] = relationship(back_populates="profile")
+
+
+class UserPreference(BaseModel):
+    """Per-user privacy and notification toggles."""
+
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, unique=True)
+    show_email: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    show_phone: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_follow: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    allow_message: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_notification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    message_notification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    transaction_notification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    comment_notification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    system_notification: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    user: Mapped[User] = relationship(back_populates="preferences")
 
 
 class Role(BaseModel):

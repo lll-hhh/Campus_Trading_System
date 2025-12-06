@@ -57,16 +57,25 @@
 
           <n-tab-pane name="batch-transaction" tab="交易批量处理">
             <n-space vertical>
-              <n-checkbox-group v-model:value="selectedTransactionTypes">
-                <n-space>
-                  <n-checkbox value="pending" label="待处理" />
-                  <n-checkbox value="cancelled" label="已取消" />
-                  <n-checkbox value="timeout" label="超时未完成" />
-                </n-space>
-              </n-checkbox-group>
-              <n-button type="error" @click="cleanupTransactions">
-                清理选中类型的交易记录
-              </n-button>
+              <n-form inline>
+                <n-form-item label="交易类型">
+                  <n-checkbox-group v-model:value="selectedTransactionTypes">
+                    <n-space>
+                      <n-checkbox value="pending" label="待处理" />
+                      <n-checkbox value="cancelled" label="已取消" />
+                      <n-checkbox value="timeout" label="超时未完成" />
+                    </n-space>
+                  </n-checkbox-group>
+                </n-form-item>
+                <n-form-item label="保留最近(天)">
+                  <n-input-number v-model:value="transactionDays" :min="1" :max="365" style="width: 140px" />
+                </n-form-item>
+                <n-form-item>
+                  <n-button type="error" @click="cleanupTransactions">
+                    清理选中类型的交易记录
+                  </n-button>
+                </n-form-item>
+              </n-form>
             </n-space>
           </n-tab-pane>
         </n-tabs>
@@ -104,6 +113,7 @@
         <n-gi>
           <h3>📥 数据导入</h3>
           <n-space vertical>
+            <n-select v-model:value="importTable" :options="importTableOptions" placeholder="选择目标表" />
             <n-upload
               :max="1"
               accept=".sql,.json,.csv"
@@ -121,7 +131,7 @@
                 <n-radio value="update" label="更新模式" />
               </n-space>
             </n-radio-group>
-            <n-button type="primary" :disabled="!uploadedFile" @click="importData">
+            <n-button type="primary" :disabled="!uploadedFile" :loading="importLoading" @click="importData">
               🔼 开始导入
             </n-button>
           </n-space>
@@ -139,51 +149,54 @@
           ✅ 当前无同步冲突
         </n-alert>
 
-        <n-table :bordered="false" v-if="conflicts.length > 0">
-          <thead>
-            <tr>
-              <th>冲突ID</th>
-              <th>表名</th>
-              <th>记录ID</th>
-              <th>源数据库</th>
-              <th>目标数据库</th>
-              <th>冲突类型</th>
-              <th>发生时间</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="conflict in conflicts" :key="conflict.id">
-              <td>{{ conflict.id }}</td>
-              <td><n-tag>{{ conflict.table }}</n-tag></td>
-              <td>{{ conflict.recordId }}</td>
-              <td>{{ conflict.sourceDb }}</td>
-              <td>{{ conflict.targetDb }}</td>
-              <td>
-                <n-tag :type="getConflictTypeColor(conflict.type)">
-                  {{ conflict.type }}
-                </n-tag>
-              </td>
-              <td>{{ conflict.createdAt }}</td>
-              <td>
-                <n-space>
-                  <n-button size="small" type="primary" @click="viewConflictDetail(conflict)">
-                    查看详情
-                  </n-button>
-                  <n-button size="small" type="success" @click="resolveConflict(conflict, 'source')">
-                    使用源
-                  </n-button>
-                  <n-button size="small" type="warning" @click="resolveConflict(conflict, 'target')">
-                    使用目标
-                  </n-button>
-                  <n-button size="small" type="error" @click="resolveConflict(conflict, 'manual')">
-                    手动解决
-                  </n-button>
-                </n-space>
-              </td>
-            </tr>
-          </tbody>
-        </n-table>
+        <n-spin :show="conflictsLoading">
+          <n-table :bordered="false" v-if="conflicts.length > 0">
+            <thead>
+              <tr>
+                <th>冲突ID</th>
+                <th>表名</th>
+                <th>记录ID</th>
+                <th>源数据库</th>
+                <th>目标数据库</th>
+                <th>冲突类型</th>
+                <th>发生时间</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="conflict in conflicts" :key="conflict.id">
+                <td>{{ conflict.id }}</td>
+                <td><n-tag>{{ conflict.table }}</n-tag></td>
+                <td>{{ conflict.recordId }}</td>
+                <td>{{ conflict.sourceDb }}</td>
+                <td>{{ conflict.targetDb }}</td>
+                <td>
+                  <n-tag :type="getConflictTypeColor(conflict.type)">
+                    {{ conflict.type }}
+                  </n-tag>
+                </td>
+                <td>{{ conflict.createdAt }}</td>
+                <td>
+                  <n-space>
+                    <n-button size="small" type="primary" @click="viewConflictDetail(conflict)">
+                      查看详情
+                    </n-button>
+                    <n-button size="small" type="success" @click="resolveConflict(conflict, 'source')">
+                      使用源
+                    </n-button>
+                    <n-button size="small" type="warning" @click="resolveConflict(conflict, 'target')">
+                      使用目标
+                    </n-button>
+                    <n-button size="small" type="error" @click="resolveConflict(conflict, 'manual')">
+                      手动解决
+                    </n-button>
+                  </n-space>
+                </td>
+              </tr>
+            </tbody>
+          </n-table>
+          <n-empty v-else description="当前没有未解决的冲突" />
+        </n-spin>
 
         <n-space>
           <n-button @click="scanConflicts">🔍 扫描新冲突</n-button>
@@ -210,8 +223,8 @@
         />
         
         <n-space>
-          <n-button type="primary" @click="executeSql">▶️ 执行 SQL</n-button>
-          <n-button @click="explainSql">📊 EXPLAIN 分析</n-button>
+          <n-button type="primary" :loading="sqlLoading" @click="executeSql">▶️ 执行 SQL</n-button>
+          <n-button :loading="sqlLoading" @click="explainSql">📊 EXPLAIN 分析</n-button>
           <n-button @click="formatSql">🎨 格式化</n-button>
           <n-button type="error" @click="clearSql">🗑️ 清空</n-button>
         </n-space>
@@ -310,16 +323,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { NCard, NSpace, NAlert, NTabs, NTabPane, NForm, NFormItem, NSelect, NButton, NStatistic, NInputNumber, NCheckboxGroup, NCheckbox, NGrid, NGi, NUpload, NRadioGroup, NRadio, NTable, NTag, NInput, NCode, NModal, useMessage } from 'naive-ui'
+import { ref, watch, onMounted } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
+import { useMessage } from 'naive-ui'
+
+import { http as api } from '@/lib/http'
+
+interface ConflictRow {
+  id: number
+  table: string
+  recordId: string
+  sourceDb: string
+  targetDb: string
+  type: string
+  createdAt: string
+  sourceData: Record<string, unknown>
+  targetData: Record<string, unknown>
+}
 
 const message = useMessage()
+
+const handleError = (error: unknown, fallback: string) => {
+  console.error(error)
+  const detail = (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+  message.error(detail || fallback)
+}
 
 // 批量用户操作
 const batchUserCondition = ref('inactive_30days')
 const batchUserAction = ref('delete')
-const estimatedUserCount = ref(15)
+const estimatedUserCount = ref(0)
+const userEstimateLoading = ref(false)
 
 const userConditionOptions = [
   { label: '30天未登录', value: 'inactive_30days' },
@@ -339,12 +373,14 @@ const userActionOptions = [
 const batchItemStatus = ref('available')
 const batchItemDays = ref(90)
 const batchItemAction = ref('archive')
-const estimatedItemCount = ref(42)
+const estimatedItemCount = ref(0)
+const itemEstimateLoading = ref(false)
 
 const itemStatusOptions = [
   { label: '在售', value: 'available' },
   { label: '已售出', value: 'sold' },
-  { label: '已下架', value: 'deleted' }
+  { label: '已下架', value: 'deleted' },
+  { label: '全部', value: 'all' }
 ]
 
 const itemActionOptions = [
@@ -354,54 +390,42 @@ const itemActionOptions = [
 ]
 
 // 批量交易处理
-const selectedTransactionTypes = ref<string[]>([])
+const selectedTransactionTypes = ref<string[]>(['pending'])
+const transactionDays = ref(30)
 
 // 数据导入导出
 const exportTables = ref<string[]>(['users', 'items'])
-const exportFormat = ref('json')
+const exportFormat = ref<'json' | 'csv'>('json')
 const uploadedFile = ref<UploadFileInfo | null>(null)
-const importMode = ref('append')
+const importMode = ref<'replace' | 'append' | 'update'>('append')
+const importTable = ref('users')
+const importLoading = ref(false)
 
 const exportFormatOptions = [
   { label: 'JSON', value: 'json' },
-  { label: 'CSV', value: 'csv' },
-  { label: 'SQL', value: 'sql' },
-  { label: 'Excel', value: 'xlsx' }
+  { label: 'CSV', value: 'csv' }
+]
+
+const importTableOptions = [
+  { label: '用户数据', value: 'users' },
+  { label: '商品数据', value: 'items' },
+  { label: '交易数据', value: 'transactions' },
+  { label: '评论数据', value: 'comments' },
+  { label: '消息数据', value: 'messages' },
+  { label: '审计日志', value: 'audit_logs' }
 ]
 
 // 同步冲突
-const conflicts = ref([
-  {
-    id: 'CONF001',
-    table: 'items',
-    recordId: 1234,
-    sourceDb: 'MySQL',
-    targetDb: 'PostgreSQL',
-    type: '版本冲突',
-    createdAt: '2025-11-19 10:23:45',
-    sourceData: { title: 'iPhone 12', price: 1200, sync_version: 5 },
-    targetData: { title: 'iPhone 12', price: 1150, sync_version: 4 }
-  },
-  {
-    id: 'CONF002',
-    table: 'users',
-    recordId: 567,
-    sourceDb: 'MariaDB',
-    targetDb: 'SQLite',
-    type: '数据不一致',
-    createdAt: '2025-11-19 09:15:22',
-    sourceData: { username: 'alice', credit_score: 95 },
-    targetData: { username: 'alice', credit_score: 92 }
-  }
-])
-
+const conflicts = ref<ConflictRow[]>([])
+const conflictsLoading = ref(false)
 const showConflictModal = ref(false)
-const currentConflict = ref<any>(null)
+const currentConflict = ref<ConflictRow | null>(null)
 
 // SQL 执行器
-const sqlTargetDb = ref('MySQL')
+const sqlTargetDb = ref<'MySQL' | 'PostgreSQL' | 'MariaDB' | 'SQLite'>('MySQL')
 const sqlQuery = ref('')
 const sqlResult = ref<any>(null)
+const sqlLoading = ref(false)
 
 const databaseOptions = [
   { label: 'MySQL', value: 'MySQL' },
@@ -410,31 +434,149 @@ const databaseOptions = [
   { label: 'SQLite', value: 'SQLite' }
 ]
 
-// 方法实现
-const executeBatchUserOperation = () => {
-  message.loading('执行批量用户操作中...')
-  setTimeout(() => {
-    message.success(`成功处理 ${estimatedUserCount.value} 个用户`)
-  }, 2000)
+const DB_VALUE_MAP: Record<string, 'mysql' | 'postgres' | 'mariadb' | 'sqlite'> = {
+  MySQL: 'mysql',
+  PostgreSQL: 'postgres',
+  MariaDB: 'mariadb',
+  SQLite: 'sqlite'
 }
 
-const executeBatchItemOperation = () => {
-  message.loading('执行批量商品操作中...')
-  setTimeout(() => {
-    message.success(`成功处理 ${estimatedItemCount.value} 件商品`)
-  }, 2000)
+const fetchUserEstimate = async () => {
+  userEstimateLoading.value = true
+  try {
+    const { data } = await api.get<{ count: number }>(
+      '/admin/operations/users/estimate',
+      { params: { condition: batchUserCondition.value } }
+    )
+    estimatedUserCount.value = data.count
+  } catch (error) {
+    handleError(error, '无法获取用户数量')
+  } finally {
+    userEstimateLoading.value = false
+  }
 }
 
-const cleanupTransactions = () => {
-  message.warning(`将清理 ${selectedTransactionTypes.value.length} 种类型的交易记录`)
+const fetchItemEstimate = async () => {
+  itemEstimateLoading.value = true
+  try {
+    const { data } = await api.get<{ count: number }>(
+      '/admin/operations/items/estimate',
+      { params: { status: batchItemStatus.value, days: batchItemDays.value } }
+    )
+    estimatedItemCount.value = data.count
+  } catch (error) {
+    handleError(error, '无法获取商品数量')
+  } finally {
+    itemEstimateLoading.value = false
+  }
 }
 
-const exportData = () => {
-  message.success(`开始导出 ${exportTables.value.length} 个表的数据 (${exportFormat.value} 格式)`)
+watch(batchUserCondition, () => {
+  fetchUserEstimate()
+}, { immediate: true })
+watch([batchItemStatus, batchItemDays], () => {
+  fetchItemEstimate()
+}, { immediate: true })
+
+const executeBatchUserOperation = async () => {
+  try {
+    const { data } = await api.post<{ affected: number }>(
+      '/admin/operations/users/batch',
+      {
+        condition: batchUserCondition.value,
+        action: batchUserAction.value,
+        dry_run: false
+      }
+    )
+    message.success(`成功处理 ${data.affected} 个用户`)
+    fetchUserEstimate()
+  } catch (error) {
+    handleError(error, '批量用户操作失败')
+  }
 }
 
-const scheduleExport = () => {
-  message.info('打开定时导出配置')
+const executeBatchItemOperation = async () => {
+  try {
+    const { data } = await api.post<{ affected: number }>(
+      '/admin/operations/items/batch',
+      {
+        status: batchItemStatus.value,
+        days: batchItemDays.value,
+        action: batchItemAction.value,
+        dry_run: false
+      }
+    )
+    message.success(`成功处理 ${data.affected} 件商品`)
+    fetchItemEstimate()
+  } catch (error) {
+    handleError(error, '批量商品操作失败')
+  }
+}
+
+const cleanupTransactions = async () => {
+  if (!selectedTransactionTypes.value.length) {
+    message.warning('请至少选择一种交易类型')
+    return
+  }
+  try {
+    const { data } = await api.post<{ affected: number }>(
+      '/admin/operations/transactions/cleanup',
+      {
+        statuses: selectedTransactionTypes.value,
+        older_than_days: transactionDays.value
+      }
+    )
+    message.success(`标记 ${data.affected} 条交易为已清理`)
+  } catch (error) {
+    handleError(error, '清理交易记录失败')
+  }
+}
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  window.URL.revokeObjectURL(url)
+}
+
+const exportData = async () => {
+  if (!exportTables.value.length) {
+    message.warning('请至少选择一个要导出的数据表')
+    return
+  }
+  try {
+    const response = await api.post<Blob>(
+      '/admin/operations/export',
+      {
+        tables: exportTables.value,
+        format: exportFormat.value,
+        schedule_only: false
+      },
+      { responseType: 'blob' }
+    )
+    const disposition = response.headers['content-disposition'] || ''
+    const match = disposition.match(/filename="?([^";]+)"?/)
+    const filename = match ? decodeURIComponent(match[1]) : `export-${Date.now()}.zip`
+    downloadBlob(response.data, filename)
+    message.success('数据导出任务完成')
+  } catch (error) {
+    handleError(error, '导出失败')
+  }
+}
+
+const scheduleExport = async () => {
+  try {
+    await api.post('/admin/operations/export', {
+      tables: exportTables.value,
+      format: exportFormat.value,
+      schedule_only: true
+    })
+    message.success('已提交定时导出请求')
+  } catch (error) {
+    handleError(error, '定时导出失败')
+  }
 }
 
 const handleBeforeUpload = (options: { file: UploadFileInfo }) => {
@@ -442,61 +584,134 @@ const handleBeforeUpload = (options: { file: UploadFileInfo }) => {
   return false
 }
 
-const importData = () => {
-  message.loading('正在导入数据...')
-  setTimeout(() => {
-    message.success('数据导入完成')
+const importData = async () => {
+  if (!uploadedFile.value?.file) {
+    message.warning('请先选择需要导入的文件')
+    return
+  }
+  const rawFile = uploadedFile.value.file as File
+  const form = new FormData()
+  form.append('table', importTable.value)
+  form.append('mode', importMode.value)
+  form.append('file', rawFile)
+
+  importLoading.value = true
+  try {
+    const { data } = await api.post<{ imported?: number; table?: string; message?: string }>(
+      '/admin/operations/import',
+      form,
+      {
+      headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    )
+    if ('imported' in data) {
+      message.success(`导入 ${data.imported} 行 ${data.table} 数据成功`)
+    } else {
+      message.info(data.message || '文件已上传，请稍后处理')
+    }
     uploadedFile.value = null
-  }, 3000)
+  } catch (error) {
+    handleError(error, '导入失败')
+  } finally {
+    importLoading.value = false
+  }
 }
 
-const scanConflicts = () => {
-  message.loading('扫描同步冲突中...')
-  setTimeout(() => {
-    message.info('扫描完成，发现 2 个新冲突')
-  }, 1500)
+const fetchConflicts = async () => {
+  conflictsLoading.value = true
+  try {
+    const { data } = await api.get<{ conflicts: any[] }>(
+      '/sync/conflicts',
+      {
+      params: { resolved: false, page: 1, page_size: 50 }
+      }
+    )
+    const rows = data.conflicts ?? []
+    conflicts.value = rows.map((item: any) => ({
+      id: item.id,
+      table: item.table_name,
+      recordId: item.record_id,
+      sourceDb: item.source,
+      targetDb: item.target,
+      type: item.payload?.type || 'unknown',
+      createdAt: item.created_at,
+      sourceData: item.payload?.local || {},
+      targetData: item.payload?.remote || {}
+    }))
+  } catch (error) {
+    handleError(error, '获取冲突列表失败')
+  } finally {
+    conflictsLoading.value = false
+  }
 }
 
-const viewConflictDetail = (conflict: any) => {
+const scanConflicts = () => fetchConflicts()
+
+const viewConflictDetail = (conflict: ConflictRow) => {
   currentConflict.value = conflict
   showConflictModal.value = true
 }
 
-const resolveConflict = (conflict: any, strategy: string) => {
-  message.success(`冲突 ${conflict.id} 已使用 ${strategy} 策略解决`)
-  conflicts.value = conflicts.value.filter(c => c.id !== conflict.id)
+const resolveConflict = async (conflict: ConflictRow, strategy: 'source' | 'target' | 'manual') => {
+  try {
+    await api.put(`/sync/conflicts/${conflict.id}/resolve`, { strategy })
+    message.success(`冲突 ${conflict.id} 已解决`)
+    await fetchConflicts()
+  } catch (error) {
+    handleError(error, '解决冲突失败')
+  }
 }
 
-const resolveAllConflicts = () => {
-  message.warning(`批量解决 ${conflicts.value.length} 个冲突`)
-  conflicts.value = []
+const resolveAllConflicts = async () => {
+  if (!conflicts.value.length) {
+    message.info('当前无待解决冲突')
+    return
+  }
+  for (const conflict of conflicts.value) {
+    try {
+      await api.put(`/sync/conflicts/${conflict.id}/resolve`, { strategy: 'manual' })
+    } catch (error) {
+      handleError(error, `冲突 ${conflict.id} 处理失败`)
+      return
+    }
+  }
+  message.success('所有冲突已标记为解决')
+  fetchConflicts()
 }
 
 const getConflictTypeColor = (type: string) => {
-  if (type.includes('版本')) return 'warning'
-  if (type.includes('不一致')) return 'error'
+  if (type.includes('version') || type.includes('版本')) return 'warning'
+  if (type.includes('inconsistent') || type.includes('不一致')) return 'error'
   return 'info'
 }
 
-const executeSql = () => {
-  message.loading('执行 SQL 中...')
-  setTimeout(() => {
-    sqlResult.value = {
-      success: true,
-      rowsAffected: 5,
-      executionTime: '23ms'
-    }
-    message.success('SQL 执行成功')
-  }, 1000)
+const runSql = async (mode: 'run' | 'explain') => {
+  if (!sqlQuery.value.trim()) {
+    message.warning('请输入 SQL 语句')
+    return
+  }
+  sqlLoading.value = true
+  try {
+    const { data } = await api.post('/admin/operations/sql', {
+      database: DB_VALUE_MAP[sqlTargetDb.value],
+      query: sqlQuery.value.trim(),
+      mode
+    })
+    sqlResult.value = data
+    message.success(mode === 'run' ? 'SQL 执行成功' : 'EXPLAIN 完成')
+  } catch (error) {
+    handleError(error, 'SQL 执行失败')
+  } finally {
+    sqlLoading.value = false
+  }
 }
 
-const explainSql = () => {
-  message.info('生成 EXPLAIN 分析结果')
-}
+const executeSql = () => runSql('run')
+const explainSql = () => runSql('explain')
 
 const formatSql = () => {
-  sqlQuery.value = sqlQuery.value.trim()
-  message.success('SQL 已格式化')
+  sqlQuery.value = sqlQuery.value.trim().replace(/\s+/g, ' ')
+  message.success('SQL 已整理')
 }
 
 const clearSql = () => {
@@ -504,31 +719,77 @@ const clearSql = () => {
   sqlResult.value = null
 }
 
-// 系统维护工具
-const cleanupExpiredSessions = () => message.success('清理过期会话完成')
-const cleanupDeletedRecords = () => message.success('清理已删除记录完成')
-const cleanupTempFiles = () => message.success('清理临时文件完成')
-const vacuum = () => message.success('VACUUM 优化完成')
-const analyzeIndexes = () => message.info('分析索引使用率...')
-const rebuildIndexes = () => message.warning('重建索引中，请勿关闭')
-const suggestIndexes = () => message.info('智能索引建议已生成')
-const optimizeTables = () => message.success('表结构优化完成')
-const viewAuditLogs = () => message.info('查看审计日志')
-const exportAuditLogs = () => message.success('审计日志已导出')
-const detectAnomalies = () => message.warning('检测到 3 个异常行为')
-const lockSuspiciousUsers = () => message.error('已锁定 2 个可疑用户')
-const analyzeSlowQueries = () => message.info('慢查询分析报告已生成')
-const cacheWarming = () => message.success('缓存预热完成')
-const adjustConnPool = () => message.info('连接池参数已调整')
-const autoOptimize = () => message.success('自动优化完成')
-const createBackup = () => message.success('备份已创建')
-const viewBackups = () => message.info('查看备份列表')
-const restoreBackup = () => message.warning('恢复备份操作')
-const scheduleBackup = () => message.info('定时备份设置')
-const forceSyncAll = () => message.warning('强制全量同步中...')
-const pauseSync = () => message.info('已暂停同步')
-const resumeSync = () => message.success('已恢复同步')
-const configureSyncRules = () => message.info('配置同步规则')
+type MaintenanceTaskKey =
+  | 'cleanup_expired_sessions'
+  | 'cleanup_deleted_records'
+  | 'cleanup_temp_files'
+  | 'vacuum_tables'
+  | 'analyze_indexes'
+  | 'rebuild_indexes'
+  | 'suggest_indexes'
+  | 'optimize_tables'
+  | 'view_audit_logs'
+  | 'export_audit_logs'
+  | 'detect_anomalies'
+  | 'lock_suspicious_users'
+  | 'analyze_slow_queries'
+  | 'cache_warming'
+  | 'adjust_connection_pool'
+  | 'auto_optimize'
+  | 'create_backup'
+  | 'view_backups'
+  | 'restore_backup'
+  | 'schedule_backup'
+
+const runMaintenanceTask = async (task: MaintenanceTaskKey, successText: string) => {
+  try {
+    const { data } = await api.post('/admin/operations/maintenance', { task })
+    const affected = data?.affected_rows ?? 0
+    const messageText = data?.message || successText
+    message.success(`${messageText}${affected ? `（影响 ${affected} 行）` : ''}`)
+  } catch (error) {
+    handleError(error, `${successText}失败`)
+  }
+}
+
+// 系统维护工具（接入后台任务）
+const cleanupExpiredSessions = () => runMaintenanceTask('cleanup_expired_sessions', '过期会话清理任务已提交')
+const cleanupDeletedRecords = () => runMaintenanceTask('cleanup_deleted_records', '已提交删除记录清理任务')
+const cleanupTempFiles = () => runMaintenanceTask('cleanup_temp_files', '临时文件清理完成')
+const vacuum = () => runMaintenanceTask('vacuum_tables', 'VACUUM 优化任务已记录')
+const analyzeIndexes = () => runMaintenanceTask('analyze_indexes', '索引分析任务已发起')
+const rebuildIndexes = () => runMaintenanceTask('rebuild_indexes', '索引重建执行中')
+const suggestIndexes = () => runMaintenanceTask('suggest_indexes', '索引建议报告已生成')
+const optimizeTables = () => runMaintenanceTask('optimize_tables', '表结构优化已提交')
+const viewAuditLogs = () => runMaintenanceTask('view_audit_logs', '已获取最新审计日志')
+const exportAuditLogs = () => runMaintenanceTask('export_audit_logs', '审计日志导出任务已提交')
+const detectAnomalies = () => runMaintenanceTask('detect_anomalies', '已触发异常检测')
+const lockSuspiciousUsers = () => runMaintenanceTask('lock_suspicious_users', '可疑用户已锁定')
+const analyzeSlowQueries = () => runMaintenanceTask('analyze_slow_queries', '慢查询分析任务已执行')
+const cacheWarming = () => runMaintenanceTask('cache_warming', '缓存预热已启动')
+const adjustConnPool = () => runMaintenanceTask('adjust_connection_pool', '连接池参数调整请求已发送')
+const autoOptimize = () => runMaintenanceTask('auto_optimize', '自动优化策略已执行')
+const createBackup = () => runMaintenanceTask('create_backup', '备份任务已加入队列')
+const viewBackups = () => runMaintenanceTask('view_backups', '已拉取备份信息')
+const restoreBackup = () => runMaintenanceTask('restore_backup', '恢复任务已启动，请关注进度')
+const scheduleBackup = () => runMaintenanceTask('schedule_backup', '定时备份计划已更新')
+
+const forceSyncAll = async () => {
+  try {
+    await api.post('/sync/run')
+    message.success('已触发全量同步任务')
+  } catch (error) {
+    handleError(error, '触发全量同步失败')
+  }
+}
+
+const pauseSync = () => message.info('同步暂停功能待实现')
+const resumeSync = () => message.info('同步恢复功能待实现')
+const configureSyncRules = () => message.info('请前往同步设置页面配置规则')
+
+onMounted(() => {
+  fetchConflicts()
+})
 </script>
 
 <style scoped>

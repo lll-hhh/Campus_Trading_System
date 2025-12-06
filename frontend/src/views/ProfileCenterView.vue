@@ -19,10 +19,10 @@
         <section>
           <h2 class="text-base font-semibold text-slate-900">我的动态</h2>
           <ul class="mt-3 space-y-2 text-sm text-slate-600">
-            <li v-if="authStore.displayName">欢迎回来，{{ authStore.displayName }}。</li>
+            <li v-if="displayName">欢迎回来，{{ displayName }}。</li>
             <li v-else>登录后即可查看最近搜索、收藏与同步任务。</li>
-            <li v-if="authStore.roles.length">当前角色：{{ authStore.roles.join(' / ') }}</li>
-            <li v-if="authStore.lastLoginAt">最近登录：{{ formatDate(authStore.lastLoginAt) }}</li>
+            <li v-if="roles.length">当前角色：{{ roles.join(' / ') }}</li>
+            <li v-if="lastLoginAt">最近登录：{{ formatDate(lastLoginAt) }}</li>
           </ul>
         </section>
       </article>
@@ -31,13 +31,18 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import AIChatBox from '@/components/AIChatBox.vue';
 import AuthPanel from '@/components/AuthPanel.vue';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 
-function formatDate(input: string) {
+const displayName = computed(() => authStore.displayName);
+const roles = computed(() => authStore.roles);
+const lastLoginAt = computed(() => authStore.lastLoginAt);
+
+function formatDate(input: string | null) {
   if (!input) return '—';
   return new Date(input).toLocaleString();
 }

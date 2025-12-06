@@ -1,6 +1,9 @@
 """API Gateway routers."""
 
 from . import (
+    admin_settings,
+    admin_users,
+    admin_tables,
     analytics,
     auth,
     cart,  # ✅ 必须有这行

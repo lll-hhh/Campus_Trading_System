@@ -108,9 +108,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { NTabs, NTabPane, NTimeline, NTimelineItem, NCard, NButton, NTag, useMessage } from 'naive-ui';
 import { http } from '@/lib/http'
 
+const router = useRouter()
 const message = useMessage()
 const activeTab = ref('buying');
 const loading = ref(false)
@@ -119,11 +121,14 @@ interface OrderItem {
   id: number
   itemName: string
   seller: string
+  seller_id?: number
   buyer: string
+  buyer_id?: number
   price: number
   status: string
   emoji: string
   created_at: string
+  item_id?: number
 }
 
 const buyingOrders = ref<OrderItem[]>([])
@@ -136,11 +141,13 @@ const loadOrders = async () => {
     const buyingResponse = await http.get('/orders', { params: { role: 'buyer' } })
     buyingOrders.value = buyingResponse.data.orders.map((order: any) => ({
       id: order.id,
-      itemName: order.item_info.item_title,
+      itemName: order.item_info?.item_title || '商品',
       seller: order.seller_name,
-      price: order.item_info.item_price,
+      seller_id: order.seller_id,
+      item_id: order.item_id,
+      price: order.item_info?.item_price || order.total_amount,
       status: order.status,
-      emoji: '📦', // 可以根据商品类别设置不同的emoji
+      emoji: '📦',
       created_at: order.created_at
     }))
 
@@ -148,11 +155,13 @@ const loadOrders = async () => {
     const sellingResponse = await http.get('/orders', { params: { role: 'seller' } })
     sellingOrders.value = sellingResponse.data.orders.map((order: any) => ({
       id: order.id,
-      itemName: order.item_info.item_title,
+      itemName: order.item_info?.item_title || '商品',
       buyer: order.buyer_name,
-      price: order.item_info.item_price,
+      buyer_id: order.buyer_id,
+      item_id: order.item_id,
+      price: order.item_info?.item_price || order.total_amount,
       status: order.status,
-      emoji: '📦', // 可以根据商品类别设置不同的emoji
+      emoji: '📦',
       created_at: order.created_at
     }))
   } catch (error: any) {
@@ -182,8 +191,20 @@ const getStatusText = (status: string) => {
 };
 
 const handleContactSeller = (order: OrderItem) => {
-  // TODO: 跳转到消息页面联系卖家
-  message.info('联系卖家功能开发中...')
+  // 跳转到消息页面与卖家对话
+  const sellerId = order.seller_id
+  if (sellerId) {
+    router.push({
+      path: '/messages',
+      query: { 
+        userId: sellerId.toString(),
+        itemId: order.item_id?.toString(),
+        orderId: order.id.toString()
+      }
+    })
+  } else {
+    message.warning('无法获取卖家信息')
+  }
 }
 
 const handleConfirmTransaction = async (order: OrderItem) => {

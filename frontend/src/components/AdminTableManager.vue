@@ -6,6 +6,7 @@ import {
   NButton,
   NSpace,
   NInput,
+  NInputNumber,
   NSelect,
   NPagination,
   NSwitch,
@@ -66,6 +67,11 @@ const dataTableColumns = ref<DataTableColumns<any>>([])
 const showDetailDrawer = ref(false)
 const selectedRecord = ref<any>(null)
 
+// 编辑模态框
+const showEditModal = ref(false)
+const editingRecord = ref<any>(null)
+const editFormData = ref<any>({})
+
 // 表格元数据配置
 const tableMetadata = {
   users: {
@@ -97,6 +103,20 @@ const tableMetadata = {
       },
       { key: 'created_at', title: '创建时间', type: 'date' as const },
       { key: 'last_login', title: '最后登录', type: 'date' as const },
+    ],
+  },
+  user_profiles: {
+    title: '用户档案',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'user_id', title: '用户ID', type: 'number' as const },
+      { key: 'display_name', title: '展示名', type: 'string' as const },
+      { key: 'phone', title: '手机号', type: 'string' as const },
+      { key: 'campus', title: '校区', type: 'string' as const },
+      { key: 'bio', title: '简介', type: 'string' as const },
+      { key: 'avatar_url', title: '头像', type: 'string' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
     ],
   },
   items: {
@@ -277,6 +297,38 @@ const tableMetadata = {
       { key: 'created_at', title: '时间', type: 'date' as const },
     ],
   },
+  roles: {
+    title: '角色管理',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'name', title: '角色名', type: 'string' as const },
+      { key: 'description', title: '描述', type: 'string' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
+    ],
+  },
+  permissions: {
+    title: '权限管理',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'name', title: '权限名', type: 'string' as const },
+      { key: 'resource', title: '资源', type: 'string' as const },
+      { key: 'action', title: '操作', type: 'string' as const },
+      { key: 'description', title: '描述', type: 'string' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
+    ],
+  },
+  role_permissions: {
+    title: '角色权限关联',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'role_id', title: '角色ID', type: 'number' as const },
+      { key: 'permission_id', title: '权限ID', type: 'number' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
+    ],
+  },
   conflict_records: {
     title: '冲突记录',
     columns: [
@@ -335,6 +387,16 @@ const tableMetadata = {
       },
       { key: 'created_at', title: '创建时间', type: 'date' as const },
       { key: 'read_at', title: '阅读时间', type: 'date' as const },
+    ],
+  },
+  system_configs: {
+    title: '系统配置',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'key', title: '配置键', type: 'string' as const },
+      { key: 'value', title: '配置值', type: 'string' as const },
+      { key: 'description', title: '描述', type: 'string' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
     ],
   },
   search_history: {
@@ -455,8 +517,32 @@ const viewDetail = (row: any) => {
 
 // 编辑记录
 const editRecord = (row: any) => {
-  message.info(`编辑记录 ID: ${row.id}`)
-  // TODO: 实现编辑功能
+  editingRecord.value = row
+  editFormData.value = { ...row }
+  showEditModal.value = true
+}
+
+// 保存编辑
+const saveEdit = async () => {
+  if (!editingRecord.value) return
+  
+  try {
+    await api.put(`${props.apiEndpoint}/${editingRecord.value.id}`, editFormData.value)
+    message.success('更新成功')
+    showEditModal.value = false
+    editingRecord.value = null
+    editFormData.value = {}
+    loadData()
+  } catch (error: any) {
+    message.error(error.response?.data?.detail || '更新失败')
+  }
+}
+
+// 取消编辑
+const cancelEdit = () => {
+  showEditModal.value = false
+  editingRecord.value = null
+  editFormData.value = {}
 }
 
 // 删除记录
@@ -601,6 +687,41 @@ onMounted(() => {
             {{ selectedRecord[col.key] || '-' }}
           </n-descriptions-item>
         </n-descriptions>
+      </n-drawer-content>
+    </n-drawer>
+
+    <!-- 编辑模态框 -->
+    <n-drawer v-model:show="showEditModal" :width="500">
+      <n-drawer-content title="编辑记录">
+        <template v-if="editingRecord">
+          <n-space vertical style="width: 100%">
+            <div v-for="col in columns.filter(c => c.key !== 'id' && !c.key.includes('created_at'))" :key="col.key" style="margin-bottom: 12px">
+              <label style="display: block; margin-bottom: 4px; font-weight: 500;">{{ col.title }}</label>
+              <template v-if="col.type === 'boolean'">
+                <n-switch v-model:value="editFormData[col.key]" />
+              </template>
+              <template v-else-if="col.type === 'number'">
+                <n-input-number v-model:value="editFormData[col.key]" style="width: 100%" />
+              </template>
+              <template v-else-if="col.type === 'enum'">
+                <n-select 
+                  v-model:value="editFormData[col.key]" 
+                  :options="col.enumOptions || []"
+                  style="width: 100%"
+                />
+              </template>
+              <template v-else>
+                <n-input v-model:value="editFormData[col.key]" />
+              </template>
+            </div>
+          </n-space>
+        </template>
+        <template #footer>
+          <n-space justify="end">
+            <n-button @click="cancelEdit">取消</n-button>
+            <n-button type="primary" @click="saveEdit">保存</n-button>
+          </n-space>
+        </template>
       </n-drawer-content>
     </n-drawer>
   </div>
