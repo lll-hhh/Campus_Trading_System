@@ -175,6 +175,94 @@ class MonitoringDataSimulator:
                 """
             )
         )
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS conflict_records (
+                    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                    table_name VARCHAR(128) NOT NULL,
+                    record_id VARCHAR(64) NOT NULL,
+                    source VARCHAR(32) NOT NULL,
+                    target VARCHAR(32) NOT NULL,
+                    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    payload JSON NULL,
+                    resolved TINYINT(1) NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    resolved_at TIMESTAMP NULL,
+                    INDEX idx_conflict_table_record (table_name, record_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+                """
+            )
+        )
+        current_db = session.execute(text("SELECT DATABASE()"))
+        schema_name = current_db.scalar() if current_db else None
+
+        def ensure_column(name: str, ddl: str) -> None:
+            if not schema_name:
+                return
+            exists = session.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM information_schema.columns
+                    WHERE table_schema = :schema AND table_name = 'conflict_records' AND column_name = :column
+                    """
+                ),
+                {"schema": schema_name, "column": name},
+            ).scalar()
+            if not exists:
+                try:
+                    session.execute(text(f"ALTER TABLE conflict_records ADD COLUMN {ddl}"))
+                except Exception as exc:  # pragma: no cover - best effort
+                    logger.warning("Failed to add column %s to conflict_records: %s", name, exc)
+                    session.rollback()
+                    session.begin()
+
+        ensure_column("table_name", "table_name VARCHAR(128) NOT NULL")
+        ensure_column("record_id", "record_id VARCHAR(64) NOT NULL")
+        ensure_column("source", "source VARCHAR(32) NOT NULL DEFAULT 'mysql'")
+        ensure_column("target", "target VARCHAR(32) NOT NULL DEFAULT 'sqlite'")
+        ensure_column("status", "status VARCHAR(32) NOT NULL DEFAULT 'pending'")
+        ensure_column("payload", "payload JSON NULL")
+        ensure_column("resolved", "resolved TINYINT(1) NOT NULL DEFAULT 0")
+        ensure_column("created_at", "created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP")
+        ensure_column("resolved_at", "resolved_at TIMESTAMP NULL")
+
+    def _resolve_conflict_column_names(self, session: Session) -> Dict[str, str | None]:
+        current_db = session.execute(text("SELECT DATABASE()"))
+        schema_name = current_db.scalar() if current_db else None
+        if not schema_name:
+            return {}
+        rows = session.execute(
+            text(
+                """
+                SELECT column_name
+                FROM information_schema.columns
+                WHERE table_schema = :schema AND table_name = 'conflict_records'
+                """
+            ),
+            {"schema": schema_name},
+        ).scalars()
+        name_map = {name.lower(): name for name in rows}
+
+        def pick(*candidates: str) -> str | None:
+            for candidate in candidates:
+                existing = name_map.get(candidate.lower())
+                if existing:
+                    return existing
+            return None
+
+        return {
+            "table": pick("table_name", "table"),
+            "record": pick("record_id", "recordid", "record_id"),
+            "source": pick("source", "source_db"),
+            "target": pick("target", "target_db"),
+            "legacy_source": pick("source_db"),
+            "legacy_target": pick("target_db"),
+            "status": pick("status", "conflict_status"),
+            "payload": pick("payload", "payload_json", "payload_data"),
+            "created_at": pick("created_at", "created_time"),
+        }
 
     def _ensure_database_configs(self, session: Session) -> None:
         service = SystemSettingsService(session)
@@ -266,6 +354,11 @@ class MonitoringDataSimulator:
         total_pending = pending.scalar() if pending else 0
         if total_pending and total_pending >= 5:
             return
+        columns = self._resolve_conflict_column_names(session)
+        required = (columns.get("table"), columns.get("record"), columns.get("source"), columns.get("target"))
+        if not all(required):
+            logger.warning("conflict_records schema incomplete, skipping simulated conflicts: %s", columns)
+            return
         templates = [
             ("items", "price"),
             ("transactions", "status"),
@@ -277,20 +370,40 @@ class MonitoringDataSimulator:
                 "local": random.randint(10, 999),
                 "remote": random.randint(10, 999),
             }
+            cols = [columns["table"], columns["record"], columns["source"], columns["target"]]
+            placeholders = [":table", ":record_id", ":source", ":target"]
+            params = {
+                "table": table,
+                "record_id": str(random.randint(1, 5000)),
+                "source": random.choice(["mysql", "postgres", "mariadb"]),
+                "target": random.choice(["sqlite", "mysql", "postgres"]),
+            }
+            legacy_source = columns.get("legacy_source")
+            if legacy_source and legacy_source not in cols:
+                cols.append(legacy_source)
+                placeholders.append(":source")
+            legacy_target = columns.get("legacy_target")
+            if legacy_target and legacy_target not in cols:
+                cols.append(legacy_target)
+                placeholders.append(":target")
+            status_column = columns.get("status")
+            if status_column:
+                cols.append(status_column)
+                placeholders.append(":status")
+                params["status"] = "pending"
+            payload_column = columns.get("payload")
+            if payload_column:
+                cols.append(payload_column)
+                placeholders.append(":payload")
+                params["payload"] = json.dumps(payload, ensure_ascii=False)
+            created_column = columns.get("created_at")
+            if created_column:
+                cols.append(created_column)
+                placeholders.append("NOW()")
+            insert_sql = f"INSERT INTO conflict_records ({', '.join(cols)}) VALUES ({', '.join(placeholders)})"
             session.execute(
-                text(
-                    """
-                    INSERT INTO conflict_records (table_name, record_id, source, target, status, payload, created_at)
-                    VALUES (:table, :record_id, :source, :target, 'pending', :payload, NOW())
-                    """
-                ),
-                {
-                    "table": table,
-                    "record_id": str(random.randint(1, 5000)),
-                    "source": random.choice(["mysql", "postgres", "mariadb"]),
-                    "target": random.choice(["sqlite", "mysql", "postgres"]),
-                    "payload": json.dumps(payload, ensure_ascii=False),
-                },
+                text(insert_sql),
+                params,
             )
 
     def _seed_daily_stats(self, session: Session) -> None:
