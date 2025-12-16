@@ -148,7 +148,7 @@ async def get_my_comments(
     session: Session = Depends(get_db_session)
 ):
     """获取我的评论"""
-    from sqlalchemy import and_, desc
+    from sqlalchemy import desc
     
     # 查询用户的评论
     query = select(Comment).where(Comment.user_id == current_user.id)

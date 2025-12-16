@@ -5,10 +5,11 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select, desc
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User
+from apps.core.models import User, Comment
 from apps.services.business_logic import CommentService
 
 router = APIRouter(prefix="/comments", tags=["评论管理"])
@@ -89,7 +90,6 @@ async def get_item_comments(
     session: Session = Depends(get_db_session)
 ):
     """获取商品的评论列表"""
-    from sqlalchemy import select
     
     comments, total = CommentService.get_item_comments(
         session, item_id, page, page_size
@@ -149,8 +149,6 @@ async def get_my_comments(
     session: Session = Depends(get_db_session)
 ):
     """获取我的评论"""
-    from apps.core.models import Comment
-    from sqlalchemy import select, and_, func, desc
     
     # 查询用户的评论
     query = select(Comment).where(Comment.user_id == current_user.id)

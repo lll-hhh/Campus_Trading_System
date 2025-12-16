@@ -2,8 +2,8 @@
   <div class="admin-operations-container">
     <h1>⚙️ 管理员高级操作中心</h1>
 
-    <!-- 批量操作区 -->
-    <n-card title="📦 批量数据操作" class="section-card">
+    <!-- 批量操作区 (未实现，暂时隐藏) -->
+    <n-card v-if="false" title="📦 批量数据操作" class="section-card">
       <n-space vertical size="large">
         <n-alert type="warning" title="⚠️ 危险操作警告" :bordered="false">
           批量操作将影响多条数据，请谨慎操作！建议先备份数据库。
@@ -205,8 +205,8 @@
       </n-space>
     </n-card>
 
-    <!-- SQL 执行器 -->
-    <n-card title="💻 高级 SQL 执行器" class="section-card">
+    <!-- SQL 执行器 (未实现，暂时隐藏) -->
+    <n-card v-if="false" title="💻 高级 SQL 执行器" class="section-card">
       <n-space vertical>
         <n-alert type="warning" title="⚠️ 高级功能" :bordered="false">
           仅限高级管理员使用，错误的 SQL 可能导致数据丢失！
@@ -235,8 +235,8 @@
       </n-space>
     </n-card>
 
-    <!-- 系统维护工具 -->
-    <n-card title="🛠️ 系统维护工具" class="section-card">
+    <!-- 系统维护工具 (未实现，暂时隐藏) -->
+    <n-card v-if="false" title="🛠️ 系统维护工具" class="section-card">
       <n-grid :cols="3" :x-gap="15" :y-gap="15">
         <n-gi>
           <n-card title="🧹 数据清理" size="small">

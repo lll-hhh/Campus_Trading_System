@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from sqlalchemy import text
@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from apps.core.database import db_manager
 from apps.core.sync_engine import SyncEvent, sync_engine
-from apps.core.transaction import with_transaction, IsolationLevel
+from apps.core.transaction import with_transaction
 
 
 class DatabaseOperationService:

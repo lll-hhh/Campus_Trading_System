@@ -3,12 +3,13 @@
 """
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models import User
+from apps.core.models import User, Category, ItemMedia
 from apps.services.business_logic import ItemService, FavoriteService
 
 router = APIRouter(prefix="/items", tags=["商品管理"])
@@ -74,7 +75,6 @@ async def create_item(
     session: Session = Depends(get_db_session)
 ):
     """发布新商品"""
-    from apps.core.models import Category, ItemMedia
     
     item = ItemService.create_item(
         session=session,
@@ -124,8 +124,6 @@ async def get_items(
     session: Session = Depends(get_db_session)
 ):
     """获取商品列表"""
-    from apps.core.models import Category, ItemMedia
-    from sqlalchemy import select
     
     items, total = ItemService.get_items(
         session=session,
@@ -178,8 +176,6 @@ async def get_item(
     session: Session = Depends(get_db_session)
 ):
     """获取商品详情"""
-    from apps.core.models import Category, ItemMedia
-    from sqlalchemy import select
     
     item = ItemService.get_item_detail(session, item_id)
     if not item:
@@ -217,8 +213,6 @@ async def update_item(
     session: Session = Depends(get_db_session)
 ):
     """更新商品信息"""
-    from apps.core.models import Category, ItemMedia
-    from sqlalchemy import select
     
     update_data = payload.dict(exclude_unset=True)
     item = ItemService.update_item(session, item_id, current_user.id, **update_data)
@@ -283,8 +277,6 @@ async def get_my_favorites(
     session: Session = Depends(get_db_session)
 ):
     """获取我的收藏"""
-    from apps.core.models import Category, ItemMedia
-    from sqlalchemy import select
     
     items, total = FavoriteService.get_user_favorites(
         session, current_user.id, page, page_size

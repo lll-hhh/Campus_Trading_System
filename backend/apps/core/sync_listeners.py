@@ -182,7 +182,7 @@ def _collect_mutations(session: Session) -> List[PendingSyncMutation]:
 
 
 def _build_sql_payload(session: Session, mutation: PendingSyncMutation) -> Optional[Dict[str, Any]]:
-    mapper = class_mapper(mutation.model_class)
+    class_mapper(mutation.model_class)
 
     if mutation.action == "delete":
         statement, params = _compose_delete_statement(

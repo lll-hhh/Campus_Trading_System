@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, date
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, JSON, String, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -41,14 +41,24 @@ class ConflictRecord(BaseModel):
     __tablename__ = "conflict_records"
 
     table_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    record_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    source: Mapped[str] = mapped_column(String(64), nullable=False)
-    target: Mapped[str] = mapped_column(String(64), nullable=False)
+    record_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
+
+    # 数据来源与目标（与初始化 SQL 保持一致）
+    source_db: Mapped[str] = mapped_column(String(64), nullable=False)
+    target_db: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # 冲突类型与数据快照
+    conflict_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    local_data: Mapped[Optional[dict]] = mapped_column(JSON)
+    remote_data: Mapped[Optional[dict]] = mapped_column(JSON)
+
+    # 处理状态信息
+    resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="0")
     status: Mapped[str] = mapped_column(String(32), nullable=False, server_default="pending")
+    resolution_strategy: Mapped[Optional[str]] = mapped_column(String(50))
     resolved_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))
     resolved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    resolution_note: Mapped[Optional[str]] = mapped_column(String(255))
-    payload: Mapped[dict] = mapped_column(JSON, nullable=False)
+    payload: Mapped[Optional[dict]] = mapped_column(JSON)
 
 
 class DailyStat(BaseModel):

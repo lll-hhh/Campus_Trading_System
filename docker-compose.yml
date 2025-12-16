@@ -148,6 +148,8 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - VITE_API_PROXY_TARGET=http://gateway:8000
+      - VITE_IMAGE_PROXY_TARGET=http://gateway:8000
     networks:
       - campuswap-network
     restart: unless-stopped

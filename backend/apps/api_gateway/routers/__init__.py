@@ -1,12 +1,14 @@
 """API Gateway routers."""
 
 from . import (
+    admin_notifications,
+    admin_operations,
     admin_settings,
-    admin_users,
     admin_tables,
+    admin_users,
     analytics,
     auth,
-    cart,  # ✅ 必须有这行
+    cart,
     comments,
     dashboard,
     database,
@@ -20,3 +22,26 @@ from . import (
     sync,
     sync_api,
 )
+
+__all__ = [
+    "admin_notifications",
+    "admin_operations",
+    "admin_settings",
+    "admin_tables",
+    "admin_users",
+    "analytics",
+    "auth",
+    "cart",
+    "comments",
+    "dashboard",
+    "database",
+    "favorites",
+    "health",
+    "items",
+    "market",
+    "messages",
+    "orders",
+    "search",
+    "sync",
+    "sync_api",
+]

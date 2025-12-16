@@ -6,7 +6,7 @@ from sqlalchemy import select, and_, desc
 from pydantic import BaseModel
 
 from apps.api_gateway.dependencies import get_current_user, get_db_session
-from apps.core.models.inventory import Favorite, Item, ItemMedia
+from apps.core.models.inventory import Favorite, Item
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
 

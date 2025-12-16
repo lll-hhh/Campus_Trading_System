@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from email.message import EmailMessage
 import smtplib
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from sqlalchemy import create_engine, text

@@ -30,7 +30,7 @@ from pathlib import Path
 # 添加项目根目录到 path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from sqlalchemy import select, update, func, text
+from sqlalchemy import select, func, text
 from sqlalchemy.orm import Session
 
 from apps.core.database import db_manager

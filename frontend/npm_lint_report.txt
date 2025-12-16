@@ -1,0 +1,329 @@
+
+> campuswap-frontend@0.1.0 lint
+> eslint "src/**/*.{ts,tsx,vue}"
+
+
+/mnt/data/桌面/newkeshe2/frontend/src/__tests__/messages.test.ts
+    6:10  error  'mount' is defined but never used         @typescript-eslint/no-unused-vars
+   43:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   61:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   94:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  220:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/AdminLayout.vue
+   2:10  error    'ref' is defined but never used              @typescript-eslint/no-unused-vars
+  57:15  warning  Attribute "class" should go before "@click"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/AdminSidebar.vue
+    2:25  error    'h' is defined but never used                 @typescript-eslint/no-unused-vars
+  103:5   warning  Attribute "class" should go before "@expand"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/AdminTableManager.vue
+    2:15  error    'computed' is defined but never used                                 @typescript-eslint/no-unused-vars
+   14:3   error    'NTag' is defined but never used                                     @typescript-eslint/no-unused-vars
+   33:18  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+   64:47  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+   68:28  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+   72:27  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+   73:26  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  436:21  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  455:21  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  472:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  491:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  513:26  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  519:26  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  536:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  549:34  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  554:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  573:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  581:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  599:19  error    Unexpected any. Specify a different type                             @typescript-eslint/no-explicit-any
+  657:9   warning  Attribute ":pagination" should go before "@update:checked-row-keys"  vue/attributes-order
+  658:9   warning  Attribute "striped" should go before "@update:checked-row-keys"      vue/attributes-order
+  659:9   warning  Attribute ":scroll-x" should go before "@update:checked-row-keys"    vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/AdvancedTableFilterPanel.vue
+   9:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  17:41  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/GlobalLoading.vue
+  6:35  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/NotificationCenter.vue
+   31:17  warning  Attribute "v-if" should go before "@click"  vue/attributes-order
+   35:61  warning  Attribute "v-if" should go before "@click"  vue/attributes-order
+   43:40  warning  Attribute "v-if" should go before "class"   vue/attributes-order
+   87:37  warning  Attribute "v-if" should go before "class"   vue/attributes-order
+  209:48  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  332:47  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  358:48  error    Unexpected any. Specify a different type    @typescript-eslint/no-explicit-any
+  401:24  error    'e' is defined but never used               @typescript-eslint/no-unused-vars
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/SearchAutocomplete.vue
+  100:15  error  'computed' is defined but never used      @typescript-eslint/no-unused-vars
+  130:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  144:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:70  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  341:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  342:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/UserLayout.vue
+  50:15  warning  Attribute "class" should go before "@click"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/UserNavbar.vue
+    4:10  error    'NLayout' is defined but never used       @typescript-eslint/no-unused-vars
+  145:58  warning  Attribute "v-if" should go before ":max"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/charts/HeatmapChart.vue
+  43:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/components/skeletons/TableSkeleton.vue
+  13:1  error  Props are defined in both `defineProps` and `export default {}`  vue/valid-define-props
+
+/mnt/data/桌面/newkeshe2/frontend/src/lib/utils.ts
+   82:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   82:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   88:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  100:56  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  106:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/stores/auth.ts
+  102:21  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/stores/notification.ts
+  12:10  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/AdminOperationsView.vue
+  145:31  warning  Attribute "v-if" should go before "type"       vue/attributes-order
+  148:33  warning  Attribute "v-else" should go before "type"     vue/attributes-order
+  153:38  warning  Attribute "v-if" should go before ":bordered"  vue/attributes-order
+  311:37  warning  Attribute "v-if" should go before ":x-gap"     vue/attributes-order
+  427:23  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  623:49  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+  630:39  error    Unexpected any. Specify a different type       @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/AdminPerformanceView.vue
+  199:38  warning  Attribute "v-if" should go before "size"  vue/attributes-order
+  429:33  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  439:28  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  444:18  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  448:17  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  563:55  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/AdminTablesView.vue
+  4:17  error  'NTabs' is defined but never used             @typescript-eslint/no-unused-vars
+  4:24  error  'NTabPane' is defined but never used          @typescript-eslint/no-unused-vars
+  7:7   error  'message' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/AnalyticsView.vue
+  177:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  180:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  183:28  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  189:24  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  192:30  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  269:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  292:26  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  312:81  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  336:48  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/CheckoutView.vue
+   89:27  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  126:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  135:32  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  155:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/ItemDetailView.vue
+  169:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  192:44  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  203:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  250:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  284:15  error    'response' is assigned a value but never used    @typescript-eslint/no-unused-vars
+  291:23  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  342:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  401:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  575:19  warning  Attribute ":disabled" should go before "@click"  vue/attributes-order
+  582:19  warning  Attribute ":disabled" should go before "@click"  vue/attributes-order
+  607:38  warning  'v-html' directive can lead to XSS attack        vue/no-v-html
+  764:17  warning  Attribute "strong" should go before "@click"     vue/attributes-order
+  775:17  warning  Attribute "strong" should go before "@click"     vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/LoginView.vue
+   21:15  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   35:15  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   47:13  warning  Attribute ":disabled" should go before "@click"  vue/attributes-order
+   48:13  warning  Attribute "type" should go before "@click"       vue/attributes-order
+   49:13  warning  Attribute "class" should go before "@click"      vue/attributes-order
+  107:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/MarketplaceView.vue
+   488:3   error  'NTabs' is defined but never used                    @typescript-eslint/no-unused-vars
+   489:3   error  'NTabPane' is defined but never used                 @typescript-eslint/no-unused-vars
+   520:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   521:7   error  'totalItems' is assigned a value but never used      @typescript-eslint/no-unused-vars
+   524:33  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   528:25  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   591:34  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   623:50  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   639:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   648:26  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   657:13  error  Empty block statement                                no-empty
+   666:55  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   735:70  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   749:28  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   820:64  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   913:25  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   916:7   error  'viewItemDetail' is assigned a value but never used  @typescript-eslint/no-unused-vars
+   916:31  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   930:38  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   943:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   956:43  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   973:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   979:36  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+   997:17  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1013:62  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1021:61  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1035:22  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1036:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1068:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1105:65  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1122:34  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1124:54  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1131:58  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  1151:19  error  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/MessagesView.vue
+   12:48  warning  Attribute ":disabled" should go before "@click"            vue/attributes-order
+   53:17  warning  Attribute ":class" should go before "@click"               vue/attributes-order
+  130:26  warning  Variable 'message' is already declared in the upper scope  vue/no-template-shadow
+  216:65  warning  Attribute ":disabled" should go before "@click"            vue/attributes-order
+  314:32  error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  398:66  error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  589:48  error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/MyItemsView.vue
+  163:44  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  193:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  208:29  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:34  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  233:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  251:25  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  277:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  288:33  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  294:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/OrdersView.vue
+  142:65  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:67  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  167:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  176:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  215:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/PublishItemView.vue
+   21:3   error    'NGrid' is defined but never used          @typescript-eslint/no-unused-vars
+   22:3   error    'NGridItem' is defined but never used      @typescript-eslint/no-unused-vars
+  139:58  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  208:19  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  458:37  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+  480:40  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/RegisterView.vue
+   19:44  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   26:41  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   34:45  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   41:44  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   48:51  warning  Attribute "id" should go before "v-model"        vue/attributes-order
+   55:13  warning  Attribute ":disabled" should go before "@click"  vue/attributes-order
+   56:13  warning  Attribute "type" should go before "@click"       vue/attributes-order
+   57:13  warning  Attribute "class" should go before "@click"      vue/attributes-order
+  129:19  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+  133:43  error    Unexpected any. Specify a different type         @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/SearchHistoryView.vue
+   10:3   error    'NTag' is defined but never used                           @typescript-eslint/no-unused-vars
+   81:60  error    Unexpected any. Specify a different type                   @typescript-eslint/no-explicit-any
+  103:50  warning  Attribute ":show-icon" should go before "@positive-click"  vue/attributes-order
+  131:53  warning  Attribute "style" should go before "@click"                vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/SearchResultsView.vue
+   75:36  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+   87:35  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+  123:43  warning  Attribute "v-if" should go before "class"  vue/attributes-order
+  123:65  warning  'v-html' directive can lead to XSS attack  vue/no-v-html
+  223:19  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  287:34  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  310:50  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  327:19  error    Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/ShoppingCartView.vue
+   92:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  110:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  125:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  143:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  154:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  187:19  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  198:29  error    Unexpected any. Specify a different type            @typescript-eslint/no-explicit-any
+  254:70  warning  Attribute "style" should go before "@click"         vue/attributes-order
+  297:19  warning  Attribute "style" should go before "@update:value"  vue/attributes-order
+  352:17  warning  Attribute "style" should go before "@click"         vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/SyncMonitorView.vue
+    8:44  warning  Attribute ":loading" should go before "@click"  vue/attributes-order
+  157:62  warning  Attribute ":loading" should go before "@click"  vue/attributes-order
+  305:18  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  317:30  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  327:41  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  412:36  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  497:41  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+  639:13  error    'data' is assigned a value but never used       @typescript-eslint/no-unused-vars
+  655:39  error    Unexpected any. Specify a different type        @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/SystemSettingsView.vue
+  140:33  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  147:33  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  154:33  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  210:38  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  290:36  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  294:36  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  298:36  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  302:36  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  427:37  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  446:37  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  458:39  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+  468:53  error    Unexpected any. Specify a different type     @typescript-eslint/no-explicit-any
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/UserManagementView.vue
+  236:52  warning  Attribute "v-if" should go before "class"    vue/attributes-order
+  240:38  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+  244:38  warning  Attribute "v-model" should go before "type"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/UserProfileView.vue
+   13:3   error    'NDescriptions' is defined but never used          @typescript-eslint/no-unused-vars
+   14:3   error    'NDescriptionsItem' is defined but never used      @typescript-eslint/no-unused-vars
+   27:7   error    'authStore' is assigned a value but never used     @typescript-eslint/no-unused-vars
+   30:22  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   51:25  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   52:32  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   53:29  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   71:19  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   89:57  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+   93:73  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  102:19  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  112:19  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  121:19  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  130:19  error    Unexpected any. Specify a different type           @typescript-eslint/no-explicit-any
+  226:29  warning  Attribute "v-model:value" should go before "type"  vue/attributes-order
+
+/mnt/data/桌面/newkeshe2/frontend/src/views/UserSettingsView.vue
+   11:3   error  'NSelect' is defined but never used       @typescript-eslint/no-unused-vars
+   78:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  156:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  178:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 249 problems (185 errors, 64 warnings)
+  0 errors and 61 warnings potentially fixable with the `--fix` option.
+

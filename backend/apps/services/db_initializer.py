@@ -3,7 +3,6 @@ Database initializer for multiple database engines.
 """
 import logging
 import os
-import re
 from pathlib import Path
 from typing import Dict, Any, Optional
 

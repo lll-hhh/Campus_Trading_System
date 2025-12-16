@@ -459,7 +459,7 @@ async def check_database_health(name: str, dsn: str, db_type: str, version: str)
             # 检查同步进度（简化版）
             sync_progress = 100  # 暂时设为100
             
-    except Exception as e:
+    except Exception:
         status = "error"
         latency = 9999
         sync_progress = 0

@@ -8,7 +8,7 @@ from sqlalchemy import select, and_, func, or_, desc
 from sqlalchemy.orm import Session
 from apps.core.models import (
     Item, Category, User, ItemMedia, Favorite, Comment,
-    Transaction, Review, Follow
+    Transaction
 )
 
 
@@ -501,7 +501,7 @@ class MessageService:
         item_id: Optional[int] = None
     ):
         """发送消息"""
-        from apps.core.models import Message, Conversation, User
+        from apps.core.models import Message
         
         # 验证接收者存在
         receiver = session.get(User, receiver_id)
@@ -562,7 +562,7 @@ class MessageService:
     @staticmethod
     def get_conversations(session: Session, user_id: int):
         """获取用户的会话列表"""
-        from apps.core.models import Conversation, User
+        from apps.core.models import Conversation
         
         # 查询用户参与的所有会话
         convs = session.execute(
@@ -591,7 +591,6 @@ class MessageService:
     @staticmethod
     def serialize_conversation(session: Session, conv, user_id: int):
         """序列化会话为API响应格式"""
-        from apps.core.models import User
         other_user_id = conv.user2_id if conv.user1_id == user_id else conv.user1_id
         other_user = session.get(User, other_user_id)
         unread_count = conv.user1_unread_count if conv.user1_id == user_id else conv.user2_unread_count
@@ -616,7 +615,7 @@ class MessageService:
         page_size: int = 50
     ):
         """获取会话消息列表"""
-        from apps.core.models import Conversation, Message, User
+        from apps.core.models import Conversation, Message
         
         # 验证会话权限
         conv = session.get(Conversation, conversation_id)
@@ -636,8 +635,8 @@ class MessageService:
             ),
             # 排除用户已删除的消息
             or_(
-                and_(Message.sender_id == user_id, Message.is_deleted_by_sender == False),
-                and_(Message.receiver_id == user_id, Message.is_deleted_by_receiver == False)
+                and_(Message.sender_id == user_id, not Message.is_deleted_by_sender),
+                and_(Message.receiver_id == user_id, not Message.is_deleted_by_receiver)
             )
         ).order_by(desc(Message.created_at))
         
@@ -726,7 +725,7 @@ class MessageService:
                 and_(
                     Message.sender_id == other_user_id,
                     Message.receiver_id == user_id,
-                    Message.is_read == False
+                    not Message.is_read
                 )
             ).values(is_read=True, read_at=now)
         )
@@ -819,7 +818,7 @@ class MessageService:
         page_size: int = 20
     ):
         """搜索消息"""
-        from apps.core.models import Message, User
+        from apps.core.models import Message
         
         # 查询包含关键词的消息
         query = select(Message).where(
@@ -880,7 +879,7 @@ class SearchService:
         user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """高级搜索商品"""
-        from apps.core.models import Item, Category, User, ItemMedia
+        from apps.core.models import Item, Category, ItemMedia
         
         # 构建基础查询
         query = select(Item).where(Item.status == status)
@@ -945,7 +944,7 @@ class SearchService:
             cover_image = session.execute(
                 select(ItemMedia).where(
                     ItemMedia.item_id == item.id,
-                    ItemMedia.is_cover == True
+                    ItemMedia.is_cover
                 )
             ).scalar_one_or_none()
             
@@ -1235,7 +1234,7 @@ class SearchService:
         user_id: Optional[int] = None
     ) -> Dict[str, Any]:
         """智能搜索建议"""
-        from apps.core.models import Item, Category, SearchHistory, SearchTrending
+        from apps.core.models import Category, SearchTrending
         from datetime import date, timedelta
         
         suggestions = {

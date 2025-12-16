@@ -1,0 +1,3 @@
+找不到命令 “pnpm”，您的意思是：
+  “npm” 命令来自 Debian 软件包 npm (9.2.0~ds1-2)
+尝试 sudo apt install <deb name>

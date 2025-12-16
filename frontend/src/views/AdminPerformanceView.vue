@@ -224,6 +224,9 @@
               <div class="text">{{ getHealthLabel(systemHealth) }}</div>
             </div>
           </n-progress>
+          <n-alert type="info" style="margin-top: 12px;" :bordered="false">
+            评分基于：数据库连接(30%) + 查询速度(30%) + 同步一致性(30%) + 资源使用(10%)
+          </n-alert>
         </div>
         <n-divider />
         <n-space vertical>

@@ -35,6 +35,33 @@
           
           <!-- 订单汇总 -->
           <n-divider />
+          
+          <!-- 收货信息表单 -->
+          <n-card title="📍 收货信息" class="mb-6">
+            <n-form ref="formRef" :model="deliveryForm" :rules="deliveryRules">
+              <n-form-item label="收货人" path="receiver_name">
+                <n-input 
+                  v-model:value="deliveryForm.receiver_name" 
+                  placeholder="请输入收货人姓名"
+                />
+              </n-form-item>
+              <n-form-item label="联系电话" path="receiver_phone">
+                <n-input 
+                  v-model:value="deliveryForm.receiver_phone" 
+                  placeholder="请输入联系电话"
+                />
+              </n-form-item>
+              <n-form-item label="收货地址" path="receiver_address">
+                <n-input 
+                  v-model:value="deliveryForm.receiver_address" 
+                  type="textarea"
+                  placeholder="请输入详细收货地址"
+                  :autosize="{ minRows: 2, maxRows: 4 }"
+                />
+              </n-form-item>
+            </n-form>
+          </n-card>
+          
           <div class="flex justify-between items-center mb-6">
             <span class="text-gray-600">商品总计 ({{ totalQuantity }} 件)</span>
             <span class="text-red-500 font-bold text-2xl">¥{{ totalAmount.toFixed(2) }}</span>
@@ -78,7 +105,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useMessage } from 'naive-ui'
+import { useMessage, type FormRules, type FormInst } from 'naive-ui'
 import { http } from '@/lib/http'
 
 const router = useRouter()
@@ -87,6 +114,29 @@ const message = useMessage()
 
 const loading = ref(true)
 const checkoutItems = ref<any[]>([])
+const formRef = ref<FormInst | null>(null)
+
+// 收货信息表单
+const deliveryForm = ref({
+  receiver_name: '',
+  receiver_phone: '',
+  receiver_address: ''
+})
+
+// 表单验证规则
+const deliveryRules: FormRules = {
+  receiver_name: [
+    { required: true, message: '请输入收货人姓名', trigger: 'blur' }
+  ],
+  receiver_phone: [
+    { required: true, message: '请输入联系电话', trigger: 'blur' },
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+  ],
+  receiver_address: [
+    { required: true, message: '请输入收货地址', trigger: 'blur' },
+    { min: 5, message: '地址至少5个字符', trigger: 'blur' }
+  ]
+}
 
 // 计算总数量和总金额
 const totalQuantity = computed(() => 
@@ -142,6 +192,9 @@ const contactSeller = (seller: any) => {
 // 创建订单
 const createOrders = async () => {
   try {
+    // 验证表单
+    await formRef.value?.validate()
+    
     // 为每个商品创建订单
     for (const item of checkoutItems.value) {
       await http.post('/orders', {

@@ -364,9 +364,9 @@ class MonitoringDataSimulator:
             ("transactions", "status"),
             ("users", "credit_score"),
         ]
-        for table, field in templates:
+        for table, field_name in templates:
             payload = {
-                "field": field,
+                "field": field_name,
                 "local": random.randint(10, 999),
                 "remote": random.randint(10, 999),
             }

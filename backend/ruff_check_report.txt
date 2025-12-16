@@ -1,0 +1,114 @@
+apps/api_gateway/routers/__init__.py:4:5: F401 `.admin_settings` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:5:5: F401 `.admin_users` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:6:5: F401 `.admin_tables` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:7:5: F401 `.analytics` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:8:5: F401 `.auth` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:9:5: F401 `.cart` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:10:5: F401 `.comments` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:11:5: F401 `.dashboard` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:12:5: F401 `.database` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:13:5: F401 `.favorites` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:14:5: F401 `.health` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:15:5: F401 `.items` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:16:5: F401 `.market` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:17:5: F401 `.messages` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:18:5: F401 `.orders` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:19:5: F401 `.search` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:20:5: F401 `.sync` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/__init__.py:21:5: F401 `.sync_api` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/api_gateway/routers/admin_operations.py:7:8: F401 [*] `math` imported but unused
+apps/api_gateway/routers/admin_operations.py:12:56: F401 [*] `typing.Optional` imported but unused
+apps/api_gateway/routers/admin_operations.py:23:5: F401 [*] `fastapi.status` imported but unused
+apps/api_gateway/routers/admin_operations.py:36:5: F401 [*] `apps.core.models.ConflictRecord` imported but unused
+apps/api_gateway/routers/admin_operations.py:48:40: F401 [*] `apps.services.sync_manager.sync_manager` imported but unused
+apps/api_gateway/routers/admin_operations.py:78:5: F811 Redefinition of unused `status` from line 23: `status` redefined here
+apps/api_gateway/routers/admin_operations.py:160:29: F811 Redefinition of unused `status` from line 23: `status` redefined here
+apps/api_gateway/routers/admin_operations.py:287:5: F811 Redefinition of unused `status` from line 23: `status` redefined here
+apps/api_gateway/routers/analytics.py:5:32: F401 [*] `fastapi.Depends` imported but unused
+apps/api_gateway/routers/analytics.py:7:24: F401 [*] `sqlalchemy.and_` imported but unused
+apps/api_gateway/routers/analytics.py:7:30: F401 [*] `sqlalchemy.desc` imported but unused
+apps/api_gateway/routers/analytics.py:7:36: F401 [*] `sqlalchemy.func` imported but unused
+apps/api_gateway/routers/analytics.py:7:42: F401 [*] `sqlalchemy.select` imported but unused
+apps/api_gateway/routers/analytics.py:8:28: F401 [*] `sqlalchemy.orm.Session` imported but unused
+apps/api_gateway/routers/analytics.py:11:30: F401 [*] `apps.core.models.Item` imported but unused
+apps/api_gateway/routers/analytics.py:11:36: F401 [*] `apps.core.models.Transaction` imported but unused
+apps/api_gateway/routers/analytics.py:11:49: F401 [*] `apps.core.models.User` imported but unused
+apps/api_gateway/routers/analytics.py:11:55: F401 [*] `apps.core.models.Category` imported but unused
+apps/api_gateway/routers/analytics.py:11:65: F401 [*] `apps.core.models.Review` imported but unused
+apps/api_gateway/routers/cart.py:9:40: F401 [*] `sqlalchemy.update` imported but unused
+apps/api_gateway/routers/comments.py:151:28: F401 [*] `sqlalchemy.and_` imported but unused
+apps/api_gateway/routers/comments_impl.py:105:20: F821 Undefined name `func`
+apps/api_gateway/routers/comments_impl.py:105:46: F821 Undefined name `Comment`
+apps/api_gateway/routers/comments_impl.py:106:17: F821 Undefined name `Comment`
+apps/api_gateway/routers/comments_impl.py:153:36: F401 [*] `sqlalchemy.and_` imported but unused
+apps/api_gateway/routers/dashboard.py:2:32: F401 [*] `datetime.timedelta` imported but unused
+apps/api_gateway/routers/favorites.py:9:56: F401 [*] `apps.core.models.inventory.ItemMedia` imported but unused
+apps/api_gateway/routers/items_impl.py:6:71: F401 [*] `fastapi.UploadFile` imported but unused
+apps/api_gateway/routers/items_impl.py:6:83: F401 [*] `fastapi.File` imported but unused
+apps/api_gateway/routers/items_impl.py:94:9: F821 Undefined name `select`
+apps/api_gateway/routers/search.py:8:33: F401 [*] `pydantic.Field` imported but unused
+apps/api_gateway/routers/sync.py:2:22: F401 [*] `datetime.datetime` imported but unused
+apps/api_gateway/routers/sync.py:3:31: F401 [*] `typing.List` imported but unused
+apps/api_gateway/routers/sync.py:3:37: F401 [*] `typing.Literal` imported but unused
+apps/api_gateway/routers/sync.py:5:41: F401 [*] `fastapi.HTTPException` imported but unused
+apps/api_gateway/routers/sync.py:5:56: F401 [*] `fastapi.status` imported but unused
+apps/api_gateway/routers/sync.py:6:22: F401 [*] `pydantic.BaseModel` imported but unused
+apps/api_gateway/routers/sync.py:7:24: F401 [*] `sqlalchemy.func` imported but unused
+apps/api_gateway/routers/sync.py:15:32: F401 [*] `apps.core.database.db_manager` imported but unused
+apps/api_gateway/routers/sync.py:16:30: F401 [*] `apps.core.models.ConflictRecord` imported but unused
+apps/api_gateway/routers/sync.py:18:37: F401 [*] `apps.core.sync_payloads.decode_params` imported but unused
+apps/api_gateway/routers/sync_api.py:462:25: F841 [*] Local variable `e` is assigned to but never used
+apps/core/models/__init__.py:12:36: F401 `.base.PrimaryKeyMixin` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/core/models/__init__.py:12:53: F401 `.base.SyncVersionMixin` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/core/models/__init__.py:12:71: F401 `.base.TimestampMixin` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+apps/core/models/additional.py:5:20: F401 [*] `typing.Optional` imported but unused
+apps/core/models/additional.py:12:5: F401 [*] `sqlalchemy.Enum` imported but unused
+apps/core/models/additional.py:21:28: F401 [*] `sqlalchemy.orm.relationship` imported but unused
+apps/core/models/transactions.py:7:84: F401 [*] `sqlalchemy.Enum` imported but unused
+apps/core/models/transactions.py:8:51: F401 [*] `sqlalchemy.orm.relationship` imported but unused
+apps/core/models/users.py:9:5: F401 [*] `sqlalchemy.BigInteger` imported but unused
+apps/core/models/users.py:16:5: F401 [*] `sqlalchemy.Text` imported but unused
+apps/core/sync_listeners.py:185:5: F841 Local variable `mapper` is assigned to but never used
+apps/core/transaction_examples.py:8:26: F401 [*] `typing.Optional` imported but unused
+apps/services/business_logic.py:10:21: F401 [*] `apps.core.models.User` imported but unused
+apps/services/business_logic.py:11:18: F401 [*] `apps.core.models.Review` imported but unused
+apps/services/business_logic.py:11:26: F401 [*] `apps.core.models.Follow` imported but unused
+apps/services/business_logic.py:504:47: F401 [*] `apps.core.models.Conversation` imported but unused
+apps/services/business_logic.py:504:61: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:565:52: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:565:52: F401 [*] `apps.core.models.User` imported but unused
+apps/services/business_logic.py:594:38: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:619:61: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:639:52: E712 Avoid equality comparisons to `False`; use `not Message.is_deleted_by_sender:` for false checks
+apps/services/business_logic.py:640:54: E712 Avoid equality comparisons to `False`; use `not Message.is_deleted_by_receiver:` for false checks
+apps/services/business_logic.py:729:21: E712 Avoid equality comparisons to `False`; use `not Message.is_read:` for false checks
+apps/services/business_logic.py:822:47: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:883:54: F811 [*] Redefinition of unused `User` from line 10: `User` redefined here
+apps/services/business_logic.py:948:21: E712 Avoid equality comparisons to `True`; use `ItemMedia.is_cover:` for truth checks
+apps/services/business_logic.py:1238:38: F401 [*] `apps.core.models.Item` imported but unused
+apps/services/business_logic.py:1238:54: F401 [*] `apps.core.models.SearchHistory` imported but unused
+apps/services/db_initializer.py:6:8: F401 [*] `re` imported but unused
+apps/services/db_operations.py:14:47: F401 [*] `typing.Tuple` imported but unused
+apps/services/db_operations.py:22:53: F401 [*] `apps.core.transaction.IsolationLevel` imported but unused
+apps/services/monitoring_simulator.py:367:20: F402 Import `field` from line 6 shadowed by loop variable
+apps/services/sync_manager.py:6:8: F401 [*] `asyncio` imported but unused
+apps/services/sync_manager.py:8:47: F401 [*] `typing.Set` imported but unused
+apps/services/sync_manager.py:9:24: F401 [*] `contextlib.contextmanager` imported but unused
+apps/services/sync_manager.py:12:30: F401 [*] `sqlalchemy.select` imported but unused
+apps/services/sync_manager.py:14:28: F401 [*] `sqlalchemy.exc.IntegrityError` imported but unused
+apps/services/sync_manager.py:14:44: F401 [*] `sqlalchemy.exc.DatabaseError` imported but unused
+apps/services/sync_manager.py:17:55: F401 [*] `apps.core.models.SyncConfig` imported but unused
+apps/services/system_settings.py:7:47: F401 [*] `typing.Tuple` imported but unused
+apps/trade_service/router.py:6:22: F401 [*] `datetime.datetime` imported but unused
+scripts/concurrent_simulator.py:28:52: F401 [*] `concurrent.futures.as_completed` imported but unused
+scripts/concurrent_simulator.py:29:32: F401 [*] `datetime.timedelta` imported but unused
+scripts/concurrent_simulator.py:32:19: F401 [*] `queue.Queue` imported but unused
+scripts/concurrent_simulator.py:45:5: F401 [*] `apps.core.models.Item` imported but unused
+scripts/concurrent_simulator.py:46:5: F401 [*] `apps.core.models.Message` imported but unused
+scripts/concurrent_simulator.py:47:5: F401 [*] `apps.core.models.Conversation` imported but unused
+scripts/concurrent_simulator.py:48:5: F401 [*] `apps.core.models.SearchTrending` imported but unused
+scripts/concurrent_simulator.py:494:29: F841 [*] Local variable `e` is assigned to but never used
+scripts/conflict_simulator.py:22:20: F401 [*] `typing.List` imported but unused
+scripts/data_simulator.py:33:32: F401 [*] `sqlalchemy.update` imported but unused
+Found 112 errors.
+[*] 78 fixable with the `--fix` option (5 hidden fixes can be enabled with the `--unsafe-fixes` option).

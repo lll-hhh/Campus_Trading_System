@@ -4,12 +4,11 @@ from __future__ import annotations
 import csv
 import io
 import json
-import math
 import zipfile
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal, Optional
+from typing import Any, Dict, Iterable, List, Literal
 
 from loguru import logger
 from fastapi import (
@@ -20,7 +19,6 @@ from fastapi import (
     HTTPException,
     Query,
     UploadFile,
-    status,
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -33,7 +31,6 @@ from apps.api_gateway.routers.admin_tables import ALLOWED_TABLES
 from apps.core.database import db_manager
 from apps.core.models import (
     AuditLog,
-    ConflictRecord,
     Item,
     Report,
     Role,
@@ -45,7 +42,6 @@ from apps.core.models import (
 )
 from apps.core.sync_engine import sync_engine
 from apps.core.transaction import TransactionConfig
-from apps.services.sync_manager import sync_manager
 from apps.services.monitoring_simulator import monitoring_data_simulator, query_simulator
 from apps.services.maintenance import MaintenanceTaskRunner
 

@@ -25,11 +25,10 @@ import sys
 import threading
 import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from queue import Queue
 from typing import Dict, List, Callable
 import signal
 
@@ -42,10 +41,6 @@ from sqlalchemy.orm import Session
 from apps.core.database import db_manager
 from apps.core.models import (
     User,
-    Item,
-    Message,
-    Conversation,
-    SearchTrending,
 )
 
 # ============== 模拟数据池 ==============
@@ -491,7 +486,7 @@ class VirtualUser:
                 result = chosen_action(session)
                 session.commit()
                 return result
-        except Exception as e:
+        except Exception:
             self.stats.inc_error(chosen_action.__name__)
             return False
 

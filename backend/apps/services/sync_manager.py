@@ -3,18 +3,15 @@
 """
 from __future__ import annotations
 
-import asyncio
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
-from contextlib import contextmanager
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from sqlalchemy import text, select
+from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError, DatabaseError
 
 from apps.core.database import db_manager
-from apps.core.models import ConflictRecord, SyncLog, SyncConfig
+from apps.core.models import ConflictRecord, SyncLog, Notification
 from apps.services.notifications import email_notifier
 
 
@@ -348,32 +345,57 @@ class DatabaseSyncManager:
         try:
             with db_manager.session_scope("mysql") as session:
                 for conflict in conflicts:
-                    # 记录冲突
+                    # 记录冲突（与 conflict_records 表结构对齐）
                     conflict_record = ConflictRecord(
                         table_name=table,
-                        record_id=str(record_id) if record_id else "unknown",
-                        source="mysql",  # 主库
-                        target=",".join(conflict.get("databases", conflict.get("failed_dbs", []))),
+                        record_id=record_id if record_id is not None else -1,
+                        source_db="mysql",  # 主库
+                        target_db=",".join(conflict.get("databases", conflict.get("failed_dbs", []))),
+                        conflict_type=conflict.get("type", "unknown"),
+                        local_data=conflict.get("local_data"),
+                        remote_data=conflict.get("remote_data"),
+                        resolved=False,
+                        status="pending",
+                        resolution_strategy=None,
                         payload=conflict,
-                        resolved=False
                     )
                     session.add(conflict_record)
                 
                 session.commit()
                 
                 # 发送邮件通知
-                subject = f"数据库同步冲突 - {table}"
-                body = f"""
-                检测到数据库同步冲突：
+                try:
+                    subject = f"数据库同步冲突 - {table}"
+                    body = f"""
+检测到数据库同步冲突：
+
+表名: {table}
+记录ID: {record_id}
+冲突类型: {[c['type'] for c in conflicts]}
+时间: {datetime.utcnow()}
+
+请登录管理后台查看详情并处理。
+                    """
+                    email_notifier.send(subject, body)
+                except Exception as email_exc:
+                    logger.warning(f"邮件通知发送失败，已记录到通知表: {email_exc}")
                 
-                表名: {table}
-                记录ID: {record_id}
-                冲突类型: {[c['type'] for c in conflicts]}
-                时间: {datetime.utcnow()}
-                
-                请登录管理后台查看详情并处理。
-                """
-                email_notifier.send(subject, body)
+                # 如果有 user_id，写入通知表作为兜底
+                if user_id:
+                    try:
+                        notification = Notification(
+                            user_id=user_id,
+                            type="system",
+                            title=f"数据库同步冲突 - {table}",
+                            content=f"表 {table} 记录 {record_id} 发生同步冲突，请及时处理。",
+                            related_id=record_id,
+                            related_type="conflict_record",
+                            is_read=False,
+                        )
+                        session.add(notification)
+                        session.commit()
+                    except Exception as notif_exc:
+                        logger.error(f"写入通知表失败: {notif_exc}")
                 
         except Exception as e:
             logger.error(f"Failed to handle conflicts: {str(e)}")

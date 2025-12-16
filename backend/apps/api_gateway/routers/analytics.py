@@ -2,13 +2,11 @@
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
-from sqlalchemy import and_, desc, func, select, text
-from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from apps.core.database import db_manager
-from apps.core.models import Item, Transaction, User, Category, Review
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 

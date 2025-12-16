@@ -5,7 +5,7 @@ This module demonstrates best practices for using transactions
 in CampuSwap multi-database environment.
 """
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from sqlalchemy.orm import Session
 from sqlalchemy import func

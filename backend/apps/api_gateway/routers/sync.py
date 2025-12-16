@@ -1,10 +1,9 @@
 """Sync routing layer for admin endpoints."""
-from datetime import datetime
-from typing import Any, Dict, List, Literal
+from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session
 
 from apps.api_gateway.dependencies import (
@@ -12,10 +11,8 @@ from apps.api_gateway.dependencies import (
     get_db_session,
     require_roles,
 )
-from apps.core.database import db_manager
 from apps.core.models import ConflictRecord, DailyStat, SyncConfig, SyncLog, User
 from apps.core.sync_engine import sync_engine
-from apps.core.sync_payloads import decode_params
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -59,3 +56,31 @@ def trigger_manual_sync(_: User = Depends(require_roles("admin", "market_admin")
 
     sync_engine.run_periodic_sync()
     return {"status": "scheduled"}
+
+
+class ResolveConflictRequest(BaseModel):
+    strategy: str  # 'source', 'target', 'manual'
+
+
+@router.put("/conflicts/{conflict_id}/resolve")
+def resolve_conflict(
+    conflict_id: int,
+    request: ResolveConflictRequest,
+    session: Session = Depends(get_db_session),
+    _: User = Depends(require_roles("admin")),
+) -> Dict[str, Any]:
+    """解决冲突记录"""
+    conflict = session.get(ConflictRecord, conflict_id)
+    if not conflict:
+        raise HTTPException(status_code=404, detail="冲突记录不存在")
+    
+    # 标记为已解决
+    stmt = (
+        update(ConflictRecord)
+        .where(ConflictRecord.id == conflict_id)
+        .values(resolved=True, resolved_at=text("NOW()"))
+    )
+    session.execute(stmt)
+    session.commit()
+    
+    return {"message": "冲突已解决", "conflict_id": conflict_id, "strategy": request.strategy}

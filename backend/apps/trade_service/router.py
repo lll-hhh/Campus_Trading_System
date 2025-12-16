@@ -3,7 +3,6 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from datetime import datetime
 
 from apps.core.database import db_manager
 from apps.services.db_operations import db_operation_service

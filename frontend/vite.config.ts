@@ -6,7 +6,8 @@ import UnoCSS from "unocss/vite";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const apiProxyTarget = env.VITE_API_PROXY_TARGET ?? "http://localhost:8010";
+  // 默认指向网关服务；可通过 VITE_API_PROXY_TARGET/VITE_IMAGE_PROXY_TARGET 覆盖
+  const apiProxyTarget = env.VITE_API_PROXY_TARGET ?? "http://gateway:8000";
   const imageProxyTarget = env.VITE_IMAGE_PROXY_TARGET ?? apiProxyTarget;
 
   return {

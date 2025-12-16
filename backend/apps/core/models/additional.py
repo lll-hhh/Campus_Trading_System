@@ -2,14 +2,12 @@
 补充模型：购物车、搜索、会话、刷新令牌
 """
 from datetime import datetime
-from typing import Optional
 from sqlalchemy import (
     BigInteger,
     Boolean,
     Column,
     Date,
     DateTime,
-    Enum,
     ForeignKey,
     Integer,
     JSON,
@@ -18,7 +16,6 @@ from sqlalchemy import (
     UniqueConstraint,
     Index,
 )
-from sqlalchemy.orm import relationship
 from apps.core.models.base import Base, TimestampMixin
 
 
@@ -187,4 +184,29 @@ class SystemSetting(Base, TimestampMixin):
     __table_args__ = (
         UniqueConstraint('category', 'key', name='uq_system_settings_category_key'),
         Index('ix_system_settings_category', 'category'),
+    )
+
+
+# ==================== 通知模型 ====================
+
+class Notification(Base, TimestampMixin):
+    """系统通知表（用于冲突/交易/消息等提醒）"""
+
+    __tablename__ = "notifications"
+
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, comment="用户ID")
+    type = Column(String(50), nullable=False, comment="通知类型")
+    title = Column(String(200), nullable=False, comment="通知标题")
+    content = Column(Text, comment="通知内容")
+    related_id = Column(BigInteger, comment="关联对象ID")
+    related_type = Column(String(50), comment="关联对象类型")
+    is_read = Column(Boolean, default=False, comment="是否已读")
+    sync_version = Column(Integer, default=0)
+
+    __table_args__ = (
+        Index('idx_user_id', 'user_id'),
+        Index('idx_type', 'type'),
+        Index('idx_is_read', 'is_read'),
+        Index('idx_created', 'created_at'),
     )
