@@ -188,7 +188,7 @@ const checkFavoriteStatus = async () => {
 const loadComments = async () => {
   commentLoading.value = true
   try {
-    const response = await http.get(`/comments/item/${itemId.value}`)
+    const response = await http.get(`/comments/items/${itemId.value}`)
     comments.value = response.data.map((c: any) => ({
       id: c.id,
       user: {

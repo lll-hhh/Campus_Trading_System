@@ -114,6 +114,8 @@ services:
       - POSTGRES_DSN=postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
       - SQLITE_DSN=sqlite:////app/data/campuswap.db
       - REDIS_URL=redis://redis:6379/0
+      - GLM_API_KEY=${GLM_API_KEY:-}
+      - GLM_MODEL=${GLM_MODEL:-glm-4-flash}
     ports:
       - "8000:8000"
     volumes:

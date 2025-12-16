@@ -70,6 +70,9 @@
               <router-view />
             </main>
 
+            <!-- AI 聊天助手 (悬浮按钮) -->
+            <AIChatBox v-if="isAuthenticated && !isAdminPage" />
+
             <footer v-if="!isLoginPage && !isAdminPage" class="border-t bg-white mt-12">
               <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-xs text-slate-500">
                 <p>© {{ currentYear }} CampuSwap · 校园二手交易平台</p>
@@ -95,6 +98,7 @@ import {
   zhCN,
   dateZhCN
 } from 'naive-ui'
+import AIChatBox from '@/components/AIChatBox.vue'
 
 const route = useRoute()
 const router = useRouter()

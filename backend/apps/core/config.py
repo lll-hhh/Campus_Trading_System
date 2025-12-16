@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     alert_sender: str | None = Field(default=None, alias="ALERT_SENDER")
     alert_recipients: List[str] = Field(default_factory=list, alias="ALERT_RECIPIENTS")
 
+    # GLM AI 配置
+    glm_api_key: str | None = Field(default=None, alias="GLM_API_KEY")
+    glm_api_base: str = Field(default="https://open.bigmodel.cn/api/paas/v4", alias="GLM_API_BASE")
+    glm_model: str = Field(default="glm-4-flash", alias="GLM_MODEL")
+
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",

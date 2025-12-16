@@ -12,6 +12,7 @@ from apps.api_gateway.routers import (
     admin_tables,
     admin_operations,
     admin_notifications,
+    ai_chat,
     analytics,
     auth,
     dashboard,
@@ -85,6 +86,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_tables.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_operations.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_notifications.router, prefix=settings.api_v1_prefix)
+    app.include_router(ai_chat.router, prefix=settings.api_v1_prefix)
     app.include_router(websocket.router, prefix=settings.api_v1_prefix)
 
     @app.on_event("startup")
