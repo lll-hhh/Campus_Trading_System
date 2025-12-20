@@ -1,0 +1,180 @@
+@startuml er_diagram
+!define TABLE(x) entity x
+
+' Entities extracted from backend models (simplified)
+TABLE(users) {
+  *id : integer
+  username : varchar
+  email : varchar
+  student_id : varchar
+}
+
+TABLE(user_profiles) {
+  *id : integer
+  user_id : integer
+  display_name : varchar
+}
+
+TABLE(user_preferences) {
+  *id : integer
+  user_id : integer
+}
+
+TABLE(roles) {
+  *id : integer
+  name : varchar
+}
+
+TABLE(permissions) {
+  *id : integer
+  name : varchar
+}
+
+TABLE(user_roles) {
+  *id : integer
+  user_id : integer
+  role_id : integer
+}
+
+TABLE(role_permissions) {
+  *id : integer
+  role_id : integer
+  permission_id : integer
+}
+
+TABLE(categories) {
+  *id : integer
+  name : varchar
+}
+
+TABLE(items) {
+  *id : integer
+  seller_id : integer
+  category_id : integer
+  title : varchar
+  price : numeric
+}
+
+TABLE(item_images) {
+  *id : integer
+  item_id : integer
+  image_url : varchar
+}
+
+TABLE(favorites) {
+  *id : integer
+  user_id : integer
+  item_id : integer
+}
+
+TABLE(comments) {
+  *id : integer
+  item_id : integer
+  user_id : integer
+  parent_id : integer
+  content : text
+}
+
+TABLE(tags) {
+  *id : integer
+  name : varchar
+}
+
+TABLE(item_tags) {
+  *id : integer
+  item_id : integer
+  tag_id : integer
+}
+
+TABLE(offers) {
+  *id : integer
+  item_id : integer
+  buyer_id : integer
+  amount : numeric
+}
+
+TABLE(transactions) {
+  *id : integer
+  item_id : integer
+  buyer_id : integer
+  seller_id : integer
+  final_amount : numeric
+}
+
+TABLE(payments) {
+  *id : integer
+  transaction_id : integer
+  provider : varchar
+}
+
+TABLE(deliveries) {
+  *id : integer
+  transaction_id : integer
+  address : text
+}
+
+TABLE(reviews) {
+  *id : integer
+  transaction_id : integer
+  reviewer_id : integer
+}
+
+TABLE(sync_configs) {
+  *id : integer
+  source : varchar
+  target : varchar
+}
+
+TABLE(sync_logs) {
+  *id : integer
+  config_id : integer
+}
+
+TABLE(conflict_records) {
+  *id : integer
+  table_name : varchar
+  record_id : bigint
+  source_db : varchar
+  target_db : varchar
+  resolved_by : integer
+}
+
+TABLE(daily_stats) {
+  *id : integer
+  stat_date : date
+}
+
+' Relationships
+users ||--o{ user_profiles : has
+users ||--o{ user_preferences : has
+users ||--o{ user_roles : assigned
+roles ||--o{ user_roles : assigns
+roles ||--o{ role_permissions : has
+permissions ||--o{ role_permissions : assigns
+
+users ||--o{ items : sells
+categories ||--o{ items : contains
+items ||--o{ item_images : has
+users ||--o{ favorites : favorites
+items ||--o{ favorites : favorited_by
+items ||--o{ comments : commented
+users ||--o{ comments : writes
+
+items ||--o{ offers : has
+users ||--o{ offers : makes
+
+items ||--o{ transactions : referenced
+users ||--o{ transactions : buyer
+users ||--o{ transactions : seller
+transactions ||--o{ payments : paid_by
+transactions ||--o{ deliveries : delivered_by
+transactions ||--o{ reviews : reviewed
+
+sync_configs ||--o{ sync_logs : logs
+
+conflict_records }o--|| users : resolved_by
+
+item_tags }o--|| items : maps
+item_tags }o--|| tags : maps
+
+@enduml
