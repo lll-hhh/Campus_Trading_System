@@ -18,6 +18,27 @@ from apps.services.sync_manager import sync_manager
 router = APIRouter(prefix="/sync", tags=["数据库同步"])
 
 
+# ==================== Helper Functions ====================
+
+def _parse_json_field(field_value: Any) -> dict:
+    """解析JSON字段，支持str、dict、bytes等多种格式"""
+    if field_value is None:
+        return {}
+    if isinstance(field_value, dict):
+        return field_value
+    if isinstance(field_value, str):
+        try:
+            return json.loads(field_value)
+        except (json.JSONDecodeError, ValueError):
+            return {}
+    if isinstance(field_value, bytes):
+        try:
+            return json.loads(field_value.decode('utf-8'))
+        except (json.JSONDecodeError, ValueError, UnicodeDecodeError):
+            return {}
+    return {}
+
+
 # ==================== Pydantic Models ====================
 
 class SyncWriteRequest(BaseModel):
@@ -77,11 +98,16 @@ class ConflictRecord(BaseModel):
     id: int
     table_name: str
     record_id: str
-    source: str
-    target: str
+    source: str  # 保留兼容性
+    target: str  # 保留兼容性
+    source_db: Optional[str] = None  # 新增明确字段
+    target_db: Optional[str] = None  # 新增明确字段
+    conflict_type: Optional[str] = None  # 冲突类型
     resolved: bool
     created_at: datetime
     payload: dict
+    local_data: Optional[dict] = None  # 来源数据库数据
+    remote_data: Optional[dict] = None  # 目标数据库数据
 
 
 class ConflictListResponse(BaseModel):
@@ -111,8 +137,14 @@ class SyncLogListResponse(BaseModel):
 
 class ConflictResolvePayload(BaseModel):
     """冲突解决请求"""
-    strategy: Literal["source", "target", "manual"] = Field(
-        default="manual", description="解决策略：采纳来源/source、保留目标/target、手动/manual"
+    strategy: Literal["source", "target", "manual", "custom"] = Field(
+        default="manual", description="解决策略：source(采纳来源)、target(保留目标)、manual(标记为已解决)、custom(自定义数据)"
+    )
+    chosen_db: Optional[str] = Field(
+        None, description="选择的数据库：mysql、mariadb、postgres、sqlite"
+    )
+    custom_data: Optional[dict] = Field(
+        None, description="自定义数据（当strategy=custom时使用）"
     )
 
 
@@ -254,10 +286,13 @@ def get_conflicts(
     # 转换为响应格式
     conflicts = []
     for row in rows:
+        local_data_parsed = _parse_json_field(row[8])
+        remote_data_parsed = _parse_json_field(row[9])
+        
         payload = {
             "type": row[7],
-            "local": _parse_json_field(row[8]),
-            "remote": _parse_json_field(row[9]),
+            "local": local_data_parsed,
+            "remote": remote_data_parsed,
             "strategy": row[10],
         }
         conflicts.append(
@@ -265,11 +300,16 @@ def get_conflicts(
                 id=row[0],
                 table_name=row[1],
                 record_id=str(row[2]),
-                source=row[3],
-                target=row[4],
+                source=row[3],  # 兼容旧字段
+                target=row[4],  # 兼容旧字段
+                source_db=row[3],  # 新字段
+                target_db=row[4],  # 新字段
+                conflict_type=row[7],  # 冲突类型
                 resolved=bool(row[5]),
                 created_at=row[6],
                 payload=payload,
+                local_data=local_data_parsed,  # 来源数据
+                remote_data=remote_data_parsed,  # 目标数据
             )
         )
     
@@ -282,48 +322,127 @@ def get_conflicts(
 
 
 @router.put("/conflicts/{conflict_id}/resolve")
-def resolve_conflict(
+async def resolve_conflict(
     conflict_id: int,
     payload: ConflictResolvePayload,
     current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db_session)
 ) -> dict:
     """
-    标记冲突为已解决并记录策略
+    解决冲突并将选中的数据同步到所有数据库
+    
+    支持的策略：
+    - source: 采纳来源数据库的数据
+    - target: 保留目标数据库的数据  
+    - manual: 仅标记为已解决，不同步数据
+    - custom: 使用自定义数据
     """
-    # 检查冲突是否存在
-    check_sql = "SELECT id, resolved FROM conflict_records WHERE id = :conflict_id"
+    # 获取冲突记录详情
+    check_sql = """
+    SELECT id, table_name, record_id, source_db, target_db, resolved, 
+           local_data, remote_data, conflict_type
+    FROM conflict_records 
+    WHERE id = :conflict_id
+    """
     result = db.execute(text(check_sql), {"conflict_id": conflict_id})
     row = result.fetchone()
     
     if not row:
         raise HTTPException(status_code=404, detail="冲突记录不存在")
     
-    if row[1]:  # resolved
+    if row[5]:  # resolved
         raise HTTPException(status_code=400, detail="冲突已解决")
     
-    # 更新状态
+    conflict_id_val, table_name, record_id, source_db, target_db, _, local_data, remote_data, conflict_type = row
+    
+    # 解析数据
+    local_dict = _parse_json_field(local_data)
+    remote_dict = _parse_json_field(remote_data)
+    
+    # 确定要同步的数据
+    chosen_data = None
+    chosen_db_name = None
+    
+    if payload.strategy == "source":
+        chosen_data = local_dict
+        chosen_db_name = source_db
+    elif payload.strategy == "target":
+        chosen_data = remote_dict
+        chosen_db_name = target_db
+    elif payload.strategy == "custom":
+        if not payload.custom_data:
+            raise HTTPException(status_code=400, detail="自定义策略需要提供custom_data")
+        chosen_data = payload.custom_data
+        chosen_db_name = "custom"
+    elif payload.chosen_db:
+        # 如果指定了数据库，从该数据库读取数据
+        if payload.chosen_db == source_db:
+            chosen_data = local_dict
+        elif payload.chosen_db == target_db:
+            chosen_data = remote_dict
+        else:
+            raise HTTPException(status_code=400, detail=f"指定的数据库 {payload.chosen_db} 不在冲突中")
+        chosen_db_name = payload.chosen_db
+    
+    # 如果有数据要同步，执行同步操作
+    sync_results = {}
+    if chosen_data and payload.strategy != "manual":
+        try:
+            # 同步到所有数据库
+            from apps.services.sync_manager import sync_manager
+            sync_result = await sync_manager.sync_write(
+                table=table_name,
+                action="update",
+                data=chosen_data,
+                record_id=int(record_id),
+                user_id=current_user.id,
+                force=True  # 强制同步，覆盖所有数据库
+            )
+            sync_results = {
+                "synced": True,
+                "success_dbs": sync_result.get("success_dbs", []),
+                "failed_dbs": sync_result.get("failed_dbs", [])
+            }
+        except Exception as e:
+            sync_results = {
+                "synced": False,
+                "error": str(e)
+            }
+    
+    # 更新冲突记录状态
     update_sql = """
     UPDATE conflict_records 
     SET resolved = 1,
         resolved_by = :user_id,
         resolved_at = NOW(), 
         resolution_strategy = :strategy,
+        resolution_data = :resolution_data,
         updated_at = NOW()
     WHERE id = :conflict_id
     """
+    
+    resolution_data_json = json.dumps({
+        "strategy": payload.strategy,
+        "chosen_db": chosen_db_name,
+        "chosen_data": chosen_data,
+        "sync_results": sync_results
+    }, ensure_ascii=False)
+    
     db.execute(text(update_sql), {
         "user_id": current_user.id,
         "conflict_id": conflict_id,
-        "strategy": payload.strategy
+        "strategy": payload.strategy,
+        "resolution_data": resolution_data_json
     })
     db.commit()
     
     return {
         "success": True,
-        "message": "冲突已标记为已解决",
+        "message": "冲突已解决" + (" 并同步数据" if sync_results.get("synced") else ""),
         "conflict_id": conflict_id,
-        "strategy": payload.strategy
+        "strategy": payload.strategy,
+        "chosen_db": chosen_db_name,
+        "sync_results": sync_results
     }
 
 

@@ -139,68 +139,35 @@
       </n-grid>
     </n-card>
 
-    <!-- 同步冲突解决 -->
-    <n-card title="🔄 同步冲突解决" class="section-card">
-      <n-space vertical>
-        <n-alert type="error" v-if="conflicts.length > 0" :bordered="false">
-          检测到 <strong>{{ conflicts.length }}</strong> 个数据同步冲突，需要手动解决！
+    <!-- 同步冲突管理 - 跳转到专用监控页 -->
+    <n-card title="🔄 数据库同步管理" class="section-card">
+      <n-space vertical size="large">
+        <n-alert type="info" :bordered="false">
+          完整的同步监控、冲突管理功能已集成到专用监控页面，提供实时监控、批量操作等功能。
         </n-alert>
-        <n-alert type="success" v-else :bordered="false">
-          ✅ 当前无同步冲突
-        </n-alert>
+        
+        <n-descriptions :column="2" bordered>
+          <n-descriptions-item label="功能特性">
+            实时数据库状态监控
+          </n-descriptions-item>
+          <n-descriptions-item label="冲突处理">
+            可视化冲突详情对比
+          </n-descriptions-item>
+          <n-descriptions-item label="同步统计">
+            成功率、失败率分析
+          </n-descriptions-item>
+          <n-descriptions-item label="批量操作">
+            支持批量解决冲突
+          </n-descriptions-item>
+        </n-descriptions>
 
-        <n-spin :show="conflictsLoading">
-          <n-table :bordered="false" v-if="conflicts.length > 0">
-            <thead>
-              <tr>
-                <th>冲突ID</th>
-                <th>表名</th>
-                <th>记录ID</th>
-                <th>源数据库</th>
-                <th>目标数据库</th>
-                <th>冲突类型</th>
-                <th>发生时间</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="conflict in conflicts" :key="conflict.id">
-                <td>{{ conflict.id }}</td>
-                <td><n-tag>{{ conflict.table }}</n-tag></td>
-                <td>{{ conflict.recordId }}</td>
-                <td>{{ conflict.sourceDb }}</td>
-                <td>{{ conflict.targetDb }}</td>
-                <td>
-                  <n-tag :type="getConflictTypeColor(conflict.type)">
-                    {{ conflict.type }}
-                  </n-tag>
-                </td>
-                <td>{{ conflict.createdAt }}</td>
-                <td>
-                  <n-space>
-                    <n-button size="small" type="primary" @click="viewConflictDetail(conflict)">
-                      查看详情
-                    </n-button>
-                    <n-button size="small" type="success" @click="resolveConflict(conflict, 'source')">
-                      使用源
-                    </n-button>
-                    <n-button size="small" type="warning" @click="resolveConflict(conflict, 'target')">
-                      使用目标
-                    </n-button>
-                    <n-button size="small" type="error" @click="resolveConflict(conflict, 'manual')">
-                      手动解决
-                    </n-button>
-                  </n-space>
-                </td>
-              </tr>
-            </tbody>
-          </n-table>
-          <n-empty v-else description="当前没有未解决的冲突" />
-        </n-spin>
-
-        <n-space>
-          <n-button @click="scanConflicts">🔍 扫描新冲突</n-button>
-          <n-button type="error" @click="resolveAllConflicts">⚡ 批量解决（使用最新数据）</n-button>
+        <n-space justify="center">
+          <n-button type="primary" size="large" @click="$router.push('/admin/sync-monitor')">
+            <template #icon>
+              <n-icon><ServerOutline /></n-icon>
+            </template>
+            前往同步监控页面
+          </n-button>
         </n-space>
       </n-space>
     </n-card>
@@ -305,20 +272,6 @@
         </n-gi>
       </n-grid>
     </n-card>
-
-    <!-- 冲突详情弹窗 -->
-    <n-modal v-model:show="showConflictModal" preset="card" title="冲突详情" style="width: 800px">
-      <n-grid :cols="2" :x-gap="20" v-if="currentConflict">
-        <n-gi>
-          <h4>源数据 ({{ currentConflict.sourceDb }})</h4>
-          <n-code :code="JSON.stringify(currentConflict.sourceData, null, 2)" language="json" />
-        </n-gi>
-        <n-gi>
-          <h4>目标数据 ({{ currentConflict.targetDb }})</h4>
-          <n-code :code="JSON.stringify(currentConflict.targetData, null, 2)" language="json" />
-        </n-gi>
-      </n-grid>
-    </n-modal>
   </div>
 </template>
 
@@ -326,20 +279,8 @@
 import { ref, watch, onMounted } from 'vue'
 import type { UploadFileInfo } from 'naive-ui'
 import { useMessage } from 'naive-ui'
-
+import { ServerOutline } from '@vicons/ionicons5'
 import { http as api } from '@/lib/http'
-
-interface ConflictRow {
-  id: number
-  table: string
-  recordId: string
-  sourceDb: string
-  targetDb: string
-  type: string
-  createdAt: string
-  sourceData: Record<string, unknown>
-  targetData: Record<string, unknown>
-}
 
 const message = useMessage()
 
@@ -414,12 +355,6 @@ const importTableOptions = [
   { label: '消息数据', value: 'messages' },
   { label: '审计日志', value: 'audit_logs' }
 ]
-
-// 同步冲突
-const conflicts = ref<ConflictRow[]>([])
-const conflictsLoading = ref(false)
-const showConflictModal = ref(false)
-const currentConflict = ref<ConflictRow | null>(null)
 
 // SQL 执行器
 const sqlTargetDb = ref<'MySQL' | 'PostgreSQL' | 'MariaDB' | 'SQLite'>('MySQL')
@@ -617,73 +552,7 @@ const importData = async () => {
   }
 }
 
-const fetchConflicts = async () => {
-  conflictsLoading.value = true
-  try {
-    const { data } = await api.get<{ conflicts: any[] }>(
-      '/sync/conflicts',
-      {
-      params: { resolved: false, page: 1, page_size: 50 }
-      }
-    )
-    const rows = data.conflicts ?? []
-    conflicts.value = rows.map((item: any) => ({
-      id: item.id,
-      table: item.table_name,
-      recordId: item.record_id,
-      sourceDb: item.source,
-      targetDb: item.target,
-      type: item.payload?.type || 'unknown',
-      createdAt: item.created_at,
-      sourceData: item.payload?.local || {},
-      targetData: item.payload?.remote || {}
-    }))
-  } catch (error) {
-    handleError(error, '获取冲突列表失败')
-  } finally {
-    conflictsLoading.value = false
-  }
-}
-
-const scanConflicts = () => fetchConflicts()
-
-const viewConflictDetail = (conflict: ConflictRow) => {
-  currentConflict.value = conflict
-  showConflictModal.value = true
-}
-
-const resolveConflict = async (conflict: ConflictRow, strategy: 'source' | 'target' | 'manual') => {
-  try {
-    await api.put(`/sync/conflicts/${conflict.id}/resolve`, { strategy })
-    message.success(`冲突 ${conflict.id} 已解决`)
-    await fetchConflicts()
-  } catch (error) {
-    handleError(error, '解决冲突失败')
-  }
-}
-
-const resolveAllConflicts = async () => {
-  if (!conflicts.value.length) {
-    message.info('当前无待解决冲突')
-    return
-  }
-  for (const conflict of conflicts.value) {
-    try {
-      await api.put(`/sync/conflicts/${conflict.id}/resolve`, { strategy: 'manual' })
-    } catch (error) {
-      handleError(error, `冲突 ${conflict.id} 处理失败`)
-      return
-    }
-  }
-  message.success('所有冲突已标记为解决')
-  fetchConflicts()
-}
-
-const getConflictTypeColor = (type: string) => {
-  if (type.includes('version') || type.includes('版本')) return 'warning'
-  if (type.includes('inconsistent') || type.includes('不一致')) return 'error'
-  return 'info'
-}
+// SQL 执行器函数
 
 const runSql = async (mode: 'run' | 'explain') => {
   if (!sqlQuery.value.trim()) {
@@ -786,10 +655,6 @@ const forceSyncAll = async () => {
 const pauseSync = () => message.info('同步暂停功能待实现')
 const resumeSync = () => message.info('同步恢复功能待实现')
 const configureSyncRules = () => message.info('请前往同步设置页面配置规则')
-
-onMounted(() => {
-  fetchConflicts()
-})
 </script>
 
 <style scoped>

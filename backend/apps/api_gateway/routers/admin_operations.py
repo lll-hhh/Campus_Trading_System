@@ -712,12 +712,44 @@ def performance_insights(session: Session = Depends(get_db_session)):
 
 
 @router.get("/performance/heatmap")
-def performance_heatmap(days: int = Query(7, ge=1, le=14)):
+def performance_heatmap(
+    days: int = Query(7, ge=1, le=14),
+    session: Session = Depends(get_db_session)
+):
     """Return recent sync activity heatmap data for analytics dashboards."""
-
-    monitoring_data_simulator.ensure_baseline()
-    data = monitoring_data_simulator.generate_heatmap(days)
-    return {"days": days, "data": data}
+    from datetime import timedelta
+    
+    try:
+        # 从user_activities表生成真实的热力图数据
+        days_ago = datetime.now() - timedelta(days=days)
+        
+        result = session.execute(text("""
+            SELECT 
+                HOUR(created_at) as hour,
+                (DAYOFWEEK(created_at) - 1) as day,
+                COUNT(*) as value
+            FROM user_activities
+            WHERE created_at >= :days_ago
+            GROUP BY hour, day
+            ORDER BY day, hour
+        """), {"days_ago": days_ago})
+        
+        data = [
+            {"hour": row[0], "day": str(row[1]), "value": row[2]}
+            for row in result
+        ]
+        
+        # 如果没有数据，使用模拟数据
+        if not data:
+            monitoring_data_simulator.ensure_baseline()
+            data = monitoring_data_simulator.generate_heatmap(days)
+        
+        return {"days": days, "data": data}
+    except Exception as e:
+        # 降级到模拟数据
+        monitoring_data_simulator.ensure_baseline()
+        data = monitoring_data_simulator.generate_heatmap(days)
+        return {"days": days, "data": data}
 
 
 @router.post("/databases/{db_name}/sync")

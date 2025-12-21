@@ -367,7 +367,7 @@ class SystemSettingsService:
             "smtp_port": self.settings.smtp_port,
             "smtp_username": self.settings.smtp_username or "",
             "smtp_password": self.settings.smtp_password or "",
-            "from_email": self.settings.alert_sender or (self.settings.smtp_username or "noreply@campuswap"),
+            "from_email": self.settings.alert_sender or (self.settings.smtp_username or "noreply@campuswap.com"),
             "admin_emails": list(self.settings.alert_recipients or []),
             "use_tls": self.settings.smtp_use_tls,
             "notify_conflicts": True,

@@ -544,13 +544,49 @@ class DatabaseSyncManager:
             return {"success": False, "error": str(e)}
     
     def get_stats(self) -> Dict[str, Any]:
-        """获取同步统计信息"""
-        return {
-            "success_count": self.success_count,
-            "failure_count": self.failure_count,
-            "conflict_count": self.conflict_count,
-            "success_rate": self.success_count / max(1, self.success_count + self.failure_count)
-        }
+        """获取同步统计信息（从数据库实时统计最近7天的数据）"""
+        try:
+            from datetime import datetime, timedelta
+            
+            # 获取数据库连接
+            with db_manager.session_scope("mysql") as session:
+                seven_days_ago = datetime.now() - timedelta(days=7)
+                
+                # 统计sync_logs表中的数据
+                sync_stats = session.execute(text("""
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success,
+                        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failure
+                    FROM sync_logs
+                    WHERE created_at >= :seven_days_ago
+                """), {"seven_days_ago": seven_days_ago}).first()
+                
+                # 统计冲突数量
+                conflict_count = session.execute(text("""
+                    SELECT COUNT(*) as count
+                    FROM conflict_records
+                    WHERE created_at >= :seven_days_ago
+                """), {"seven_days_ago": seven_days_ago}).scalar()
+                
+                success_count = sync_stats[1] if sync_stats else 0
+                failure_count = sync_stats[2] if sync_stats else 0
+                
+                return {
+                    "success_count": success_count or 0,
+                    "failure_count": failure_count or 0,
+                    "conflict_count": conflict_count or 0,
+                    "success_rate": success_count / max(1, success_count + failure_count) if success_count else 0.0
+                }
+        except Exception as e:
+            logger.error(f"获取同步统计失败: {e}")
+            # 降级到内存计数器
+            return {
+                "success_count": self.success_count,
+                "failure_count": self.failure_count,
+                "conflict_count": self.conflict_count,
+                "success_rate": self.success_count / max(1, self.success_count + self.failure_count)
+            }
 
 
 # 全局实例

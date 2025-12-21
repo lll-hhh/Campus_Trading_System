@@ -46,7 +46,7 @@ sleep 5
 # 初始化 SQLite
 # ========================================
 SQLITE_DB="/app/data/campuswap.db"
-SQLITE_INIT_SCRIPT="/app/sql/sqlite_init.sql"
+SQLITE_INIT_SCRIPT="/app/sql/init/sqlite_init.sql"
 
 echo "📊 检查 SQLite 数据库..."
 

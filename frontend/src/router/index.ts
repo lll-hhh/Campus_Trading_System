@@ -35,6 +35,7 @@ import AdminOperationsView from '@/views/AdminOperationsView.vue';
 import AdminTablesView from '@/views/AdminTablesView.vue';
 import SyncMonitorView from '@/views/SyncMonitorView.vue';
 import AdminProfileView from '@/views/AdminProfileView.vue';
+import AdminAIView from '@/views/AdminAIView.vue';
 
 // 1. 引入注册组件
 import RegisterView from '@/views/RegisterView.vue';
@@ -220,6 +221,12 @@ const router = createRouter({
           name: 'sync-monitor',
           component: SyncMonitorView,
           meta: { title: '同步监控', icon: '🔄', role: 'admin', requiresAdmin: true }
+        },
+        {
+          path: 'ai',
+          name: 'admin-ai',
+          component: AdminAIView,
+          meta: { title: 'AI助手', icon: '🤖', role: 'admin', requiresAdmin: true }
         },
         {
           path: 'profile',

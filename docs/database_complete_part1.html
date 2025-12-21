@@ -1,0 +1,2175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据库完整文档 - Part 1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', sans-serif; background: #f0f2f5; padding: 20px; }
+        .container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); overflow: hidden; }
+        h1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; font-size: 2.5em; }
+        .nav { position: sticky; top: 0; background: #fff; border-bottom: 2px solid #e0e0e0; padding: 15px 30px; z-index: 100; }
+        .nav-links { display: flex; gap: 20px; flex-wrap: wrap; }
+        .nav-link { padding: 8px 15px; background: #f5f5f5; border-radius: 5px; text-decoration: none; color: #333; transition: all 0.3s; }
+        .nav-link:hover { background: #667eea; color: white; }
+        .section { padding: 40px; }
+        h2 { color: #667eea; margin: 40px 0 20px; padding-bottom: 15px; border-bottom: 3px solid #667eea; font-size: 2em; }
+        h3 { color: #333; margin: 30px 0 15px; font-size: 1.5em; padding: 15px; background: linear-gradient(to right, #f5f7fa, transparent); border-left: 5px solid #667eea; }
+        .table-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea; }
+        .table-info strong { color: #667eea; font-size: 1.1em; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        th { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; text-align: left; font-size: 1.05em; }
+        td { padding: 12px 15px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+        tr:hover { background: #f8f9ff; }
+        .pk { background: #ffe4e4; color: #d32f2f; font-weight: bold; padding: 4px 8px; border-radius: 4px; }
+        .fk { background: #e3f2fd; color: #1976d2; font-weight: bold; padding: 4px 8px; border-radius: 4px; }
+        .uk { background: #fff3e0; color: #f57c00; font-weight: bold; padding: 4px 8px; border-radius: 4px; }
+        .idx { background: #e8f5e9; color: #388e3c; padding: 4px 8px; border-radius: 4px; }
+        .code-block { background: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; margin: 20px 0; overflow-x: auto; font-family: 'Consolas', monospace; line-height: 1.6; }
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .comment { color: #6a9955; }
+        .code-block .function { color: #dcdcaa; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin: 30px 0; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 10px; text-align: center; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); }
+        .stat-number { font-size: 3em; font-weight: bold; margin: 10px 0; }
+        .stat-label { font-size: 1em; opacity: 0.9; }
+        .highlight-box { background: #e7f3ff; border: 2px solid #2196F3; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .highlight-box h4 { color: #1976D2; margin-bottom: 10px; }
+        .field-type { color: #666; font-family: 'Consolas', monospace; font-size: 0.9em; }
+        .constraint-list { list-style: none; padding: 10px 0; }
+        .constraint-list li { padding: 5px 0; border-left: 3px solid #667eea; padding-left: 15px; margin: 5px 0; }
+        
+        /* ER图缩放控制 */
+        .er-controls { 
+            position: sticky; 
+            top: 70px; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .zoom-control { 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            flex: 1;
+            min-width: 300px;
+        }
+        .zoom-slider {
+            flex: 1;
+            height: 8px;
+            border-radius: 4px;
+            background: #e0e0e0;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .zoom-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: none;
+        }
+        .zoom-value {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 60px;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .zoom-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        .zoom-btn {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        .zoom-btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        .er-container {
+            background: #fafbfc;
+            padding: 30px;
+            border-radius: 10px;
+            border: 2px solid #e1e4e8;
+            margin: 30px 0;
+            overflow: auto;
+            max-height: 80vh;
+        }
+        #erSvg {
+            transition: transform 0.2s ease;
+            transform-origin: top left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🗄️ 校园交易系统 - 完整数据库文档 (Part 1)</h1>
+        
+        <div class="nav">
+            <div class="nav-links">
+                <a href="#overview" class="nav-link">📊 概览</a>
+                <a href="#erdiagram" class="nav-link">🗺️ ER图</a>
+                <a href="#users" class="nav-link">👥 用户表</a>
+                <a href="#rbac" class="nav-link">🔐 权限表</a>
+                <a href="#items" class="nav-link">📦 商品表</a>
+                <a href="#transactions" class="nav-link">💰 交易表</a>
+                <a href="#interactions" class="nav-link">💬 互动表</a>
+                <a href="#monitoring" class="nav-link">🔍 监控表</a>
+                <a href="#sync" class="nav-link">🔄 同步表</a>
+                <a href="#extensions" class="nav-link">🎯 扩展表</a>
+                <a href="#database-programming" class="nav-link">⚙️ 触发器/存储过程</a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2 id="overview">📊 数据库概览</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label">总表数量</div>
+                    <div class="stat-number">35+</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">数据库类型</div>
+                    <div class="stat-number">4</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">触发器数量</div>
+                    <div class="stat-number">7</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">存储过程</div>
+                    <div class="stat-number">3</div>
+                </div>
+            </div>
+
+            <div class="highlight-box">
+                <h4>🎯 核心特性</h4>
+                <ul>
+                    <li>✅ <strong>四库同步</strong>: MySQL、MariaDB、PostgreSQL、SQLite 实时同步</li>
+                    <li>✅ <strong>RBAC权限管理</strong>: 完整的角色-权限体系</li>
+                    <li>✅ <strong>软删除机制</strong>: 关键数据逻辑删除</li>
+                    <li>✅ <strong>审计日志</strong>: 完整的操作追踪</li>
+                    <li>✅ <strong>信用评分系统</strong>: 用户信用管理</li>
+                    <li>✅ <strong>乐观锁</strong>: sync_version 字段版本控制</li>
+                </ul>
+            </div>
+
+            <!-- 完整表目录 -->
+            <h3>📋 完整表目录 (35张表)</h3>
+            
+            <table style="margin: 30px 0;">
+                <thead>
+                    <tr>
+                        <th>模块</th>
+                        <th>表名</th>
+                        <th>中文名</th>
+                        <th>字段数</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr style="background: #e3f2fd;"><td colspan="5" style="font-weight: bold; color: #1976d2;">👥 用户权限模块 (6表)</td></tr>
+                    <tr><td></td><td><code>users</code></td><td>用户表</td><td>20</td><td>⭐ 核心表 - 用户基础信息、信用分、评分</td></tr>
+                    <tr><td></td><td><code>roles</code></td><td>角色表</td><td>6</td><td>RBAC角色定义</td></tr>
+                    <tr><td></td><td><code>permissions</code></td><td>权限表</td><td>8</td><td>资源+操作权限模型</td></tr>
+                    <tr><td></td><td><code>user_roles</code></td><td>用户角色关联表</td><td>6</td><td>N:M 多对多关系</td></tr>
+                    <tr><td></td><td><code>role_permissions</code></td><td>角色权限关联表</td><td>6</td><td>N:M 多对多关系</td></tr>
+                    <tr><td></td><td><code>user_profiles</code></td><td>用户资料表</td><td>10</td><td>1:1 扩展资料</td></tr>
+                    
+                    <tr style="background: #f3e5f5;"><td colspan="5" style="font-weight: bold; color: #7b1fa2;">📦 商品交易模块 (8表)</td></tr>
+                    <tr><td></td><td><code>categories</code></td><td>商品分类表</td><td>10</td><td>分类管理、排序</td></tr>
+                    <tr><td></td><td><code>items</code></td><td>商品表</td><td>21</td><td>⭐ 核心表 - FULLTEXT全文索引</td></tr>
+                    <tr><td></td><td><code>item_images</code></td><td>商品图片表</td><td>8</td><td>多图支持、封面标记</td></tr>
+                    <tr><td></td><td><code>item_price_history</code></td><td>商品价格历史表</td><td>6</td><td>价格变动追踪</td></tr>
+                    <tr><td></td><td><code>transactions</code></td><td>交易表</td><td>20</td><td>⭐ 核心表 - 完整交易流程</td></tr>
+                    <tr><td></td><td><code>favorites</code></td><td>收藏表</td><td>6</td><td>用户收藏商品</td></tr>
+                    <tr><td></td><td><code>transaction_review_images</code></td><td>交易评价图片表</td><td>6</td><td>晒单功能</td></tr>
+                    <tr><td></td><td><code>cart_items</code></td><td>购物车表</td><td>8</td><td>购物车商品</td></tr>
+                    
+                    <tr style="background: #e8f5e9;"><td colspan="5" style="font-weight: bold; color: #388e3c;">💬 评论互动模块 (4表)</td></tr>
+                    <tr><td></td><td><code>comments</code></td><td>评论表</td><td>10</td><td>支持嵌套回复</td></tr>
+                    <tr><td></td><td><code>messages</code></td><td>消息表</td><td>12</td><td>用户私信系统</td></tr>
+                    <tr><td></td><td><code>comment_likes</code></td><td>评论点赞表</td><td>5</td><td>点赞互动</td></tr>
+                    <tr><td></td><td><code>message_attachments</code></td><td>消息附件表</td><td>8</td><td>图片/视频/文档</td></tr>
+                    
+                    <tr style="background: #fff3e0;"><td colspan="5" style="font-weight: bold; color: #f57c00;">🔍 系统监控模块 (7表)</td></tr>
+                    <tr><td></td><td><code>audit_logs</code></td><td>审计日志表</td><td>11</td><td>⭐ 核心表 - 完整操作追踪</td></tr>
+                    <tr><td></td><td><code>conflict_records</code></td><td>同步冲突表</td><td>14</td><td>4库同步冲突管理</td></tr>
+                    <tr><td></td><td><code>system_configs</code></td><td>系统配置表</td><td>7</td><td>键值对配置</td></tr>
+                    <tr><td></td><td><code>system_settings</code></td><td>系统运行时配置</td><td>7</td><td>JSON存储配置</td></tr>
+                    <tr><td></td><td><code>reports</code></td><td>举报表</td><td>12</td><td>内容举报管理</td></tr>
+                    <tr><td></td><td><code>report_actions</code></td><td>举报处理记录表</td><td>7</td><td>管理员操作日志</td></tr>
+                    <tr><td></td><td><code>notifications</code></td><td>系统通知表</td><td>11</td><td>消息推送</td></tr>
+                    
+                    <tr style="background: #fce4ec;"><td colspan="5" style="font-weight: bold; color: #c2185b;">🔄 同步管理模块 (5表)</td></tr>
+                    <tr><td></td><td><code>sync_configs</code></td><td>同步配置表</td><td>10</td><td>4库同步配置</td></tr>
+                    <tr><td></td><td><code>sync_logs</code></td><td>同步日志表</td><td>9</td><td>同步执行记录</td></tr>
+                    <tr><td></td><td><code>sync_tasks</code></td><td>同步任务表</td><td>14</td><td>任务队列管理</td></tr>
+                    <tr><td></td><td><code>performance_metrics</code></td><td>性能监控表</td><td>8</td><td>性能指标追踪</td></tr>
+                    <tr><td></td><td><code>daily_stats</code></td><td>每日统计表</td><td>9</td><td>业务数据统计</td></tr>
+                    
+                    <tr style="background: #e1f5fe;"><td colspan="5" style="font-weight: bold; color: #0277bd;">🎯 扩展功能模块 (8表)</td></tr>
+                    <tr><td></td><td><code>user_follows</code></td><td>用户关注表</td><td>6</td><td>关注关系</td></tr>
+                    <tr><td></td><td><code>user_addresses</code></td><td>用户地址表</td><td>12</td><td>收货地址管理</td></tr>
+                    <tr><td></td><td><code>item_view_history</code></td><td>商品浏览历史表</td><td>6</td><td>推荐算法数据</td></tr>
+                    <tr><td></td><td><code>search_history</code></td><td>搜索历史表</td><td>7</td><td>搜索优化</td></tr>
+                    <tr><td></td><td><code>credit_score_history</code></td><td>信用分变更记录表</td><td>12</td><td>信用分追溯</td></tr>
+                    <tr><td></td><td><code>conversations</code></td><td>会话表</td><td>8</td><td>聊天会话管理</td></tr>
+                    <tr><td></td><td><code>search_trending</code></td><td>热搜表</td><td>6</td><td>热门搜索词</td></tr>
+                    <tr><td></td><td><code>refresh_tokens</code></td><td>刷新令牌表</td><td>7</td><td>JWT令牌管理</td></tr>
+                    
+                    <tr style="background: #f5f5f5;"><td colspan="5" style="font-weight: bold;">📊 总计: 35张表，约350+字段</td></tr>
+                </tbody>
+            </table>
+
+            <!-- ========== ER图部分 ========== -->
+            <h2 id="erdiagram">🗺️ 实体关系图 (Entity-Relationship Diagram)</h2>
+            
+            <div class="highlight-box">
+                <h4>📐 ER图说明</h4>
+                <ul>
+                    <li><strong>实体 (Entity)</strong>: 矩形框表示数据库表</li>
+                    <li><strong>关系 (Relationship)</strong>: 菱形表示表之间的关联关系</li>
+                    <li><strong>属性 (Attribute)</strong>: 表内关键字段（详细字段见下方表定义）</li>
+                    <li><strong>基数 (Cardinality)</strong>: 1:1（一对一）、1:N（一对多）、N:M（多对多）</li>
+                    <li><strong>外键约束</strong>: 实线连接表示 FOREIGN KEY 约束</li>
+                </ul>
+            </div>
+
+            <!-- ER图缩放控制 -->
+            <div class="er-controls">
+                <div class="zoom-control">
+                    <span style="font-weight: bold; color: #667eea;">🔍 缩放:</span>
+                    <input type="range" id="zoomSlider" class="zoom-slider" min="30" max="200" value="100" step="10">
+                    <span id="zoomValue" class="zoom-value">100%</span>
+                </div>
+                <div class="zoom-buttons">
+                    <button class="zoom-btn" onclick="zoomER(-20)">➖ 缩小</button>
+                    <button class="zoom-btn" onclick="zoomER(0)">🔄 重置</button>
+                    <button class="zoom-btn" onclick="zoomER(20)">➕ 放大</button>
+                </div>
+            </div>
+
+            <div class="er-container">
+                <svg id="erSvg" viewBox="0 0 2200 2100" width="2200" height="2100" xmlns="http://www.w3.org/2000/svg">
+                    <!-- 定义样式 -->
+                    <defs>
+                        <style>
+                            .entity-box { fill: #e3f2fd; stroke: #1976d2; stroke-width: 2; }
+                            .entity-title { fill: #1976d2; font-weight: bold; font-size: 16px; font-family: Arial; }
+                            .entity-key { fill: #d32f2f; font-size: 13px; font-family: 'Courier New', monospace; }
+                            .entity-attr { fill: #555; font-size: 12px; font-family: 'Courier New', monospace; }
+                            .relationship-line { stroke: #666; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+                            .relationship-diamond { fill: #fff3e0; stroke: #f57c00; stroke-width: 2; }
+                            .relationship-label { fill: #333; font-size: 13px; font-weight: bold; font-family: Arial; }
+                            .cardinality { fill: #d32f2f; font-size: 12px; font-weight: bold; font-family: Arial; }
+                            .module-label { fill: #667eea; font-size: 18px; font-weight: bold; font-family: Arial; }
+                        </style>
+                        <!-- 箭头定义 -->
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="#666" />
+                        </marker>
+                    </defs>
+
+                    <!-- 模块分组背景 -->
+                    <rect x="10" y="10" width="750" height="450" rx="10" fill="#f0f4ff" stroke="#667eea" stroke-width="1" opacity="0.3"/>
+                    <text x="30" y="40" class="module-label">👥 用户权限模块 (RBAC)</text>
+
+                    <rect x="800" y="10" width="1350" height="650" rx="10" fill="#fff8f0" stroke="#f57c00" stroke-width="1" opacity="0.3"/>
+                    <text x="820" y="40" class="module-label">🛍️ 商品交易模块</text>
+
+                    <rect x="10" y="490" width="750" height="420" rx="10" fill="#f5f0ff" stroke="#7b1fa2" stroke-width="1" opacity="0.3"/>
+                    <text x="30" y="520" class="module-label">💬 消息评论模块</text>
+
+                    <rect x="800" y="690" width="1350" height="450" rx="10" fill="#f0fff4" stroke="#388e3c" stroke-width="1" opacity="0.3"/>
+                    <text x="820" y="720" class="module-label">🔄 同步与审计模块</text>
+
+                    <rect x="10" y="940" width="750" height="450" rx="10" fill="#fffef0" stroke="#ffa000" stroke-width="1" opacity="0.3"/>
+                    <text x="30" y="970" class="module-label">⚙️ 系统管理模块</text>
+
+                    <rect x="800" y="1170" width="1350" height="600" rx="10" fill="#f5f5f5" stroke="#616161" stroke-width="1" opacity="0.3"/>
+                    <text x="820" y="1200" class="module-label">📦 扩展功能模块</text>
+
+                    <!-- ========== 用户权限模块实体 ========== -->
+                    
+                    <!-- users 表 -->
+                    <g id="users">
+                        <rect x="50" y="70" width="200" height="150" class="entity-box" rx="5"/>
+                        <text x="150" y="95" text-anchor="middle" class="entity-title">users</text>
+                        <line x1="50" y1="105" x2="250" y2="105" stroke="#1976d2" stroke-width="2"/>
+                        <text x="60" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="145" class="entity-attr">username (UQ)</text>
+                        <text x="60" y="160" class="entity-attr">email (UQ)</text>
+                        <text x="60" y="175" class="entity-attr">student_id (UQ)</text>
+                        <text x="60" y="190" class="entity-attr">credit_score</text>
+                        <text x="60" y="205" class="entity-attr">seller_rating...</text>
+                    </g>
+
+                    <!-- roles 表 -->
+                    <g id="roles">
+                        <rect x="300" y="70" width="180" height="100" class="entity-box" rx="5"/>
+                        <text x="390" y="95" text-anchor="middle" class="entity-title">roles</text>
+                        <line x1="300" y1="105" x2="480" y2="105" stroke="#1976d2" stroke-width="2"/>
+                        <text x="310" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="310" y="145" class="entity-attr">name (UQ)</text>
+                        <text x="310" y="160" class="entity-attr">description</text>
+                    </g>
+
+                    <!-- permissions 表 -->
+                    <g id="permissions">
+                        <rect x="300" y="200" width="180" height="120" class="entity-box" rx="5"/>
+                        <text x="390" y="225" text-anchor="middle" class="entity-title">permissions</text>
+                        <line x1="300" y1="235" x2="480" y2="235" stroke="#1976d2" stroke-width="2"/>
+                        <text x="310" y="255" class="entity-key">🔑 id (PK)</text>
+                        <text x="310" y="275" class="entity-attr">name (UQ)</text>
+                        <text x="310" y="290" class="entity-attr">resource</text>
+                        <text x="310" y="305" class="entity-attr">action</text>
+                    </g>
+
+                    <!-- user_roles 关联表 -->
+                    <g id="user_roles">
+                        <rect x="530" y="70" width="180" height="100" class="entity-box" rx="5"/>
+                        <text x="620" y="95" text-anchor="middle" class="entity-title">user_roles</text>
+                        <line x1="530" y1="105" x2="710" y2="105" stroke="#1976d2" stroke-width="2"/>
+                        <text x="540" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="540" y="145" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="540" y="160" class="entity-attr">🔗 role_id (FK)</text>
+                    </g>
+
+                    <!-- role_permissions 关联表 -->
+                    <g id="role_permissions">
+                        <rect x="530" y="200" width="180" height="120" class="entity-box" rx="5"/>
+                        <text x="620" y="225" text-anchor="middle" class="entity-title">role_permissions</text>
+                        <line x1="530" y1="235" x2="710" y2="235" stroke="#1976d2" stroke-width="2"/>
+                        <text x="540" y="255" class="entity-key">🔑 id (PK)</text>
+                        <text x="540" y="275" class="entity-attr">🔗 role_id (FK)</text>
+                        <text x="540" y="290" class="entity-attr">🔗 permission_id (FK)</text>
+                    </g>
+
+                    <!-- user_profiles 表 -->
+                    <g id="user_profiles">
+                        <rect x="50" y="250" width="180" height="110" class="entity-box" rx="5"/>
+                        <text x="140" y="275" text-anchor="middle" class="entity-title">user_profiles</text>
+                        <line x1="50" y1="285" x2="230" y2="285" stroke="#1976d2" stroke-width="2"/>
+                        <text x="60" y="305" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="325" class="entity-attr">🔗 user_id (FK,UQ)</text>
+                        <text x="60" y="340" class="entity-attr">display_name</text>
+                        <text x="60" y="355" class="entity-attr">campus...</text>
+                    </g>
+
+                    <!-- ========== 商品交易模块实体 ========== -->
+                    
+                    <!-- categories 表 -->
+                    <g id="categories">
+                        <rect x="840" y="70" width="180" height="100" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="930" y="95" text-anchor="middle" class="entity-title" style="fill: #f57c00;">categories</text>
+                        <line x1="840" y1="105" x2="1020" y2="105" stroke="#f57c00" stroke-width="2"/>
+                        <text x="850" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="145" class="entity-attr">name</text>
+                        <text x="850" y="160" class="entity-attr">slug (UQ)</text>
+                    </g>
+
+                    <!-- items 表 (核心) -->
+                    <g id="items">
+                        <rect x="1070" y="70" width="200" height="180" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00; stroke-width: 3;"/>
+                        <text x="1170" y="95" text-anchor="middle" class="entity-title" style="fill: #f57c00; font-size: 18px;">⭐ items</text>
+                        <line x1="1070" y1="105" x2="1270" y2="105" stroke="#f57c00" stroke-width="2"/>
+                        <text x="1080" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="1080" y="145" class="entity-attr">🔗 seller_id (FK)</text>
+                        <text x="1080" y="160" class="entity-attr">🔗 category_id (FK)</text>
+                        <text x="1080" y="175" class="entity-attr">title</text>
+                        <text x="1080" y="190" class="entity-attr">price</text>
+                        <text x="1080" y="205" class="entity-attr">status</text>
+                        <text x="1080" y="220" class="entity-attr">view_count</text>
+                        <text x="1080" y="235" class="entity-attr">favorite_count...</text>
+                    </g>
+
+                    <!-- item_images 表 -->
+                    <g id="item_images">
+                        <rect x="1320" y="70" width="180" height="100" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="1410" y="95" text-anchor="middle" class="entity-title" style="fill: #f57c00;">item_images</text>
+                        <line x1="1320" y1="105" x2="1500" y2="105" stroke="#f57c00" stroke-width="2"/>
+                        <text x="1330" y="125" class="entity-key">🔑 id (PK)</text>
+                        <text x="1330" y="145" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="1330" y="160" class="entity-attr">image_url</text>
+                    </g>
+
+                    <!-- transactions 表 (核心) -->
+                    <g id="transactions">
+                        <rect x="840" y="280" width="220" height="180" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00; stroke-width: 3;"/>
+                        <text x="950" y="305" text-anchor="middle" class="entity-title" style="fill: #f57c00; font-size: 18px;">⭐ transactions</text>
+                        <line x1="840" y1="315" x2="1060" y2="315" stroke="#f57c00" stroke-width="2"/>
+                        <text x="850" y="335" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="355" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="850" y="370" class="entity-attr">🔗 buyer_id (FK)</text>
+                        <text x="850" y="385" class="entity-attr">🔗 seller_id (FK)</text>
+                        <text x="850" y="400" class="entity-attr">final_amount</text>
+                        <text x="850" y="415" class="entity-attr">status</text>
+                        <text x="850" y="430" class="entity-attr">buyer_rating</text>
+                        <text x="850" y="445" class="entity-attr">seller_rating...</text>
+                    </g>
+
+                    <!-- favorites 表 -->
+                    <g id="favorites">
+                        <rect x="1120" y="300" width="180" height="100" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="1210" y="325" text-anchor="middle" class="entity-title" style="fill: #f57c00;">favorites</text>
+                        <line x1="1120" y1="335" x2="1300" y2="335" stroke="#f57c00" stroke-width="2"/>
+                        <text x="1130" y="355" class="entity-key">🔑 id (PK)</text>
+                        <text x="1130" y="375" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1130" y="390" class="entity-attr">🔗 item_id (FK)</text>
+                    </g>
+
+                    <!-- item_price_history 表 -->
+                    <g id="item_price_history">
+                        <rect x="1320" y="200" width="180" height="110" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="1410" y="225" text-anchor="middle" class="entity-title" style="fill: #f57c00;">item_price_history</text>
+                        <line x1="1320" y1="235" x2="1500" y2="235" stroke="#f57c00" stroke-width="2"/>
+                        <text x="1330" y="255" class="entity-key">🔑 id (PK)</text>
+                        <text x="1330" y="275" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="1330" y="290" class="entity-attr">old_price</text>
+                        <text x="1330" y="305" class="entity-attr">new_price</text>
+                    </g>
+
+                    <!-- cart_items 表 (在商品模块) -->
+                    <g id="cart_items_trade">
+                        <rect x="1320" y="340" width="180" height="110" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="1410" y="365" text-anchor="middle" class="entity-title" style="fill: #f57c00;">cart_items</text>
+                        <line x1="1320" y1="375" x2="1500" y2="375" stroke="#f57c00" stroke-width="2"/>
+                        <text x="1330" y="395" class="entity-key">🔑 id (PK)</text>
+                        <text x="1330" y="415" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1330" y="430" class="entity-attr">🔗 item_id (FK)</text>
+                    </g>
+
+                    <!-- transaction_review_images 表 (在商品模块) -->
+                    <g id="trans_review_imgs">
+                        <rect x="840" y="500" width="220" height="120" class="entity-box" rx="5" style="fill: #fff3e0; stroke: #f57c00;"/>
+                        <text x="950" y="525" text-anchor="middle" class="entity-title" style="fill: #f57c00;">transaction_review_images</text>
+                        <line x1="840" y1="535" x2="1060" y2="535" stroke="#f57c00" stroke-width="2"/>
+                        <text x="850" y="555" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="575" class="entity-attr">🔗 transaction_id (FK)</text>
+                        <text x="850" y="590" class="entity-attr">reviewer_type</text>
+                        <text x="850" y="605" class="entity-attr">image_url...</text>
+                    </g>
+
+                    <!-- ========== 消息评论模块实体 ========== -->
+                    
+                    <!-- comments 表 -->
+                    <g id="comments">
+                        <rect x="50" y="490" width="200" height="130" class="entity-box" rx="5" style="fill: #f3e5f5; stroke: #7b1fa2;"/>
+                        <text x="150" y="515" text-anchor="middle" class="entity-title" style="fill: #7b1fa2;">comments</text>
+                        <line x1="50" y1="525" x2="250" y2="525" stroke="#7b1fa2" stroke-width="2"/>
+                        <text x="60" y="545" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="565" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="60" y="580" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="60" y="595" class="entity-attr">🔗 parent_id (FK)</text>
+                        <text x="60" y="610" class="entity-attr">content...</text>
+                    </g>
+
+                    <!-- messages 表 -->
+                    <g id="messages">
+                        <rect x="300" y="490" width="200" height="130" class="entity-box" rx="5" style="fill: #f3e5f5; stroke: #7b1fa2;"/>
+                        <text x="400" y="515" text-anchor="middle" class="entity-title" style="fill: #7b1fa2;">messages</text>
+                        <line x1="300" y1="525" x2="500" y2="525" stroke="#7b1fa2" stroke-width="2"/>
+                        <text x="310" y="545" class="entity-key">🔑 id (PK)</text>
+                        <text x="310" y="565" class="entity-attr">🔗 sender_id (FK)</text>
+                        <text x="310" y="580" class="entity-attr">🔗 receiver_id (FK)</text>
+                        <text x="310" y="595" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="310" y="610" class="entity-attr">content...</text>
+                    </g>
+
+                    <!-- comment_likes 表 -->
+                    <g id="comment_likes">
+                        <rect x="50" y="650" width="180" height="100" class="entity-box" rx="5" style="fill: #f3e5f5; stroke: #7b1fa2;"/>
+                        <text x="140" y="675" text-anchor="middle" class="entity-title" style="fill: #7b1fa2;">comment_likes</text>
+                        <line x1="50" y1="685" x2="230" y2="685" stroke="#7b1fa2" stroke-width="2"/>
+                        <text x="60" y="705" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="725" class="entity-attr">🔗 comment_id (FK)</text>
+                        <text x="60" y="740" class="entity-attr">🔗 user_id (FK)</text>
+                    </g>
+
+                    <!-- ========== 同步与审计模块实体 ========== -->
+                    
+                    <!-- audit_logs 表 -->
+                    <g id="audit_logs">
+                        <rect x="840" y="660" width="200" height="120" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="940" y="685" text-anchor="middle" class="entity-title" style="fill: #388e3c;">audit_logs</text>
+                        <line x1="840" y1="695" x2="1040" y2="695" stroke="#388e3c" stroke-width="2"/>
+                        <text x="850" y="715" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="735" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="850" y="750" class="entity-attr">table_name</text>
+                        <text x="850" y="765" class="entity-attr">operation...</text>
+                    </g>
+
+                    <!-- conflict_records 表 -->
+                    <g id="conflict_records">
+                        <rect x="1090" y="660" width="200" height="130" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="1190" y="685" text-anchor="middle" class="entity-title" style="fill: #388e3c;">conflict_records</text>
+                        <line x1="1090" y1="695" x2="1290" y2="695" stroke="#388e3c" stroke-width="2"/>
+                        <text x="1100" y="715" class="entity-key">🔑 id (PK)</text>
+                        <text x="1100" y="735" class="entity-attr">table_name</text>
+                        <text x="1100" y="750" class="entity-attr">source_db</text>
+                        <text x="1100" y="765" class="entity-attr">target_db</text>
+                        <text x="1100" y="780" class="entity-attr">resolved...</text>
+                    </g>
+
+                    <!-- sync_logs 表 -->
+                    <g id="sync_logs">
+                        <rect x="1340" y="660" width="180" height="110" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="1430" y="685" text-anchor="middle" class="entity-title" style="fill: #388e3c;">sync_logs</text>
+                        <line x1="1340" y1="695" x2="1520" y2="695" stroke="#388e3c" stroke-width="2"/>
+                        <text x="1350" y="715" class="entity-key">🔑 id (PK)</text>
+                        <text x="1350" y="735" class="entity-attr">🔗 config_id (FK)</text>
+                        <text x="1350" y="750" class="entity-attr">status</text>
+                        <text x="1350" y="765" class="entity-attr">stats...</text>
+                    </g>
+
+                    <!-- sync_configs 表 -->
+                    <g id="sync_configs">
+                        <rect x="840" y="810" width="180" height="120" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="930" y="835" text-anchor="middle" class="entity-title" style="fill: #388e3c;">sync_configs</text>
+                        <line x1="840" y1="845" x2="1020" y2="845" stroke="#388e3c" stroke-width="2"/>
+                        <text x="850" y="865" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="885" class="entity-attr">source</text>
+                        <text x="850" y="900" class="entity-attr">target</text>
+                        <text x="850" y="915" class="entity-attr">mode...</text>
+                    </g>
+
+                    <!-- sync_tasks 表 -->
+                    <g id="sync_tasks">
+                        <rect x="1090" y="810" width="180" height="120" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="1180" y="835" text-anchor="middle" class="entity-title" style="fill: #388e3c;">sync_tasks</text>
+                        <line x1="1090" y1="845" x2="1270" y2="845" stroke="#388e3c" stroke-width="2"/>
+                        <text x="1100" y="865" class="entity-key">🔑 id (PK)</text>
+                        <text x="1100" y="885" class="entity-attr">task_type</text>
+                        <text x="1100" y="900" class="entity-attr">source_db</text>
+                        <text x="1100" y="915" class="entity-attr">status...</text>
+                    </g>
+
+                    <!-- performance_metrics 表 -->
+                    <g id="performance_metrics">
+                        <rect x="1340" y="810" width="200" height="120" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="1440" y="835" text-anchor="middle" class="entity-title" style="fill: #388e3c;">performance_metrics</text>
+                        <line x1="1340" y1="845" x2="1540" y2="845" stroke="#388e3c" stroke-width="2"/>
+                        <text x="1350" y="865" class="entity-key">🔑 id (PK)</text>
+                        <text x="1350" y="885" class="entity-attr">metric_type</text>
+                        <text x="1350" y="900" class="entity-attr">db_name</text>
+                        <text x="1350" y="915" class="entity-attr">metric_value...</text>
+                    </g>
+
+                    <!-- database_health 表 -->
+                    <g id="database_health">
+                        <rect x="1590" y="810" width="180" height="110" class="entity-box" rx="5" style="fill: #e8f5e9; stroke: #388e3c;"/>
+                        <text x="1680" y="835" text-anchor="middle" class="entity-title" style="fill: #388e3c;">database_health</text>
+                        <line x1="1590" y1="845" x2="1770" y2="845" stroke="#388e3c" stroke-width="2"/>
+                        <text x="1600" y="865" class="entity-key">🔑 id (PK)</text>
+                        <text x="1600" y="885" class="entity-attr">db_name</text>
+                        <text x="1600" y="900" class="entity-attr">status...</text>
+                    </g>
+
+                    <!-- ========== 系统管理模块实体 ========== -->
+                    
+                    <!-- reports 表 -->
+                    <g id="reports">
+                        <rect x="50" y="1010" width="200" height="140" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="150" y="1035" text-anchor="middle" class="entity-title" style="fill: #c2185b;">reports</text>
+                        <line x1="50" y1="1045" x2="250" y2="1045" stroke="#c2185b" stroke-width="2"/>
+                        <text x="60" y="1065" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="1085" class="entity-attr">🔗 reporter_id (FK)</text>
+                        <text x="60" y="1100" class="entity-attr">🔗 reported_user_id</text>
+                        <text x="60" y="1115" class="entity-attr">🔗 item_id (FK)</text>
+                        <text x="60" y="1130" class="entity-attr">report_type...</text>
+                    </g>
+
+                    <!-- report_actions 表 -->
+                    <g id="report_actions">
+                        <rect x="300" y="1010" width="180" height="120" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="390" y="1035" text-anchor="middle" class="entity-title" style="fill: #c2185b;">report_actions</text>
+                        <line x1="300" y1="1045" x2="480" y2="1045" stroke="#c2185b" stroke-width="2"/>
+                        <text x="310" y="1065" class="entity-key">🔑 id (PK)</text>
+                        <text x="310" y="1085" class="entity-attr">🔗 report_id (FK)</text>
+                        <text x="310" y="1100" class="entity-attr">🔗 admin_id (FK)</text>
+                        <text x="310" y="1115" class="entity-attr">action_type...</text>
+                    </g>
+
+                    <!-- system_configs 表 -->
+                    <g id="system_configs">
+                        <rect x="50" y="1180" width="180" height="110" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="140" y="1205" text-anchor="middle" class="entity-title" style="fill: #c2185b;">system_configs</text>
+                        <line x1="50" y1="1215" x2="230" y2="1215" stroke="#c2185b" stroke-width="2"/>
+                        <text x="60" y="1235" class="entity-key">🔑 id (PK)</text>
+                        <text x="60" y="1255" class="entity-attr">config_key (UQ)</text>
+                        <text x="60" y="1270" class="entity-attr">config_value...</text>
+                    </g>
+
+                    <!-- system_settings 表 -->
+                    <g id="system_settings">
+                        <rect x="280" y="1180" width="180" height="120" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="370" y="1205" text-anchor="middle" class="entity-title" style="fill: #c2185b;">system_settings</text>
+                        <line x1="280" y1="1215" x2="460" y2="1215" stroke="#c2185b" stroke-width="2"/>
+                        <text x="290" y="1235" class="entity-key">🔑 id (PK)</text>
+                        <text x="290" y="1255" class="entity-attr">category</text>
+                        <text x="290" y="1270" class="entity-attr">key</text>
+                        <text x="290" y="1285" class="entity-attr">🔗 updated_by (FK)</text>
+                    </g>
+
+                    <!-- notifications 表 -->
+                    <g id="notifications">
+                        <rect x="510" y="1010" width="180" height="130" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="600" y="1035" text-anchor="middle" class="entity-title" style="fill: #c2185b;">notifications</text>
+                        <line x1="510" y1="1045" x2="690" y2="1045" stroke="#c2185b" stroke-width="2"/>
+                        <text x="520" y="1065" class="entity-key">🔑 id (PK)</text>
+                        <text x="520" y="1085" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="520" y="1100" class="entity-attr">type</text>
+                        <text x="520" y="1115" class="entity-attr">title</text>
+                        <text x="520" y="1130" class="entity-attr">is_read...</text>
+                    </g>
+
+                    <!-- daily_stats 表 -->
+                    <g id="daily_stats">
+                        <rect x="510" y="1180" width="180" height="120" class="entity-box" rx="5" style="fill: #fce4ec; stroke: #c2185b;"/>
+                        <text x="600" y="1205" text-anchor="middle" class="entity-title" style="fill: #c2185b;">daily_stats</text>
+                        <line x1="510" y1="1215" x2="690" y2="1215" stroke="#c2185b" stroke-width="2"/>
+                        <text x="520" y="1235" class="entity-key">🔑 id (PK)</text>
+                        <text x="520" y="1255" class="entity-attr">stat_date (UQ)</text>
+                        <text x="520" y="1270" class="entity-attr">sync_success...</text>
+                        <text x="520" y="1285" class="entity-attr">ai_request...</text>
+                    </g>
+
+                    <!-- ========== 扩展功能模块实体 ========== -->
+                    
+                    <!-- user_follows 表 -->
+                    <g id="user_follows">
+                        <rect x="840" y="1240" width="180" height="110" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="930" y="1265" text-anchor="middle" class="entity-title" style="fill: #616161;">user_follows</text>
+                        <line x1="840" y1="1275" x2="1020" y2="1275" stroke="#616161" stroke-width="2"/>
+                        <text x="850" y="1295" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="1315" class="entity-attr">🔗 follower_id (FK)</text>
+                        <text x="850" y="1330" class="entity-attr">🔗 following_id (FK)</text>
+                    </g>
+
+                    <!-- user_addresses 表 -->
+                    <g id="user_addresses">
+                        <rect x="1070" y="1240" width="180" height="120" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1160" y="1265" text-anchor="middle" class="entity-title" style="fill: #616161;">user_addresses</text>
+                        <line x1="1070" y1="1275" x2="1250" y2="1275" stroke="#616161" stroke-width="2"/>
+                        <text x="1080" y="1295" class="entity-key">🔑 id (PK)</text>
+                        <text x="1080" y="1315" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1080" y="1330" class="entity-attr">address_type</text>
+                        <text x="1080" y="1345" class="entity-attr">building...</text>
+                    </g>
+
+                    <!-- item_view_history 表 -->
+                    <g id="item_view_history">
+                        <rect x="840" y="1390" width="180" height="110" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="930" y="1415" text-anchor="middle" class="entity-title" style="fill: #616161;">item_view_history</text>
+                        <line x1="840" y1="1425" x2="1020" y2="1425" stroke="#616161" stroke-width="2"/>
+                        <text x="850" y="1445" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="1465" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="850" y="1480" class="entity-attr">🔗 item_id (FK)</text>
+                    </g>
+
+                    <!-- search_history 表 -->
+                    <g id="search_history">
+                        <rect x="1070" y="1390" width="180" height="120" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1160" y="1415" text-anchor="middle" class="entity-title" style="fill: #616161;">search_history</text>
+                        <line x1="1070" y1="1425" x2="1250" y2="1425" stroke="#616161" stroke-width="2"/>
+                        <text x="1080" y="1445" class="entity-key">🔑 id (PK)</text>
+                        <text x="1080" y="1465" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1080" y="1480" class="entity-attr">keyword</text>
+                        <text x="1080" y="1495" class="entity-attr">🔗 clicked_item_id</text>
+                    </g>
+
+                    <!-- credit_score_history 表 -->
+                    <g id="credit_score_history">
+                        <rect x="1300" y="1240" width="200" height="140" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1400" y="1265" text-anchor="middle" class="entity-title" style="fill: #616161;">credit_score_history</text>
+                        <line x1="1300" y1="1275" x2="1500" y2="1275" stroke="#616161" stroke-width="2"/>
+                        <text x="1310" y="1295" class="entity-key">🔑 id (PK)</text>
+                        <text x="1310" y="1315" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1310" y="1330" class="entity-attr">old_score</text>
+                        <text x="1310" y="1345" class="entity-attr">new_score</text>
+                        <text x="1310" y="1360" class="entity-attr">change_reason...</text>
+                    </g>
+
+                    <!-- message_attachments 表 -->
+                    <g id="message_attachments">
+                        <rect x="1550" y="1240" width="200" height="120" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1650" y="1265" text-anchor="middle" class="entity-title" style="fill: #616161;">message_attachments</text>
+                        <line x1="1550" y1="1275" x2="1750" y2="1275" stroke="#616161" stroke-width="2"/>
+                        <text x="1560" y="1295" class="entity-key">🔑 id (PK)</text>
+                        <text x="1560" y="1315" class="entity-attr">🔗 message_id (FK)</text>
+                        <text x="1560" y="1330" class="entity-attr">file_type</text>
+                        <text x="1560" y="1345" class="entity-attr">file_url...</text>
+                    </g>
+
+                    <!-- conversations 表 (新增) -->
+                    <g id="conversations">
+                        <rect x="840" y="1550" width="180" height="110" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="930" y="1575" text-anchor="middle" class="entity-title" style="fill: #616161;">conversations</text>
+                        <line x1="840" y1="1585" x2="1020" y2="1585" stroke="#616161" stroke-width="2"/>
+                        <text x="850" y="1605" class="entity-key">🔑 id (PK)</text>
+                        <text x="850" y="1625" class="entity-attr">🔗 user1_id (FK)</text>
+                        <text x="850" y="1640" class="entity-attr">🔗 user2_id (FK)</text>
+                    </g>
+
+                    <!-- search_trending 表 (新增) -->
+                    <g id="search_trending">
+                        <rect x="1070" y="1550" width="180" height="100" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1160" y="1575" text-anchor="middle" class="entity-title" style="fill: #616161;">search_trending</text>
+                        <line x1="1070" y1="1585" x2="1250" y2="1585" stroke="#616161" stroke-width="2"/>
+                        <text x="1080" y="1605" class="entity-key">🔑 id (PK)</text>
+                        <text x="1080" y="1625" class="entity-attr">keyword</text>
+                        <text x="1080" y="1640" class="entity-attr">search_count...</text>
+                    </g>
+
+                    <!-- refresh_tokens 表 (新增) -->
+                    <g id="refresh_tokens">
+                        <rect x="1300" y="1550" width="180" height="110" class="entity-box" rx="5" style="fill: #f5f5f5; stroke: #616161;"/>
+                        <text x="1390" y="1575" text-anchor="middle" class="entity-title" style="fill: #616161;">refresh_tokens</text>
+                        <line x1="1300" y1="1585" x2="1480" y2="1585" stroke="#616161" stroke-width="2"/>
+                        <text x="1310" y="1605" class="entity-key">🔑 id (PK)</text>
+                        <text x="1310" y="1625" class="entity-attr">🔗 user_id (FK)</text>
+                        <text x="1310" y="1640" class="entity-attr">token...</text>
+                    </g>
+
+                    <!-- ========== 更多关系连线 ========== -->
+                    
+                    <!-- users → user_profiles (1:1) -->
+                    <path class="relationship-line" d="M 150 220 L 150 250"/>
+                    <text x="160" y="240" class="cardinality">1:1</text>
+
+                    <!-- users → user_roles (1:N) -->
+                    <path class="relationship-line" d="M 250 120 L 530 120"/>
+                    <text x="380" y="110" class="cardinality">1</text>
+                    <text x="510" y="110" class="cardinality">N</text>
+
+                    <!-- roles → user_roles (1:N) -->
+                    <path class="relationship-line" d="M 480 120 L 530 120"/>
+                    <text x="500" y="110" class="cardinality">1:N</text>
+
+                    <!-- roles → role_permissions (1:N) -->
+                    <path class="relationship-line" d="M 480 170 L 480 260 L 530 260"/>
+                    <text x="490" y="215" class="cardinality">1:N</text>
+
+                    <!-- permissions → role_permissions (1:N) -->
+                    <path class="relationship-line" d="M 480 260 L 530 260"/>
+                    <text x="500" y="250" class="cardinality">1:N</text>
+
+                    <!-- users → items (1:N, seller) -->
+                    <path class="relationship-line" d="M 250 100 L 730 100 L 730 160 L 1070 160" stroke-dasharray="5,5"/>
+                    <text x="650" y="90" class="cardinality">1:N (seller)</text>
+
+                    <!-- categories → items (1:N) -->
+                    <path class="relationship-line" d="M 1020 120 L 1070 120"/>
+                    <text x="1035" y="110" class="cardinality">1:N</text>
+
+                    <!-- items → item_images (1:N) -->
+                    <path class="relationship-line" d="M 1270 120 L 1320 120"/>
+                    <text x="1285" y="110" class="cardinality">1:N</text>
+
+                    <!-- items → item_price_history (1:N) -->
+                    <path class="relationship-line" d="M 1270 200 L 1290 200 L 1290 255 L 1320 255"/>
+                    <text x="1285" y="230" class="cardinality">1:N</text>
+
+                    <!-- users → transactions (1:N, buyer) -->
+                    <path class="relationship-line" d="M 250 145 L 730 145 L 730 370 L 840 370" stroke-dasharray="5,5"/>
+                    <text x="650" y="160" class="cardinality">1:N (buyer)</text>
+
+                    <!-- items → transactions (1:N) -->
+                    <path class="relationship-line" d="M 1070 250 L 1070 370 L 1060 370"/>
+                    <text x="1075" y="310" class="cardinality">1:N</text>
+
+                    <!-- users ↔ items via favorites (N:M) -->
+                    <path class="relationship-line" d="M 250 190 L 760 190 L 760 350 L 1120 350" stroke-dasharray="5,5"/>
+                    <text x="685" y="180" class="cardinality">N:M</text>
+
+                    <!-- items → favorites (1:N) -->
+                    <path class="relationship-line" d="M 1170 250 L 1170 300"/>
+                    <text x="1180" y="280" class="cardinality">1:N</text>
+
+                    <!-- transactions → transaction_review_images (1:N) -->
+                    <path class="relationship-line" d="M 950 460 L 950 500"/>
+                    <text x="960" y="485" class="cardinality">1:N</text>
+
+                    <!-- items → cart_items (1:N) -->
+                    <path class="relationship-line" d="M 1270 200 L 1410 200 L 1410 340"/>
+                    <text x="1340" y="270" class="cardinality">1:N</text>
+
+                    <!-- users → cart_items (1:N) -->
+                    <path class="relationship-line" d="M 250 100 L 770 100 L 770 395 L 1320 395" stroke-dasharray="5,5"/>
+                    <text x="1035" y="90" class="cardinality">1:N</text>
+
+                    <!-- users → comments (1:N) -->
+                    <path class="relationship-line" d="M 150 220 L 150 490"/>
+                    <text x="160" y="355" class="cardinality">1:N</text>
+
+                    <!-- items → comments (1:N) -->
+                    <path class="relationship-line" d="M 1070 240 L 760 240 L 760 555 L 250 555" stroke-dasharray="5,5"/>
+                    <text x="900" y="230" class="cardinality">1:N</text>
+
+                    <!-- comments → comment_likes (1:N) -->
+                    <path class="relationship-line" d="M 150 620 L 150 650"/>
+                    <text x="160" y="640" class="cardinality">1:N</text>
+
+                    <!-- users → messages (1:N, sender/receiver) -->
+                    <path class="relationship-line" d="M 250 190 L 400 190 L 400 490"/>
+                    <text x="410" y="340" class="cardinality">1:N</text>
+
+                    <!-- users → audit_logs (1:N) -->
+                    <path class="relationship-line" d="M 250 145 L 730 145 L 730 720 L 840 720" stroke-dasharray="5,5"/>
+                    <text x="750" y="435" class="cardinality">1:N</text>
+
+                    <!-- ========== 更多关系连线 ========== -->
+                    
+                    <!-- sync_configs → sync_logs -->
+                    <path class="relationship-line" d="M 1020 870 L 1340 715"/>
+                    <text x="1180" y="790" class="cardinality">1:N</text>
+
+                    <!-- reports → report_actions -->
+                    <path class="relationship-line" d="M 250 1070 L 300 1070"/>
+                    <text x="270" y="1060" class="cardinality">1:N</text>
+
+                    <!-- users → reports (reporter) -->
+                    <path class="relationship-line" d="M 150 220 L 150 1010" stroke-dasharray="5,5"/>
+                    <text x="160" y="615" class="cardinality">1:N</text>
+
+                    <!-- users → notifications -->
+                    <path class="relationship-line" d="M 250 145 L 600 145 L 600 1010" stroke-dasharray="5,5"/>
+                    <text x="425" y="580" class="cardinality">1:N</text>
+
+                    <!-- users → user_follows (follower/following) -->
+                    <path class="relationship-line" d="M 250 100 L 750 100 L 750 1295 L 840 1295" stroke-dasharray="5,5"/>
+                    <text x="795" y="700" class="cardinality">N:M</text>
+
+                    <!-- users → user_addresses -->
+                    <path class="relationship-line" d="M 250 120 L 760 120 L 760 1300 L 1070 1300" stroke-dasharray="5,5"/>
+                    <text x="915" y="710" class="cardinality">1:N</text>
+
+                    <!-- users → credit_score_history -->
+                    <path class="relationship-line" d="M 250 140 L 770 140 L 770 1310 L 1300 1310" stroke-dasharray="5,5"/>
+                    <text x="1035" y="725" class="cardinality">1:N</text>
+
+                    <!-- users → search_history -->
+                    <path class="relationship-line" d="M 250 160 L 780 160 L 780 1450 L 1070 1450" stroke-dasharray="5,5"/>
+                    <text x="925" y="805" class="cardinality">1:N</text>
+
+                    <!-- items → item_view_history -->
+                    <path class="relationship-line" d="M 1170 250 L 1170 530 L 930 530 L 930 1390" stroke-dasharray="5,5"/>
+                    <text x="1050" y="890" class="cardinality">1:N</text>
+
+                    <!-- messages → message_attachments -->
+                    <path class="relationship-line" d="M 500 555 L 1650 555 L 1650 1240" stroke-dasharray="5,5"/>
+                    <text x="1075" y="545" class="cardinality">1:N</text>
+
+                    <!-- users → conversations -->
+                    <path class="relationship-line" d="M 250 180 L 790 180 L 790 1605 L 840 1605" stroke-dasharray="5,5"/>
+                    <text x="545" y="892" class="cardinality">N:M</text>
+
+                    <!-- users → refresh_tokens -->
+                    <path class="relationship-line" d="M 250 200 L 800 200 L 800 1605 L 1300 1605" stroke-dasharray="5,5"/>
+                    <text x="775" y="902" class="cardinality">1:N</text>
+
+                    <!-- 图例 -->
+                    <g transform="translate(50, 1850)">
+                        <text x="0" y="0" style="fill: #333; font-size: 16px; font-weight: bold;">📋 图例说明:</text>
+                        <line x1="0" y1="20" x2="50" y2="20" class="relationship-line"/>
+                        <text x="60" y="25" style="fill: #555; font-size: 13px;">实线: 外键关系</text>
+                        
+                        <line x1="150" y1="20" x2="200" y2="20" stroke="#666" stroke-width="2" stroke-dasharray="5,5" marker-end="url(#arrowhead)"/>
+                        <text x="210" y="25" style="fill: #555; font-size: 13px;">虚线: 跨模块引用</text>
+                        
+                        <text x="350" y="25" style="fill: #d32f2f; font-size: 13px; font-weight: bold;">1:N</text>
+                        <text x="385" y="25" style="fill: #555; font-size: 13px;">一对多关系</text>
+                        
+                        <text x="500" y="25" style="fill: #d32f2f; font-size: 13px; font-weight: bold;">N:M</text>
+                        <text x="540" y="25" style="fill: #555; font-size: 13px;">多对多关系</text>
+                        
+                        <text x="650" y="25" class="entity-key">🔑</text>
+                        <text x="670" y="25" style="fill: #555; font-size: 13px;">主键</text>
+                        
+                        <text x="730" y="25" class="entity-attr">🔗</text>
+                        <text x="750" y="25" style="fill: #555; font-size: 13px;">外键</text>
+                        
+                        <text x="810" y="25" style="fill: #f57c00; font-size: 14px; font-weight: bold;">⭐</text>
+                        <text x="830" y="25" style="fill: #555; font-size: 13px;">核心表</text>
+                        
+                        <text x="0" y="65" style="fill: #333; font-size: 14px; font-weight: bold;">📊 统计信息:</text>
+                        <text x="0" y="90" style="fill: #555; font-size: 13px;">• 总表数: <tspan style="font-weight: bold; fill: #667eea;">35+</tspan> 张</text>
+                        <text x="150" y="90" style="fill: #555; font-size: 13px;">• 核心表: <tspan style="font-weight: bold; fill: #f57c00;">users, items, transactions</tspan></text>
+                        <text x="0" y="110" style="fill: #555; font-size: 13px;">• 关联表: <tspan style="font-weight: bold; fill: #7b1fa2;">user_roles, role_permissions, favorites</tspan> 等</text>
+                        <text x="0" y="130" style="fill: #555; font-size: 13px;">• 自引用: <tspan style="font-weight: bold; fill: #388e3c;">comments.parent_id</tspan> (评论嵌套)</text>
+                    </g>
+
+                </svg>
+            </div>
+
+            <div class="highlight-box" style="background: #fff8e1; border-color: #ffa000;">
+                <h4>🔍 完整ER图核心关系说明</h4>
+                <ul>
+                    <li><strong>users (核心枢纽)</strong>: 连接35+张表，包括角色权限、商品交易、消息评论、审计日志、扩展功能等</li>
+                    <li><strong>items (商品中心)</strong>: 被 transactions、favorites、comments、item_images、item_price_history、item_view_history、cart_items 等多表引用</li>
+                    <li><strong>transactions (交易核心)</strong>: 关联 buyer、seller、item 三方，还关联 transaction_review_images</li>
+                    <li><strong>RBAC权限体系</strong>: users ↔ roles ↔ permissions 通过 user_roles 和 role_permissions 中间表实现多对多关系</li>
+                    <li><strong>消息系统</strong>: messages 表关联 sender、receiver、item，并通过 message_attachments 支持附件</li>
+                    <li><strong>评论系统</strong>: comments.parent_id 实现评论嵌套回复，comment_likes 实现点赞功能</li>
+                    <li><strong>审计追踪</strong>: audit_logs 记录所有表的 INSERT/UPDATE/DELETE 操作</li>
+                    <li><strong>四库同步</strong>: conflict_records、sync_logs、sync_tasks、sync_configs 支持 MySQL/MariaDB/PostgreSQL/SQLite 同步</li>
+                    <li><strong>监控系统</strong>: performance_metrics、database_health 实时监控数据库性能和健康状态</li>
+                    <li><strong>系统管理</strong>: reports 举报系统、notifications 通知、daily_stats 统计、system_configs/settings 配置</li>
+                    <li><strong>扩展功能</strong>: user_follows 关注、user_addresses 地址、search_history 搜索历史、credit_score_history 信用分变更、cart_items 购物车、conversations 会话等</li>
+                </ul>
+            </div>
+
+            <!-- 继续详细表定义 -->
+            <h2 id="users">👥 users - 用户表</h2>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 存储用户核心信息，包括账号、认证、信用评分、交易统计等</p>
+                <p><strong>特殊字段</strong>: credit_score(信用分)、seller_rating(卖家评分)、buyer_rating(买家评分)</p>
+                <p><strong>索引优化</strong>: username、email、student_id、credit_score、is_active</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>用户ID，主键</td></tr>
+                    <tr><td>username</td><td class="field-type">VARCHAR(50)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>用户名，唯一</td></tr>
+                    <tr><td>email</td><td class="field-type">VARCHAR(100)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>校园邮箱，唯一</td></tr>
+                    <tr><td>student_id</td><td class="field-type">VARCHAR(20)</td><td><span class="uk">UNIQUE</span></td><td>NULL</td><td>学号，唯一</td></tr>
+                    <tr><td>password_hash</td><td class="field-type">VARCHAR(255)</td><td>NOT NULL</td><td>-</td><td>密码哈希值</td></tr>
+                    <tr><td>phone</td><td class="field-type">VARCHAR(20)</td><td>NULL</td><td>NULL</td><td>手机号码</td></tr>
+                    <tr><td>avatar_url</td><td class="field-type">VARCHAR(500)</td><td>NULL</td><td>NULL</td><td>头像URL</td></tr>
+                    <tr><td>real_name</td><td class="field-type">VARCHAR(50)</td><td>NULL</td><td>NULL</td><td>真实姓名</td></tr>
+                    <tr><td>is_active</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>TRUE</td><td>账号是否激活</td></tr>
+                    <tr><td>is_verified</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否实名认证</td></tr>
+                    <tr><td>is_banned</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否被封禁</td></tr>
+                    <tr><td>credit_score</td><td class="field-type">INT</td><td>NOT NULL</td><td>100</td><td>信用分(0-100)，低于30封号</td></tr>
+                    <tr><td>seller_rating</td><td class="field-type">DECIMAL(3,2)</td><td>NOT NULL</td><td>5.00</td><td>卖家评分(0-5星)</td></tr>
+                    <tr><td>buyer_rating</td><td class="field-type">DECIMAL(3,2)</td><td>NOT NULL</td><td>5.00</td><td>买家评分(0-5星)</td></tr>
+                    <tr><td>total_sales</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>总销售数量</td></tr>
+                    <tr><td>total_purchases</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>总购买数量</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>注册时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>last_login_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>最后登录时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号(乐观锁)</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引列表</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_username (username)</li>
+                    <li><span class="idx">IDX</span> idx_email (email)</li>
+                    <li><span class="idx">IDX</span> idx_student_id (student_id)</li>
+                    <li><span class="idx">IDX</span> idx_credit (credit_score) - 用于信用查询</li>
+                    <li><span class="idx">IDX</span> idx_active (is_active, is_banned) - 联合索引</li>
+                </ul>
+            </div>
+
+            <!-- 2. 角色表 -->
+            <h2 id="rbac">🔐 RBAC 权限管理系统</h2>
+            
+            <h3>roles - 角色表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 定义系统角色，如管理员、普通用户、审核员等</p>
+                <p><strong>关系</strong>: 与users表多对多关系(通过user_roles)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>角色ID</td></tr>
+                    <tr><td>name</td><td class="field-type">VARCHAR(50)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>角色名称(如: admin, user, moderator)</td></tr>
+                    <tr><td>description</td><td class="field-type">VARCHAR(255)</td><td>NULL</td><td>NULL</td><td>角色描述</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <h3>permissions - 权限表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 定义具体的权限项，如创建商品、删除评论等</p>
+                <p><strong>权限模型</strong>: 资源(resource) + 操作(action)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>权限ID</td></tr>
+                    <tr><td>name</td><td class="field-type">VARCHAR(100)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>权限名称(如: item:create)</td></tr>
+                    <tr><td>resource</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>资源类型(item, user, comment等)</td></tr>
+                    <tr><td>action</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>操作类型(create, read, update, delete)</td></tr>
+                    <tr><td>description</td><td class="field-type">VARCHAR(255)</td><td>NULL</td><td>NULL</td><td>权限描述</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引列表</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_name (name)</li>
+                    <li><span class="idx">IDX</span> idx_resource_action (resource, action) - 联合索引，权限验证优化</li>
+                </ul>
+            </div>
+
+            <h3>user_roles - 用户角色关联表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 关联用户和角色的多对多关系表</p>
+                <p><strong>外键关系</strong>: users.id、roles.id</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>关联ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>role_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>角色ID → roles.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>分配时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 约束列表</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> uq_user_role (user_id, role_id) - 防止重复分配</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> role_id → roles(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>role_permissions - 角色权限关联表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 关联角色和权限的多对多关系表</p>
+                <p><strong>外键关系</strong>: roles.id、permissions.id</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>关联ID</td></tr>
+                    <tr><td>role_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>角色ID → roles.id</td></tr>
+                    <tr><td>permission_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>权限ID → permissions.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>分配时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 约束列表</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> uq_role_permission (role_id, permission_id) - 防止重复分配</li>
+                    <li><span class="fk">FK</span> role_id → roles(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> permission_id → permissions(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>user_profiles - 用户资料表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 存储用户扩展资料，与users表一对一关系</p>
+                <p><strong>外键关系</strong>: users.id</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>字段名</th>
+                        <th>类型</th>
+                        <th>约束</th>
+                        <th>默认值</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>资料ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> <span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>用户ID → users.id (一对一)</td></tr>
+                    <tr><td>display_name</td><td class="field-type">VARCHAR(120)</td><td>NOT NULL</td><td>-</td><td>显示名称</td></tr>
+                    <tr><td>phone</td><td class="field-type">VARCHAR(32)</td><td>NULL</td><td>NULL</td><td>联系电话</td></tr>
+                    <tr><td>campus</td><td class="field-type">VARCHAR(120)</td><td>NULL</td><td>NULL</td><td>所在校区</td></tr>
+                    <tr><td>bio</td><td class="field-type">VARCHAR(500)</td><td>NULL</td><td>NULL</td><td>个人简介</td></tr>
+                    <tr><td>avatar_url</td><td class="field-type">VARCHAR(512)</td><td>NULL</td><td>NULL</td><td>头像URL</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 约束列表</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> user_id - 确保一对一关系</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <!-- ========== 商品交易模块表定义 ========== -->
+            <h2 id="items">📦 商品交易模块表定义</h2>
+
+            <h3>categories - 商品分类表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 商品分类管理，支持分类图标、排序、状态控制</p>
+                <p><strong>特殊字段</strong>: slug(URL友好标识)、sort_order(排序权重)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>分类ID</td></tr>
+                    <tr><td>name</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>分类名称</td></tr>
+                    <tr><td>slug</td><td class="field-type">VARCHAR(50)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>URL标识(如: electronics)</td></tr>
+                    <tr><td>description</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>分类描述</td></tr>
+                    <tr><td>icon</td><td class="field-type">VARCHAR(100)</td><td>NULL</td><td>NULL</td><td>图标名称/URL</td></tr>
+                    <tr><td>sort_order</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>显示顺序(数字越小越靠前)</td></tr>
+                    <tr><td>is_active</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>TRUE</td><td>是否启用</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_slug (slug) - 快速查询</li>
+                    <li><span class="idx">IDX</span> idx_active (is_active) - 状态过滤</li>
+                </ul>
+            </div>
+
+            <h3>items - 商品表 ⭐核心表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 商品核心信息，支持全文搜索、标签、议价、包邮等</p>
+                <p><strong>特殊功能</strong>: FULLTEXT全文索引、JSON标签、ENUM成色/状态</p>
+                <p><strong>统计字段</strong>: view_count、favorite_count、inquiry_count</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>商品ID</td></tr>
+                    <tr><td>seller_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>卖家ID → users.id</td></tr>
+                    <tr><td>category_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>分类ID → categories.id</td></tr>
+                    <tr><td>title</td><td class="field-type">VARCHAR(200)</td><td>NOT NULL</td><td>-</td><td>商品标题</td></tr>
+                    <tr><td>description</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>商品描述</td></tr>
+                    <tr><td>price</td><td class="field-type">DECIMAL(10,2)</td><td>NOT NULL</td><td>-</td><td>当前价格</td></tr>
+                    <tr><td>original_price</td><td class="field-type">DECIMAL(10,2)</td><td>NULL</td><td>NULL</td><td>原价(划线价)</td></tr>
+                    <tr><td>condition_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'二手'</td><td>成色: 全新/99新/95新/9成新/二手</td></tr>
+                    <tr><td>location</td><td class="field-type">VARCHAR(100)</td><td>NULL</td><td>NULL</td><td>交易地点</td></tr>
+                    <tr><td>contact_info</td><td class="field-type">VARCHAR(200)</td><td>NULL</td><td>NULL</td><td>联系方式(加密存储)</td></tr>
+                    <tr><td>tags</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>商品标签数组</td></tr>
+                    <tr><td>status</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'available'</td><td>状态: available/reserved/sold/deleted</td></tr>
+                    <tr><td>is_negotiable</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否可议价</td></tr>
+                    <tr><td>is_shipped</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否包邮</td></tr>
+                    <tr><td>view_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>浏览量</td></tr>
+                    <tr><td>favorite_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>收藏量</td></tr>
+                    <tr><td>inquiry_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>咨询量</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>发布时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sold_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>售出时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_seller (seller_id) - 卖家商品查询</li>
+                    <li><span class="idx">IDX</span> idx_category (category_id) - 分类过滤</li>
+                    <li><span class="idx">IDX</span> idx_status (status) - 状态查询</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at) - 时间排序</li>
+                    <li><span class="idx">IDX</span> idx_price (price) - 价格筛选</li>
+                    <li><span class="idx">FULLTEXT</span> idx_title_desc (title, description) - 全文搜索</li>
+                    <li><span class="fk">FK</span> seller_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> category_id → categories(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>item_images - 商品图片表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 商品图片存储，支持多图、排序、封面标记</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>图片ID</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID → items.id</td></tr>
+                    <tr><td>image_url</td><td class="field-type">VARCHAR(500)</td><td>NOT NULL</td><td>-</td><td>图片URL</td></tr>
+                    <tr><td>sort_order</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>排序</td></tr>
+                    <tr><td>is_cover</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否封面</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>上传时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_item (item_id) - 商品图片查询</li>
+                    <li><span class="idx">IDX</span> idx_cover (item_id, is_cover) - 封面图快速查询</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>transactions - 交易表 ⭐核心表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 交易流程管理，记录买卖双方、价格、状态、评价等完整信息</p>
+                <p><strong>状态流转</strong>: pending → contacted → meeting → completed/cancelled</p>
+                <p><strong>评价系统</strong>: 双向评分(1-5分)、评价内容、评价时间</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>交易ID</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID → items.id</td></tr>
+                    <tr><td>buyer_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>买家ID → users.id</td></tr>
+                    <tr><td>seller_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>卖家ID → users.id</td></tr>
+                    <tr><td>item_price</td><td class="field-type">DECIMAL(10,2)</td><td>NOT NULL</td><td>-</td><td>商品原价</td></tr>
+                    <tr><td>final_amount</td><td class="field-type">DECIMAL(10,2)</td><td>NOT NULL</td><td>-</td><td>最终成交价</td></tr>
+                    <tr><td>status</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'pending'</td><td>pending/contacted/meeting/completed/cancelled</td></tr>
+                    <tr><td>buyer_contact</td><td class="field-type">VARCHAR(200)</td><td>NULL</td><td>NULL</td><td>买家联系方式(加密)</td></tr>
+                    <tr><td>seller_contact</td><td class="field-type">VARCHAR(200)</td><td>NULL</td><td>NULL</td><td>卖家联系方式(加密)</td></tr>
+                    <tr><td>meeting_location</td><td class="field-type">VARCHAR(200)</td><td>NULL</td><td>NULL</td><td>约定见面地点</td></tr>
+                    <tr><td>meeting_time</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>约定见面时间</td></tr>
+                    <tr><td>buyer_rating</td><td class="field-type">TINYINT</td><td>NULL</td><td>NULL</td><td>买家评分(1-5)</td></tr>
+                    <tr><td>seller_rating</td><td class="field-type">TINYINT</td><td>NULL</td><td>NULL</td><td>卖家评分(1-5)</td></tr>
+                    <tr><td>buyer_review</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>买家评价内容</td></tr>
+                    <tr><td>seller_review</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>卖家评价内容</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>交易创建时间</td></tr>
+                    <tr><td>contacted_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>联系时间</td></tr>
+                    <tr><td>completed_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>完成时间</td></tr>
+                    <tr><td>cancelled_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>取消时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引、约束和触发器</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_buyer (buyer_id)</li>
+                    <li><span class="idx">IDX</span> idx_seller (seller_id)</li>
+                    <li><span class="idx">IDX</span> idx_item (item_id)</li>
+                    <li><span class="idx">IDX</span> idx_status (status)</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at)</li>
+                    <li><span class="fk">FK</span> item_id → items(id)</li>
+                    <li><span class="fk">FK</span> buyer_id → users(id)</li>
+                    <li><span class="fk">FK</span> seller_id → users(id)</li>
+                    <li>🔧 <strong>触发器</strong>: trg_after_transaction_complete - 完成时更新用户统计和商品状态</li>
+                    <li>🔧 <strong>触发器</strong>: trg_after_transaction_rating - 评分时重算用户评分</li>
+                </ul>
+            </div>
+
+            <h3>favorites - 收藏表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 用户收藏商品，支持快速查询</p>
+                <p><strong>特点</strong>: UNIQUE约束防止重复收藏</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>收藏ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID → items.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>收藏时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引、约束和触发器</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> uk_user_item (user_id, item_id) - 防止重复收藏</li>
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="idx">IDX</span> idx_item (item_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE CASCADE</li>
+                    <li>🔧 <strong>触发器</strong>: trg_after_favorite_insert - 收藏时增加商品favorite_count</li>
+                    <li>🔧 <strong>触发器</strong>: trg_after_favorite_delete - 取消收藏时减少favorite_count</li>
+                </ul>
+            </div>
+
+            <!-- ========== 评论互动模块表定义 ========== -->
+            <h2 id="interactions">💬 评论互动模块表定义</h2>
+
+            <h3>comments - 评论表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 商品评论，支持嵌套回复</p>
+                <p><strong>特殊功能</strong>: parent_id自引用实现评论回复树状结构</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>评论ID</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID → items.id</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>评论用户ID → users.id</td></tr>
+                    <tr><td>parent_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>父评论ID(回复) → comments.id</td></tr>
+                    <tr><td>content</td><td class="field-type">TEXT</td><td>NOT NULL</td><td>-</td><td>评论内容</td></tr>
+                    <tr><td>is_deleted</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否已删除</td></tr>
+                    <tr><td>is_reported</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否被举报</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>评论时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引、约束和触发器</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_item (item_id)</li>
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="idx">IDX</span> idx_parent (parent_id)</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at)</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> parent_id → comments(id) ON DELETE CASCADE</li>
+                    <li>🔧 <strong>触发器</strong>: trg_after_comment_insert - 评论时增加商品inquiry_count</li>
+                </ul>
+            </div>
+
+            <h3>messages - 消息表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 用户私信，支持商品关联、已读标记、双向删除</p>
+                <p><strong>隐私保护</strong>: is_deleted_by_sender/receiver 实现软删除</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>消息ID</td></tr>
+                    <tr><td>sender_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>发送者ID → users.id</td></tr>
+                    <tr><td>receiver_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>接收者ID → users.id</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>关联商品ID → items.id</td></tr>
+                    <tr><td>content</td><td class="field-type">TEXT</td><td>NOT NULL</td><td>-</td><td>消息内容</td></tr>
+                    <tr><td>is_read</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否已读</td></tr>
+                    <tr><td>is_deleted_by_sender</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>发送者是否删除</td></tr>
+                    <tr><td>is_deleted_by_receiver</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>接收者是否删除</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>发送时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>read_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>阅读时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_sender (sender_id)</li>
+                    <li><span class="idx">IDX</span> idx_receiver (receiver_id)</li>
+                    <li><span class="idx">IDX</span> idx_conversation (sender_id, receiver_id)</li>
+                    <li><span class="idx">IDX</span> idx_item (item_id)</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at)</li>
+                    <li><span class="fk">FK</span> sender_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> receiver_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>reports - 举报表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 举报用户/商品/评论，支持多种举报类型和状态管理</p>
+                <p><strong>举报类型</strong>: fraud(诈骗)、fake_item(假货)、harassment(骚扰)、spam(垃圾信息)、other(其他)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>举报ID</td></tr>
+                    <tr><td>reporter_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>举报人ID → users.id</td></tr>
+                    <tr><td>reported_user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>被举报用户ID → users.id</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>被举报商品ID → items.id</td></tr>
+                    <tr><td>comment_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>被举报评论ID → comments.id</td></tr>
+                    <tr><td>report_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>fraud/fake_item/harassment/spam/other</td></tr>
+                    <tr><td>reason</td><td class="field-type">TEXT</td><td>NOT NULL</td><td>-</td><td>举报原因</td></tr>
+                    <tr><td>status</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'pending'</td><td>pending/processing/resolved/rejected</td></tr>
+                    <tr><td>admin_note</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>管理员备注</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>举报时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>resolved_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>处理完成时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_reporter (reporter_id)</li>
+                    <li><span class="idx">IDX</span> idx_reported_user (reported_user_id)</li>
+                    <li><span class="idx">IDX</span> idx_status (status)</li>
+                    <li><span class="fk">FK</span> reporter_id → users(id)</li>
+                    <li><span class="fk">FK</span> reported_user_id → users(id)</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> comment_id → comments(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <!-- ========== 系统监控模块表定义 ========== -->
+            <h2 id="monitoring">🔍 系统监控模块表定义</h2>
+
+            <h3>audit_logs - 审计日志表 ⭐核心表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 记录所有数据库操作(INSERT/UPDATE/DELETE)，支持JSON存储变更前后数据</p>
+                <p><strong>用途</strong>: 合规审计、数据追溯、安全分析</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>日志ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>操作用户ID → users.id</td></tr>
+                    <tr><td>table_name</td><td class="field-type">VARCHAR(100)</td><td>NOT NULL</td><td>-</td><td>表名</td></tr>
+                    <tr><td>operation</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>INSERT/UPDATE/DELETE</td></tr>
+                    <tr><td>record_id</td><td class="field-type">BIGINT</td><td>NULL</td><td>NULL</td><td>记录ID</td></tr>
+                    <tr><td>old_value</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>变更前数据</td></tr>
+                    <tr><td>new_value</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>变更后数据</td></tr>
+                    <tr><td>ip_address</td><td class="field-type">VARCHAR(45)</td><td>NULL</td><td>NULL</td><td>IP地址(支持IPv6)</td></tr>
+                    <tr><td>user_agent</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>浏览器信息</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>操作时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="idx">IDX</span> idx_table (table_name, operation)</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at)</li>
+                    <li><span class="idx">IDX</span> idx_record (table_name, record_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>conflict_records - 同步冲突表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 4数据库同步冲突记录和解决方案</p>
+                <p><strong>冲突类型</strong>: version_mismatch(版本不匹配)、data_inconsistency(数据不一致)、constraint_violation(约束违反)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>冲突ID</td></tr>
+                    <tr><td>table_name</td><td class="field-type">VARCHAR(100)</td><td>NOT NULL</td><td>-</td><td>冲突表名</td></tr>
+                    <tr><td>record_id</td><td class="field-type">BIGINT</td><td>NOT NULL</td><td>-</td><td>冲突记录ID</td></tr>
+                    <tr><td>source_db</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>源数据库(mysql/mariadb/postgres/sqlite)</td></tr>
+                    <tr><td>target_db</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>目标数据库</td></tr>
+                    <tr><td>conflict_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>version_mismatch/data_inconsistency/constraint_violation</td></tr>
+                    <tr><td>local_data</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>本地数据</td></tr>
+                    <tr><td>remote_data</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>远程数据</td></tr>
+                    <tr><td>resolved</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否已解决</td></tr>
+                    <tr><td>resolved_by</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>解决人ID → users.id</td></tr>
+                    <tr><td>resolution_strategy</td><td class="field-type">VARCHAR(50)</td><td>NULL</td><td>NULL</td><td>解决策略(use_local/use_remote/merge)</td></tr>
+                    <tr><td>resolved_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>解决时间</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>发现时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_resolved (resolved)</li>
+                    <li><span class="idx">IDX</span> idx_table_record (table_name, record_id)</li>
+                    <li><span class="idx">IDX</span> idx_created (created_at)</li>
+                    <li><span class="idx">IDX</span> idx_resolved_by (resolved_by)</li>
+                    <li><span class="fk">FK</span> resolved_by → users(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>system_configs - 系统配置表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 键值对存储系统配置，支持公开/私密配置分离</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>配置ID</td></tr>
+                    <tr><td>config_key</td><td class="field-type">VARCHAR(100)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>配置键</td></tr>
+                    <tr><td>config_value</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>配置值</td></tr>
+                    <tr><td>description</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>描述</td></tr>
+                    <tr><td>is_public</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否公开</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> config_key (UNIQUE)</li>
+                    <li><span class="idx">IDX</span> idx_key (config_key)</li>
+                </ul>
+            </div>
+
+            <h3>system_settings - 系统运行时配置</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 分类管理系统设置，JSON存储复杂配置值</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>设置ID</td></tr>
+                    <tr><td>category</td><td class="field-type">VARCHAR(64)</td><td>NOT NULL</td><td>-</td><td>设置分类</td></tr>
+                    <tr><td>key</td><td class="field-type">VARCHAR(128)</td><td>NOT NULL</td><td>-</td><td>设置键</td></tr>
+                    <tr><td>value</td><td class="field-type">JSON</td><td>NOT NULL</td><td>-</td><td>设置值(JSON格式)</td></tr>
+                    <tr><td>updated_by</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>更新人ID → users.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> uq_system_settings_category_key (category, key)</li>
+                    <li><span class="idx">IDX</span> ix_system_settings_category (category)</li>
+                    <li><span class="fk">FK</span> updated_by → users(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <!-- ========== 同步与数据库管理模块表定义 ========== -->
+            <h2 id="sync">🔄 同步与数据库管理模块表定义</h2>
+
+            <h3>sync_configs - 同步配置表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 管理4数据库同步配置(MySQL/MariaDB/PostgreSQL/SQLite)</p>
+                <p><strong>模式</strong>: realtime(实时)、scheduled(定时)、manual(手动)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>配置ID</td></tr>
+                    <tr><td>source</td><td class="field-type">VARCHAR(64)</td><td>NOT NULL</td><td>-</td><td>源数据库</td></tr>
+                    <tr><td>target</td><td class="field-type">VARCHAR(64)</td><td>NOT NULL</td><td>-</td><td>目标数据库</td></tr>
+                    <tr><td>mode</td><td class="field-type">VARCHAR(32)</td><td>NOT NULL</td><td>'realtime'</td><td>同步模式</td></tr>
+                    <tr><td>interval_seconds</td><td class="field-type">INT</td><td>NOT NULL</td><td>300</td><td>同步间隔(秒)</td></tr>
+                    <tr><td>enabled</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>1</td><td>是否启用</td></tr>
+                    <tr><td>last_run_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>最后运行时间</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <h3>sync_logs - 同步日志表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 记录每次同步任务的执行情况和统计数据</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>日志ID</td></tr>
+                    <tr><td>config_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>配置ID → sync_configs.id</td></tr>
+                    <tr><td>status</td><td class="field-type">VARCHAR(32)</td><td>NOT NULL</td><td>-</td><td>completed/failed/running</td></tr>
+                    <tr><td>started_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>-</td><td>开始时间</td></tr>
+                    <tr><td>completed_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>完成时间</td></tr>
+                    <tr><td>stats</td><td class="field-type">JSON</td><td>NOT NULL</td><td>'{}'</td><td>统计数据(同步行数、冲突数等)</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="fk">FK</span> config_id → sync_configs(id)</li>
+                </ul>
+            </div>
+
+            <h3>sync_tasks - 同步任务表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 同步任务队列，支持全量同步、增量同步、冲突解决</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>任务ID</td></tr>
+                    <tr><td>task_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>full_sync/incremental_sync/conflict_resolution</td></tr>
+                    <tr><td>source_db</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>源数据库</td></tr>
+                    <tr><td>target_db</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>目标数据库</td></tr>
+                    <tr><td>table_name</td><td class="field-type">VARCHAR(100)</td><td>NULL</td><td>NULL</td><td>表名(NULL表示全部表)</td></tr>
+                    <tr><td>status</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'pending'</td><td>pending/running/completed/failed</td></tr>
+                    <tr><td>total_records</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>总记录数</td></tr>
+                    <tr><td>synced_records</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>已同步记录数</td></tr>
+                    <tr><td>failed_records</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>失败记录数</td></tr>
+                    <tr><td>error_message</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>错误信息</td></tr>
+                    <tr><td>started_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>开始时间</td></tr>
+                    <tr><td>completed_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>完成时间</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_status (status)</li>
+                </ul>
+            </div>
+
+            <h3>performance_metrics - 性能监控表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 监控数据库性能指标，支持阈值告警</p>
+                <p><strong>指标类型</strong>: query_time(查询时间)、connection_pool(连接池)、sync_latency(同步延迟)、error_rate(错误率)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>指标ID</td></tr>
+                    <tr><td>metric_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>指标类型</td></tr>
+                    <tr><td>db_name</td><td class="field-type">VARCHAR(50)</td><td>NOT NULL</td><td>-</td><td>数据库名称</td></tr>
+                    <tr><td>metric_value</td><td class="field-type">DECIMAL(10,2)</td><td>NOT NULL</td><td>-</td><td>指标值</td></tr>
+                    <tr><td>threshold_value</td><td class="field-type">DECIMAL(10,2)</td><td>NULL</td><td>NULL</td><td>阈值</td></tr>
+                    <tr><td>is_alert</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否告警</td></tr>
+                    <tr><td>details</td><td class="field-type">JSON</td><td>NULL</td><td>NULL</td><td>详细信息</td></tr>
+                    <tr><td>recorded_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>记录时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_type (metric_type)</li>
+                    <li><span class="idx">IDX</span> idx_db (db_name)</li>
+                </ul>
+            </div>
+
+            <h3>daily_stats - 每日统计表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 每日业务统计汇总，支持BI分析和趋势预测</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>统计ID</td></tr>
+                    <tr><td>stat_date</td><td class="field-type">DATE</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>统计日期</td></tr>
+                    <tr><td>sync_success_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步成功次数</td></tr>
+                    <tr><td>sync_conflict_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步冲突次数</td></tr>
+                    <tr><td>ai_request_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>AI请求次数</td></tr>
+                    <tr><td>inventory_changes</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>库存变动次数</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> stat_date (UNIQUE)</li>
+                </ul>
+            </div>
+
+            <!-- ========== 扩展功能表定义 ========== -->
+            <h2 id="extensions">🎯 扩展功能表定义</h2>
+
+            <h3>user_follows - 用户关注表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 用户之间的关注关系</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>关注ID</td></tr>
+                    <tr><td>follower_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>粉丝ID → users.id</td></tr>
+                    <tr><td>following_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>被关注者ID → users.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>关注时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="uk">UK</span> uk_follower_following (follower_id, following_id)</li>
+                    <li><span class="idx">IDX</span> idx_follower (follower_id)</li>
+                    <li><span class="idx">IDX</span> idx_following (following_id)</li>
+                    <li><span class="fk">FK</span> follower_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> following_id → users(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>user_addresses - 用户地址表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 用户收货地址管理，支持宿舍/家庭/其他地址类型</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>地址ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>address_type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>'dormitory'</td><td>dormitory/home/other</td></tr>
+                    <tr><td>building</td><td class="field-type">VARCHAR(50)</td><td>NULL</td><td>NULL</td><td>楼栋</td></tr>
+                    <tr><td>room</td><td class="field-type">VARCHAR(20)</td><td>NULL</td><td>NULL</td><td>房间号</td></tr>
+                    <tr><td>detail_address</td><td class="field-type">VARCHAR(200)</td><td>NULL</td><td>NULL</td><td>详细地址</td></tr>
+                    <tr><td>contact_name</td><td class="field-type">VARCHAR(50)</td><td>NULL</td><td>NULL</td><td>联系人</td></tr>
+                    <tr><td>contact_phone</td><td class="field-type">VARCHAR(20)</td><td>NULL</td><td>NULL</td><td>联系电话</td></tr>
+                    <tr><td>is_default</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否默认地址</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>item_view_history - 商品浏览历史表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 记录用户浏览行为，支持推荐算法</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>浏览ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID → items.id</td></tr>
+                    <tr><td>view_duration</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>浏览时长(秒)</td></tr>
+                    <tr><td>viewed_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>浏览时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>� 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="idx">IDX</span> idx_item (item_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> item_id → items(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>search_history - 搜索历史表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 记录搜索关键词和结果，支持搜索优化</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>搜索ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>用户ID → users.id(未登录为NULL)</td></tr>
+                    <tr><td>keyword</td><td class="field-type">VARCHAR(200)</td><td>NOT NULL</td><td>-</td><td>搜索关键词</td></tr>
+                    <tr><td>result_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>结果数量</td></tr>
+                    <tr><td>clicked_item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>点击商品ID → items.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>搜索时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE SET NULL</li>
+                    <li><span class="fk">FK</span> clicked_item_id → items(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>credit_score_history - 信用分变更记录表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 记录用户信用分变更历史，支持追溯和申诉</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>记录ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>old_score</td><td class="field-type">INT</td><td>NOT NULL</td><td>-</td><td>变更前分数</td></tr>
+                    <tr><td>new_score</td><td class="field-type">INT</td><td>NOT NULL</td><td>-</td><td>变更后分数</td></tr>
+                    <tr><td>change_amount</td><td class="field-type">INT</td><td>NOT NULL</td><td>-</td><td>变化量(±)</td></tr>
+                    <tr><td>change_reason</td><td class="field-type">VARCHAR(200)</td><td>NOT NULL</td><td>-</td><td>变更原因</td></tr>
+                    <tr><td>related_transaction_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>关联交易ID → transactions.id</td></tr>
+                    <tr><td>related_report_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>关联举报ID → reports.id</td></tr>
+                    <tr><td>admin_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NULL</td><td>NULL</td><td>操作管理员ID → users.id</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>变更时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                    <li><span class="fk">FK</span> related_transaction_id → transactions(id) ON DELETE SET NULL</li>
+                    <li><span class="fk">FK</span> related_report_id → reports(id) ON DELETE SET NULL</li>
+                    <li><span class="fk">FK</span> admin_id → users(id) ON DELETE SET NULL</li>
+                </ul>
+            </div>
+
+            <h3>notifications - 系统通知表</h3>
+            
+            <div class="table-info">
+                <p><strong>功能</strong>: 系统消息推送，支持多种通知类型</p>
+                <p><strong>类型</strong>: system(系统)、transaction(交易)、message(私信)、comment(评论)、follow(关注)、like(点赞)</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span> AUTO_INCREMENT</td><td>-</td><td>通知ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID → users.id</td></tr>
+                    <tr><td>type</td><td class="field-type">ENUM</td><td>NOT NULL</td><td>-</td><td>通知类型</td></tr>
+                    <tr><td>title</td><td class="field-type">VARCHAR(200)</td><td>NOT NULL</td><td>-</td><td>通知标题</td></tr>
+                    <tr><td>content</td><td class="field-type">TEXT</td><td>NULL</td><td>NULL</td><td>通知内容</td></tr>
+                    <tr><td>related_id</td><td class="field-type">BIGINT</td><td>NULL</td><td>NULL</td><td>关联ID(商品/交易/消息等)</td></tr>
+                    <tr><td>related_type</td><td class="field-type">VARCHAR(50)</td><td>NULL</td><td>NULL</td><td>关联类型</td></tr>
+                    <tr><td>is_read</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否已读</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>updated_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>更新时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <h4>📌 索引和约束</h4>
+                <ul class="constraint-list">
+                    <li><span class="idx">IDX</span> idx_user (user_id)</li>
+                    <li><span class="fk">FK</span> user_id → users(id) ON DELETE CASCADE</li>
+                </ul>
+            </div>
+
+            <h3>其他扩展表</h3>
+            
+            <div class="table-info">
+                <p><strong>item_price_history</strong>: 商品价格历史记录 - 用于价格追踪和分析</p>
+                <p><strong>comment_likes</strong>: 评论点赞表 - 支持评论互动</p>
+                <p><strong>message_attachments</strong>: 消息附件表 - 支持图片/视频/文档</p>
+                <p><strong>report_actions</strong>: 举报处理记录表 - 管理员操作日志</p>
+                <p><strong>transaction_review_images</strong>: 交易评价图片表 - 晒单功能</p>
+                <p><strong>cart_items</strong>: 购物车表 - 临时购物车商品</p>
+                <p><strong>conversations</strong>: 会话表 - 聊天会话管理</p>
+                <p><strong>search_trending</strong>: 热搜表 - 热门搜索词统计</p>
+                <p><strong>refresh_tokens</strong>: 刷新令牌表 - JWT令牌管理</p>
+            </div>
+
+            <h3>cart_items - 购物车表</h3>
+            <table>
+                <thead><tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span></td><td>-</td><td>购物车项ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID</td></tr>
+                    <tr><td>item_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>商品ID</td></tr>
+                    <tr><td>quantity</td><td class="field-type">INT</td><td>NOT NULL</td><td>1</td><td>数量</td></tr>
+                    <tr><td>added_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>添加时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <h3>conversations - 会话表</h3>
+            <table>
+                <thead><tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span></td><td>-</td><td>会话ID</td></tr>
+                    <tr><td>user1_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户1 ID</td></tr>
+                    <tr><td>user2_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户2 ID</td></tr>
+                    <tr><td>last_message_at</td><td class="field-type">TIMESTAMP</td><td>NULL</td><td>NULL</td><td>最后消息时间</td></tr>
+                    <tr><td>unread_count_user1</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>用户1未读数</td></tr>
+                    <tr><td>unread_count_user2</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>用户2未读数</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <h3>search_trending - 热搜表</h3>
+            <table>
+                <thead><tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span></td><td>-</td><td>热搜ID</td></tr>
+                    <tr><td>keyword</td><td class="field-type">VARCHAR(200)</td><td>NOT NULL</td><td>-</td><td>搜索关键词</td></tr>
+                    <tr><td>search_count</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>搜索次数</td></tr>
+                    <tr><td>trend_score</td><td class="field-type">DECIMAL(10,2)</td><td>NOT NULL</td><td>0</td><td>热度分数</td></tr>
+                    <tr><td>date</td><td class="field-type">DATE</td><td>NOT NULL</td><td>-</td><td>统计日期</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                </tbody>
+            </table>
+
+            <h3>refresh_tokens - 刷新令牌表</h3>
+            <table>
+                <thead><tr><th>字段名</th><th>类型</th><th>约束</th><th>默认值</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>id</td><td class="field-type">BIGINT</td><td><span class="pk">PK</span></td><td>-</td><td>令牌ID</td></tr>
+                    <tr><td>user_id</td><td class="field-type">BIGINT</td><td><span class="fk">FK</span> NOT NULL</td><td>-</td><td>用户ID</td></tr>
+                    <tr><td>token</td><td class="field-type">VARCHAR(255)</td><td><span class="uk">UNIQUE</span> NOT NULL</td><td>-</td><td>刷新令牌</td></tr>
+                    <tr><td>expires_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>-</td><td>过期时间</td></tr>
+                    <tr><td>is_revoked</td><td class="field-type">BOOLEAN</td><td>NOT NULL</td><td>FALSE</td><td>是否撤销</td></tr>
+                    <tr><td>created_at</td><td class="field-type">TIMESTAMP</td><td>NOT NULL</td><td>CURRENT_TIMESTAMP</td><td>创建时间</td></tr>
+                    <tr><td>sync_version</td><td class="field-type">INT</td><td>NOT NULL</td><td>0</td><td>同步版本号</td></tr>
+                </tbody>
+            </table>
+
+            <!-- ========== 数据库编程组件 ========== -->
+            <h2 id="database-programming">⚙️ 数据库编程组件</h2>
+
+            <h3>触发器 (Triggers)</h3>
+            
+            <div class="highlight-box">
+                <h4>🔧 7个核心触发器</h4>
+                <ul class="constraint-list">
+                    <li><strong>trg_after_user_insert</strong>: 用户注册后自动记录审计日志</li>
+                    <li><strong>trg_before_item_view_update</strong>: 商品浏览时更新updated_at</li>
+                    <li><strong>trg_after_transaction_complete</strong>: 交易完成时更新用户统计和商品状态</li>
+                    <li><strong>trg_after_comment_insert</strong>: 评论时增加商品咨询量</li>
+                    <li><strong>trg_after_favorite_insert</strong>: 收藏时增加商品收藏量</li>
+                    <li><strong>trg_after_favorite_delete</strong>: 取消收藏时减少收藏量</li>
+                    <li><strong>trg_after_transaction_rating</strong>: 评分时重新计算用户平均评分</li>
+                </ul>
+            </div>
+
+            <h3>存储过程 (Stored Procedures)</h3>
+            
+            <div class="highlight-box">
+                <h4>📦 3个核心存储过程</h4>
+                <ul class="constraint-list">
+                    <li><strong>sp_create_transaction</strong>(item_id, buyer_id, buyer_contact)
+                        <br>→ 创建交易，带锁检查商品状态，防止重复下单</li>
+                    <li><strong>sp_get_user_stats</strong>(user_id)
+                        <br>→ 获取用户完整统计(评分、交易量、在售商品数、收藏数)</li>
+                    <li><strong>sp_search_items</strong>(keyword, category_id, min_price, max_price, condition_type, offset, limit)
+                        <br>→ 商品全文搜索，支持多条件过滤和分页</li>
+                </ul>
+            </div>
+
+            <h3>视图 (Views)</h3>
+            
+            <div class="highlight-box">
+                <h4>👁️ 3个核心视图</h4>
+                <ul class="constraint-list">
+                    <li><strong>v_item_details</strong>: 商品详情视图 - 关联卖家信息、分类信息</li>
+                    <li><strong>v_transaction_stats</strong>: 交易统计视图 - 按日期汇总交易数据</li>
+                    <li><strong>v_user_activity</strong>: 用户活跃度视图 - 汇总用户行为数据</li>
+                </ul>
+            </div>
+
+        </div>
+
+        <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <h2 style="margin: 0 0 20px 0;">✅ 文档完成</h2>
+            <p style="font-size: 1.2em; margin: 10px 0;"><strong>校园交易平台数据库完整文档</strong></p>
+            <p style="margin: 10px 0;">📊 35+张表 | 🔧 7个触发器 | 📦 3个存储过程 | 👁️ 3个视图</p>
+            <p style="margin: 20px 0 10px 0; font-size: 0.95em;">
+                ✅ 用户权限系统 (6表) | ✅ 商品交易模块 (8表) | ✅ 评论互动模块 (4表)<br>
+                ✅ 系统监控模块 (5表) | ✅ 同步管理模块 (5表) | ✅ 扩展功能模块 (10+表)
+            </p>
+            <p style="margin-top: 20px; font-size: 0.9em; opacity: 0.9;">
+                📄 生成时间: 2025-12-21 | 数据库版本: v2.1 | 支持: MySQL/MariaDB/PostgreSQL/SQLite
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // ER图缩放控制
+        const erSvg = document.getElementById('erSvg');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
+        
+        function updateZoom(value) {
+            const scale = value / 100;
+            erSvg.style.transform = `scale(${scale})`;
+            zoomValue.textContent = value + '%';
+            zoomSlider.value = value;
+        }
+        
+        function zoomER(delta) {
+            let currentValue = parseInt(zoomSlider.value);
+            if (delta === 0) {
+                currentValue = 100; // 重置
+            } else {
+                currentValue = Math.max(30, Math.min(200, currentValue + delta));
+            }
+            updateZoom(currentValue);
+        }
+        
+        // 滑块事件监听
+        zoomSlider.addEventListener('input', (e) => {
+            updateZoom(e.target.value);
+        });
+        
+        // 初始化缩放
+        updateZoom(100);
+        
+        // 平滑滚动到锚点
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href').substring(1);
+                const targetElement = document.getElementById(targetId);
+                if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

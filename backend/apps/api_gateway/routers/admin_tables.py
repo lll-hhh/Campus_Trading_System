@@ -37,6 +37,7 @@ ALLOWED_TABLES: Dict[str, str] = {
     "conflict_records": "conflict_records",
     "daily_stats": "daily_stats",
     "system_configs": "system_configs",
+    "system_settings": "system_settings",  # 新增系统设置表
     "user_follows": "user_follows",
     "item_view_history": "item_view_history",
     "user_addresses": "user_addresses",

@@ -165,42 +165,127 @@
     <n-modal
       v-model:show="showConflictDetailModal"
       preset="card"
-      title="冲突详情"
-      style="width: 800px"
+      title="冲突解决 - 选择保留数据"
+      style="width: 1000px"
     >
-      <n-descriptions v-if="selectedConflict" bordered :column="2">
-        <n-descriptions-item label="冲突ID">
-          {{ selectedConflict.id }}
-        </n-descriptions-item>
-        <n-descriptions-item label="表名">
-          {{ selectedConflict.table_name }}
-        </n-descriptions-item>
-        <n-descriptions-item label="记录ID">
-          {{ selectedConflict.record_id }}
-        </n-descriptions-item>
-        <n-descriptions-item label="来源数据库">
-          {{ selectedConflict.source }}
-        </n-descriptions-item>
-        <n-descriptions-item label="目标数据库">
-          {{ selectedConflict.target }}
-        </n-descriptions-item>
-        <n-descriptions-item label="发生时间">
-          {{ formatDateTime(selectedConflict.created_at) }}
-        </n-descriptions-item>
-        <n-descriptions-item label="冲突数据" :span="2">
-          <n-code :code="JSON.stringify(selectedConflict.payload, null, 2)" language="json" />
-        </n-descriptions-item>
-      </n-descriptions>
+      <div v-if="selectedConflict">
+        <!-- 基本信息 -->
+        <n-descriptions bordered :column="3" size="small" style="margin-bottom: 20px">
+          <n-descriptions-item label="冲突ID">
+            {{ selectedConflict.id }}
+          </n-descriptions-item>
+          <n-descriptions-item label="表名">
+            {{ selectedConflict.table_name }}
+          </n-descriptions-item>
+          <n-descriptions-item label="记录ID">
+            {{ selectedConflict.record_id }}
+          </n-descriptions-item>
+          <n-descriptions-item label="来源数据库">
+            <n-tag type="info">{{ selectedConflict.source_db || selectedConflict.source }}</n-tag>
+          </n-descriptions-item>
+          <n-descriptions-item label="目标数据库">
+            <n-tag type="warning">{{ selectedConflict.target_db || selectedConflict.target }}</n-tag>
+          </n-descriptions-item>
+          <n-descriptions-item label="发生时间">
+            {{ formatDateTime(selectedConflict.created_at) }}
+          </n-descriptions-item>
+        </n-descriptions>
+
+        <!-- 数据对比 -->
+        <n-divider>数据对比 - 字段差异</n-divider>
+        
+        <n-space vertical>
+          <!-- 选择策略 -->
+          <n-alert type="info" title="请选择要保留的数据" style="margin-bottom: 16px">
+            红色背景表示两个数据库的值不同，绿色边框表示当前选中的数据源
+          </n-alert>
+
+          <!-- 字段对比表格 -->
+          <n-card title="字段详细对比" style="margin-bottom: 16px">
+            <n-data-table
+              :columns="conflictComparisonColumns"
+              :data="conflictComparisonData"
+              :pagination="false"
+              :bordered="true"
+              size="small"
+              :max-height="400"
+            />
+          </n-card>
+
+          <!-- 选择数据源 -->
+          <n-radio-group v-model:value="conflictResolutionChoice" size="large">
+            <n-space vertical :size="16">
+              <!-- 来源数据库选项 -->
+              <n-card 
+                :class="{ 'selected-data-card': conflictResolutionChoice === 'source' }"
+                hoverable
+                @click="conflictResolutionChoice = 'source'"
+                style="cursor: pointer"
+              >
+                <template #header>
+                  <n-space align="center">
+                    <n-radio :value="'source'" style="pointer-events: none" />
+                    <span style="font-weight: 600">✅ 保留来源数据库 ({{ selectedConflict.source_db || selectedConflict.source }})</span>
+                    <n-tag type="info" size="small">源数据</n-tag>
+                  </n-space>
+                </template>
+                <div style="color: #666; font-size: 13px">
+                  将此数据库的所有字段值同步到其他数据库
+                </div>
+              </n-card>
+
+              <!-- 目标数据库选项 -->
+              <n-card 
+                :class="{ 'selected-data-card': conflictResolutionChoice === 'target' }"
+                hoverable
+                @click="conflictResolutionChoice = 'target'"
+                style="cursor: pointer"
+              >
+                <template #header>
+                  <n-space align="center">
+                    <n-radio :value="'target'" style="pointer-events: none" />
+                    <span style="font-weight: 600">✅ 保留目标数据库 ({{ selectedConflict.target_db || selectedConflict.target }})</span>
+                    <n-tag type="warning" size="small">目标数据</n-tag>
+                  </n-space>
+                </template>
+                <div style="color: #666; font-size: 13px">
+                  将此数据库的所有字段值同步到其他数据库
+                </div>
+              </n-card>
+
+              <!-- 仅标记已解决选项 -->
+              <n-card 
+                :class="{ 'selected-data-card': conflictResolutionChoice === 'manual' }"
+                hoverable
+                @click="conflictResolutionChoice = 'manual'"
+                style="cursor: pointer"
+              >
+                <template #header>
+                  <n-space align="center">
+                    <n-radio :value="'manual'" style="pointer-events: none" />
+                    <span style="font-weight: 600">⚠️ 仅标记为已解决</span>
+                    <n-tag type="default" size="small">不同步数据</n-tag>
+                  </n-space>
+                </template>
+                <n-alert type="warning" title="注意">
+                  此选项只会将冲突标记为已解决，但不会同步数据到其他数据库。数据不一致性仍然存在。
+                </n-alert>
+              </n-card>
+            </n-space>
+          </n-radio-group>
+        </n-space>
+      </div>
 
       <template #footer>
         <n-space justify="end">
-          <n-button @click="showConflictDetailModal = false">关闭</n-button>
+          <n-button @click="showConflictDetailModal = false">取消</n-button>
           <n-button
-            type="warning"
+            type="primary"
             :loading="resolvingConflictId === selectedConflict?.id"
-            @click="resolveConflictRecord(selectedConflict.id, 'manual')"
+            :disabled="!conflictResolutionChoice"
+            @click="handleResolveWithChoice"
           >
-            标记为已解决
+            {{ conflictResolutionChoice === 'manual' ? '标记已解决' : '解决冲突并同步数据' }}
           </n-button>
         </n-space>
       </template>
@@ -315,6 +400,7 @@ const logPagination = ref({
 const showSyncRepairModal = ref(false)
 const showConflictDetailModal = ref(false)
 const selectedConflict = ref<any>(null)
+const conflictResolutionChoice = ref<'source' | 'target' | 'manual'>('source')
 
 // 修复表单
 const repairForm = ref({
@@ -654,7 +740,178 @@ const handleSyncRepair = async () => {
 
 const viewConflictDetail = (conflict: any) => {
   selectedConflict.value = conflict
+  conflictResolutionChoice.value = 'source' // 默认选择源数据
   showConflictDetailModal.value = true
+}
+
+// 格式化冲突数据为美观的JSON
+const formatConflictData = (data: any): string => {
+  if (!data) return '{}'
+  
+  try {
+    // 如果是字符串，先解析
+    const parsed = typeof data === 'string' ? JSON.parse(data) : data
+    return JSON.stringify(parsed, null, 2)
+  } catch {
+    return typeof data === 'string' ? data : JSON.stringify(data, null, 2)
+  }
+}
+
+// 解析冲突数据
+const parseConflictData = (data: any): Record<string, any> => {
+  if (!data) return {}
+  
+  try {
+    return typeof data === 'string' ? JSON.parse(data) : data
+  } catch {
+    return {}
+  }
+}
+
+// 冲突对比列定义
+const conflictComparisonColumns = computed(() => [
+  {
+    title: '字段名',
+    key: 'field',
+    width: 150,
+    fixed: 'left' as const,
+    render(row: any) {
+      return h('span', { style: { fontWeight: '500' } }, row.field)
+    }
+  },
+  {
+    title: `来源数据库 (${selectedConflict.value?.source_db || selectedConflict.value?.source || 'N/A'})`,
+    key: 'sourceValue',
+    minWidth: 250,
+    render(row: any) {
+      const isDiff = row.isDifferent
+      return h(
+        'div',
+        {
+          style: {
+            padding: '4px 8px',
+            borderRadius: '4px',
+            backgroundColor: isDiff ? '#fff1f0' : 'transparent',
+            border: conflictResolutionChoice.value === 'source' && isDiff ? '2px solid #52c41a' : 'none',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            wordBreak: 'break-all'
+          }
+        },
+        String(row.sourceValue)
+      )
+    }
+  },
+  {
+    title: `目标数据库 (${selectedConflict.value?.target_db || selectedConflict.value?.target || 'N/A'})`,
+    key: 'targetValue',
+    minWidth: 250,
+    render(row: any) {
+      const isDiff = row.isDifferent
+      return h(
+        'div',
+        {
+          style: {
+            padding: '4px 8px',
+            borderRadius: '4px',
+            backgroundColor: isDiff ? '#fff1f0' : 'transparent',
+            border: conflictResolutionChoice.value === 'target' && isDiff ? '2px solid #52c41a' : 'none',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            wordBreak: 'break-all'
+          }
+        },
+        String(row.targetValue)
+      )
+    }
+  },
+  {
+    title: '状态',
+    key: 'status',
+    width: 100,
+    align: 'center' as const,
+    render(row: any) {
+      return h(
+        NTag,
+        {
+          type: row.isDifferent ? 'error' : 'success',
+          size: 'small',
+          bordered: false
+        },
+        { default: () => row.isDifferent ? '冲突' : '一致' }
+      )
+    }
+  }
+])
+
+// 冲突对比数据
+const conflictComparisonData = computed(() => {
+  if (!selectedConflict.value) return []
+  
+  const localData = parseConflictData(selectedConflict.value.local_data)
+  const remoteData = parseConflictData(selectedConflict.value.remote_data)
+  
+  // 获取所有字段
+  const allFields = new Set([
+    ...Object.keys(localData),
+    ...Object.keys(remoteData)
+  ])
+  
+  // 排除某些系统字段
+  const excludeFields = ['created_at', 'updated_at', 'deleted_at']
+  
+  return Array.from(allFields)
+    .filter(field => !excludeFields.includes(field))
+    .map(field => {
+      const sourceValue = localData[field] !== undefined ? localData[field] : '-'
+      const targetValue = remoteData[field] !== undefined ? remoteData[field] : '-'
+      
+      // 判断是否不同
+      const isDifferent = JSON.stringify(sourceValue) !== JSON.stringify(targetValue)
+      
+      return {
+        field,
+        sourceValue: formatFieldValue(sourceValue),
+        targetValue: formatFieldValue(targetValue),
+        isDifferent
+      }
+    })
+    .sort((a, b) => {
+      // 有冲突的字段排在前面
+      if (a.isDifferent && !b.isDifferent) return -1
+      if (!a.isDifferent && b.isDifferent) return 1
+      return a.field.localeCompare(b.field)
+    })
+})
+
+// 格式化字段值
+const formatFieldValue = (value: any): string => {
+  if (value === null || value === undefined) return '-'
+  if (typeof value === 'object') return JSON.stringify(value)
+  return String(value)
+}
+
+// 处理选择后的冲突解决
+const handleResolveWithChoice = async () => {
+  if (!selectedConflict.value || !conflictResolutionChoice.value) {
+    return
+  }
+
+  try {
+    await syncStore.resolveConflict(selectedConflict.value.id, conflictResolutionChoice.value)
+    
+    const messages = {
+      source: `冲突已解决！来源数据库 (${selectedConflict.value.source_db || selectedConflict.value.source}) 的数据已同步到所有数据库`,
+      target: `冲突已解决！目标数据库 (${selectedConflict.value.target_db || selectedConflict.value.target}) 的数据已同步到所有数据库`,
+      manual: '冲突已标记为已解决（未同步数据）'
+    }
+    
+    message.success(messages[conflictResolutionChoice.value] || '冲突已解决')
+    showConflictDetailModal.value = false
+  } catch (error: any) {
+    console.error('解决冲突失败:', error)
+    message.error(error.message || '解决冲突失败')
+  }
 }
 
 async function resolveConflictRecord(conflictId: number, strategy: 'source' | 'target' | 'manual') {
@@ -716,5 +973,11 @@ onMounted(() => {
 .stat-item .value {
   color: #333;
   font-weight: 500;
+}
+
+/* 冲突解决数据卡片样式 */
+.selected-data-card {
+  border: 2px solid #18a058;
+  box-shadow: 0 0 8px rgba(24, 160, 88, 0.3);
 }
 </style>

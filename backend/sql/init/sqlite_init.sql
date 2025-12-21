@@ -322,6 +322,20 @@ CREATE TABLE IF NOT EXISTS system_configs (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- 系统设置表
+CREATE TABLE IF NOT EXISTS system_settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    category TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL,
+    updated_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now')),
+    UNIQUE (category, key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_system_settings_category ON system_settings(category);
+
 -- ============================================
 -- 3. 扩展关联表
 -- ============================================

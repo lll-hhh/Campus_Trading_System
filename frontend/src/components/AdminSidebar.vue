@@ -46,6 +46,11 @@ const menuOptions = [
     key: 'd1'
   },
   {
+    label: '🤖 AI助手',
+    key: 'admin-ai',
+    path: '/admin/ai'
+  },
+  {
     label: '📋 表格管理',
     key: 'admin-tables',
     path: '/admin/tables'

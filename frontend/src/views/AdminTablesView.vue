@@ -28,6 +28,7 @@ const tables = [
   { key: 'audit_logs', label: '审计日志', endpoint: '/admin/tables/audit_logs' },
   { key: 'conflict_records', label: '冲突记录', endpoint: '/admin/tables/conflict_records' },
   { key: 'system_configs', label: '系统配置', endpoint: '/admin/tables/system_configs' },
+  { key: 'system_settings', label: '系统设置', endpoint: '/admin/tables/system_settings' },
   { key: 'roles', label: '角色管理', endpoint: '/admin/tables/roles' },
   { key: 'permissions', label: '权限管理', endpoint: '/admin/tables/permissions' },
   { key: 'role_permissions', label: '角色权限关联', endpoint: '/admin/tables/role_permissions' },

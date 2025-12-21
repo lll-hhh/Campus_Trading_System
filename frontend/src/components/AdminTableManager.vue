@@ -16,10 +16,13 @@ import {
   NDrawerContent,
   NDescriptions,
   NDescriptionsItem,
+  NTabs,
+  NTabPane,
   useMessage,
   DataTableColumns,
 } from 'naive-ui'
 import AdvancedTableFilterPanel, { FilterCondition, TableColumn } from '../components/AdvancedTableFilterPanel.vue'
+import AdvancedQueryBuilder from '../components/AdvancedQueryBuilder.vue'
 import  { http as api } from '../lib/http'
 
 const props = defineProps<{
@@ -393,9 +396,23 @@ const tableMetadata = {
     title: '系统配置',
     columns: [
       { key: 'id', title: 'ID', type: 'number' as const },
-      { key: 'key', title: '配置键', type: 'string' as const },
-      { key: 'value', title: '配置值', type: 'string' as const },
+      { key: 'config_key', title: '配置键', type: 'string' as const },
+      { key: 'config_value', title: '配置值', type: 'string' as const },
       { key: 'description', title: '描述', type: 'string' as const },
+      { key: 'is_public', title: '公开', type: 'boolean' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
+      { key: 'updated_at', title: '更新时间', type: 'date' as const },
+    ],
+  },
+  system_settings: {
+    title: '系统设置',
+    columns: [
+      { key: 'id', title: 'ID', type: 'number' as const },
+      { key: 'category', title: '分类', type: 'string' as const },
+      { key: 'key', title: '设置键', type: 'string' as const },
+      { key: 'value', title: '配置内容', type: 'string' as const },
+      { key: 'updated_by', title: '最后修改人ID', type: 'number' as const },
+      { key: 'created_at', title: '创建时间', type: 'date' as const },
       { key: 'updated_at', title: '更新时间', type: 'date' as const },
     ],
   },
@@ -621,58 +638,67 @@ onMounted(() => {
         </n-space>
       </template>
 
-      <!-- 筛选面板 -->
-      <div v-if="showFilterPanel" style="margin-bottom: 16px">
-        <AdvancedTableFilterPanel
-          v-model="filterConditions"
-          :columns="columns"
-          @apply="applyFilter"
-          @reset="resetFilter"
-        />
-      </div>
+      <!-- Tab切换：简单查询 / 高级查询 -->
+      <n-tabs type="line" animated>
+        <n-tab-pane name="simple" tab="📊 简单查询">
+          <!-- 筛选面板 -->
+          <div v-if="showFilterPanel" style="margin-bottom: 16px">
+            <AdvancedTableFilterPanel
+              v-model="filterConditions"
+              :columns="columns"
+              @apply="applyFilter"
+              @reset="resetFilter"
+            />
+          </div>
 
-      <!-- 批量操作 -->
-      <div v-if="checkedRowKeys.length > 0" style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border: 1px solid #18a058; border-radius: 4px;">
-        <n-space align="center" justify="space-between">
-          <span>已选择 {{ checkedRowKeys.length }} 条记录</span>
-          <n-space>
-            <n-popconfirm @positive-click="batchDelete">
-              <template #trigger>
-                <n-button type="error" size="small">批量删除</n-button>
-              </template>
-              确定删除选中的 {{ checkedRowKeys.length }} 条记录吗？
-            </n-popconfirm>
-          </n-space>
-        </n-space>
-      </div>
+          <!-- 批量操作 -->
+          <div v-if="checkedRowKeys.length > 0" style="margin-bottom: 16px; padding: 12px; background: #f0f9ff; border: 1px solid #18a058; border-radius: 4px;">
+            <n-space align="center" justify="space-between">
+              <span>已选择 {{ checkedRowKeys.length }} 条记录</span>
+              <n-space>
+                <n-popconfirm @positive-click="batchDelete">
+                  <template #trigger>
+                    <n-button type="error" size="small">批量删除</n-button>
+                  </template>
+                  确定删除选中的 {{ checkedRowKeys.length }} 条记录吗？
+                </n-popconfirm>
+              </n-space>
+            </n-space>
+          </div>
 
-      <!-- 数据表格 -->
-      <n-data-table
-        :columns="dataTableColumns"
-        :data="data"
-        :loading="loading"
-        :row-key="(row: any) => row.id"
-        :checked-row-keys="checkedRowKeys"
-        @update:checked-row-keys="(keys) => (checkedRowKeys = keys as string[])"
-        :pagination="false"
-        striped
-        :scroll-x="1200"
-      />
+          <!-- 数据表格 -->
+          <n-data-table
+            :columns="dataTableColumns"
+            :data="data"
+            :loading="loading"
+            :row-key="(row: any) => row.id"
+            :checked-row-keys="checkedRowKeys"
+            @update:checked-row-keys="(keys) => (checkedRowKeys = keys as string[])"
+            :pagination="false"
+            striped
+            :scroll-x="1200"
+          />
 
-      <!-- 分页 -->
-      <div style="margin-top: 16px; display: flex; justify-content: flex-end">
-        <n-pagination
-          v-model:page="pagination.page"
-          v-model:page-size="pagination.pageSize"
-          :page-count="Math.ceil(totalRecords / pagination.pageSize)"
-          :page-sizes="pagination.pageSizes"
-          show-size-picker
-          :item-count="totalRecords"
-          show-quick-jumper
-        >
-          <template #prefix="{ itemCount }">共 {{ itemCount }} 条</template>
-        </n-pagination>
-      </div>
+          <!-- 分页 -->
+          <div style="margin-top: 16px; display: flex; justify-content: flex-end">
+            <n-pagination
+              v-model:page="pagination.page"
+              v-model:page-size="pagination.pageSize"
+              :page-count="Math.ceil(totalRecords / pagination.pageSize)"
+              :page-sizes="pagination.pageSizes"
+              show-size-picker
+              :item-count="totalRecords"
+              show-quick-jumper
+            >
+              <template #prefix="{ itemCount }">共 {{ itemCount }} 条</template>
+            </n-pagination>
+          </div>
+        </n-tab-pane>
+
+        <n-tab-pane name="advanced" tab="🔍 高级查询 (多表JOIN)">
+          <AdvancedQueryBuilder />
+        </n-tab-pane>
+      </n-tabs>
     </n-card>
 
     <!-- 详情抽屉 -->

@@ -374,6 +374,20 @@ CREATE TABLE IF NOT EXISTS system_configs (
 
 CREATE INDEX IF NOT EXISTS idx_system_configs_key ON system_configs(config_key);
 
+-- 系统设置表
+CREATE TABLE IF NOT EXISTS system_settings (
+    id BIGSERIAL PRIMARY KEY,
+    category VARCHAR(64) NOT NULL,
+    key VARCHAR(128) NOT NULL,
+    value JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_system_settings_category_key ON system_settings(category, key);
+CREATE INDEX IF NOT EXISTS ix_system_settings_category ON system_settings(category);
+
 -- ============================================
 -- 3. 触发器函数
 -- ============================================
@@ -977,14 +991,24 @@ INSERT INTO daily_stats (stat_date, sync_success_count, sync_conflict_count, ai_
 ON CONFLICT (stat_date) DO NOTHING;
 
 -- ============================================
--- 冲突记录示例数据
--- ============================================
-INSERT INTO conflict_records (table_name, record_id, source, target, status, payload) VALUES
-('users', '15', 'mysql', 'mariadb', 'pending', '{"field": "email", "mysql_value": "user15@a.edu", "mariadb_value": "user15@b.edu"}'),
-('items', '42', 'mysql', 'postgres', 'pending', '{"field": "price", "mysql_value": 199.00, "postgres_value": 189.00}'),
-('items', '78', 'mariadb', 'postgres', 'resolved', '{"field": "status", "mariadb_value": "active", "postgres_value": "sold"}'),
-('transactions', '123', 'mysql', 'mariadb', 'pending', '{"field": "status", "mysql_value": "completed", "mariadb_value": "pending"}'),
-('users', '88', 'postgres', 'sqlite', 'resolved', '{"field": "credit_score", "postgres_value": 85, "sqlite_value": 90}');
+INSERT INTO conflict_records (
+    table_name,
+    record_id,
+    source_db,
+    target_db,
+    conflict_type,
+    local_data,
+    remote_data,
+    resolved,
+    resolution_strategy,
+    resolved_by,
+    resolved_at
+) VALUES
+('users', 15, 'mysql', 'mariadb', 'data_inconsistency', '{"email": "user15@a.edu"}', '{"email": "user15@b.edu"}', false, NULL, NULL, NULL),
+('items', 42, 'mysql', 'postgres', 'data_inconsistency', '{"price": 199.00}', '{"price": 189.00}', false, NULL, NULL, NULL),
+('items', 78, 'mariadb', 'postgres', 'version_mismatch', '{"status": "active"}', '{"status": "sold"}', true, 'manual_review', NULL, NULL),
+('transactions', 123, 'mysql', 'mariadb', 'constraint_violation', '{"status": "completed"}', '{"status": "pending"}', false, NULL, NULL, NULL),
+('users', 88, 'postgres', 'sqlite', 'data_inconsistency', '{"credit_score": 85}', '{"credit_score": 90}', true, 'auto_merge', NULL, NULL);
 
 -- ============================================
 -- 管理员账户 (密码: admin123)
