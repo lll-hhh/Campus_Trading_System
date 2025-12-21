@@ -303,7 +303,53 @@ npm run dev
 
 ## ⚙️ 环境配置
 
-### 后端环境变量 (.env)
+### ⚠️ 安全提示
+
+**重要：请勿将包含真实密钥的 `.env` 文件提交到Git仓库！**
+
+1. `.env` 文件已在 `.gitignore` 中，确保不会被Git跟踪
+2. 仅提交 `.env.example` 模板文件
+3. 生产环境必须使用强密码和随机密钥
+4. API密钥应从环境变量或密钥管理服务获取
+
+### 后端环境变量配置
+
+**步骤1：复制模板文件**
+```bash
+# 根目录
+cp .env.example .env
+
+# 后端目录
+cp backend/.env.example backend/.env
+```
+
+**步骤2：编辑 `.env` 文件，填入真实配置**
+
+```bash
+# 数据库配置 (必填)
+MYSQL_DSN=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/campuswap
+POSTGRES_DSN=postgresql+psycopg://campuswap:YOUR_PASSWORD@localhost:5432/campuswap
+REDIS_URL=redis://localhost:6379/0
+
+# JWT密钥 (必须修改为随机字符串!)
+JWT_SECRET_KEY=请生成一个随机的64位字符串
+JWT_ALGORITHM=HS256
+
+# AI功能配置 (可选，不使用AI功能可留空)
+GLM_API_KEY=从 https://open.bigmodel.cn/ 获取
+GLM_MODEL=glm-4-flash
+```
+
+**步骤3：生成安全的JWT密钥**
+```bash
+# 使用Python生成随机密钥
+python -c "import secrets; print(secrets.token_urlsafe(64))"
+
+# 或使用OpenSSL
+openssl rand -base64 64
+```
+
+### 完整环境变量说明
 
 ```bash
 # 应用配置
