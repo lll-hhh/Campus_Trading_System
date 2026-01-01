@@ -29,6 +29,7 @@ from apps.api_gateway.routers import (
     comments,
     search,
     sync_api,
+    stores,
 )
 from apps.services import websocket
 from apps.core.config import get_settings
@@ -81,6 +82,7 @@ def create_app() -> FastAPI:
     app.include_router(favorites.router, prefix=settings.api_v1_prefix)
     app.include_router(comments.router, prefix=settings.api_v1_prefix)
     app.include_router(search.router, prefix=settings.api_v1_prefix)
+    app.include_router(stores.router, prefix=settings.api_v1_prefix)
     app.include_router(sync_api.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_settings.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_users.router, prefix=settings.api_v1_prefix)
@@ -111,7 +113,7 @@ def create_app() -> FastAPI:
 
     @app.get("/", tags=["root"])
     def read_root() -> dict[str, str]:
-        return {"message": "CampuSwap API Gateway"}
+        return {"message": "Phoenix Auto Parts API Gateway"}
 
     return app
 

@@ -24,7 +24,7 @@ class ItemService:
         price: float,
         category_name: str,
         images: List[str],
-        status: str = "draft",
+        status: str = "pending",
         condition: str = "good"
     ) -> Item:
         """创建商品"""
@@ -926,6 +926,8 @@ class SearchService:
             query = query.order_by(desc(Item.created_at))
         elif sort_by == "popular":
             query = query.order_by(desc(Item.view_count))
+        elif sort_by == "favorite_desc":
+            query = query.order_by(desc(Item.favorite_count))
         else:  # relevance - 默认按相关度（这里简单用浏览量）
             query = query.order_by(desc(Item.view_count))
         

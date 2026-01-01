@@ -93,7 +93,7 @@ def create_item(payload: ItemPayload) -> dict[str, str | int | float]:
             "title": payload.title,
             "status": "draft",
             "price": float(payload.price),
-            "synced_to": ["mysql", "mariadb", "postgres", "sqlite"],
+            "synced_to": ["mysql"],
         }
 
 
@@ -146,7 +146,7 @@ def update_item(item_id: int, payload: ItemUpdatePayload) -> dict[str, str | int
         return {
             "id": item_id,
             "message": "Item updated successfully",
-            "synced_to": ["mysql", "mariadb", "postgres", "sqlite"],
+            "synced_to": ["mysql"],
         }
 
 
@@ -168,7 +168,7 @@ def delete_item(item_id: int) -> dict[str, str | int]:
         return {
             "id": item_id,
             "message": "Item deleted successfully",
-            "synced_to": ["mysql", "mariadb", "postgres", "sqlite"],
+            "synced_to": ["mysql"],
         }
 
 

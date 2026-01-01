@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS items (
     location VARCHAR(100) COMMENT '交易地点',
     contact_info VARCHAR(200) COMMENT '联系方式(加密)',
     tags JSON COMMENT '商品标签数组',
-    status ENUM('available', 'reserved', 'sold', 'deleted') DEFAULT 'available' COMMENT '商品状态',
+    status ENUM('pending', 'available', 'reserved', 'sold', 'deleted', 'banned') DEFAULT 'pending' COMMENT '商品状态',
     is_negotiable BOOLEAN DEFAULT FALSE COMMENT '是否可议价',
     is_shipped BOOLEAN DEFAULT FALSE COMMENT '是否包邮',
     view_count INT DEFAULT 0 COMMENT '浏览量',
@@ -196,6 +196,23 @@ CREATE TABLE IF NOT EXISTS comments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
+
+-- 门店网络表
+CREATE TABLE IF NOT EXISTS stores (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL COMMENT '门店名称',
+    address VARCHAR(255) NOT NULL COMMENT '门店地址',
+    phone VARCHAR(20) COMMENT '联系电话',
+    image_url VARCHAR(500) COMMENT '门店图片URL',
+    latitude DECIMAL(10, 8) COMMENT '纬度',
+    longitude DECIMAL(11, 8) COMMENT '经度',
+    description TEXT COMMENT '门店描述',
+    is_active BOOLEAN DEFAULT TRUE COMMENT '是否营业',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_name (name),
+    INDEX idx_active (is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店网络表';
 
 -- 交易表 (不使用分区，因为MySQL分区不支持外键)
 CREATE TABLE IF NOT EXISTS transactions (
@@ -253,6 +270,31 @@ CREATE TABLE IF NOT EXISTS messages (
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息表';
 
+-- 会话表（消息聊天）
+CREATE TABLE IF NOT EXISTS conversations (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user1_id BIGINT NOT NULL COMMENT '用户1 ID',
+    user2_id BIGINT NOT NULL COMMENT '用户2 ID',
+    item_id BIGINT COMMENT '关联商品ID（可选）',
+    last_message_id BIGINT COMMENT '最后一条消息ID',
+    last_message_content TEXT COMMENT '最后消息内容',
+    last_message_at TIMESTAMP NULL COMMENT '最后消息时间',
+    user1_unread_count INT DEFAULT 0 COMMENT '用户1未读消息数',
+    user2_unread_count INT DEFAULT 0 COMMENT '用户2未读消息数',
+    user1_deleted BOOLEAN DEFAULT FALSE COMMENT '用户1是否删除',
+    user2_deleted BOOLEAN DEFAULT FALSE COMMENT '用户2是否删除',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_users (user1_id, user2_id),
+    INDEX idx_user1 (user1_id, user1_deleted),
+    INDEX idx_user2 (user2_id, user2_deleted),
+    INDEX idx_item (item_id),
+    INDEX idx_updated (updated_at),
+    FOREIGN KEY (user1_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (user2_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='会话表';
+
 -- 收藏表
 CREATE TABLE IF NOT EXISTS favorites (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -267,6 +309,22 @@ CREATE TABLE IF NOT EXISTS favorites (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收藏表';
+
+-- 购物车表
+CREATE TABLE IF NOT EXISTS cart_items (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    item_id BIGINT NOT NULL COMMENT '商品ID',
+    quantity INT NOT NULL DEFAULT 1 COMMENT '数量',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_item (user_id, item_id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_item_id (item_id),
+    INDEX idx_created (created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='购物车表';
 
 -- 举报表
 CREATE TABLE IF NOT EXISTS reports (
@@ -315,29 +373,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_record (table_name, record_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='审计日志表';
-
--- 同步冲突表
-CREATE TABLE IF NOT EXISTS conflict_records (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    table_name VARCHAR(100) NOT NULL,
-    record_id BIGINT NOT NULL,
-    source_db VARCHAR(50) NOT NULL COMMENT '源数据库',
-    target_db VARCHAR(50) NOT NULL COMMENT '目标数据库',
-    conflict_type ENUM('version_mismatch', 'data_inconsistency', 'constraint_violation') NOT NULL,
-    local_data JSON,
-    remote_data JSON,
-    resolved BOOLEAN DEFAULT FALSE,
-    resolved_by BIGINT,
-    resolution_strategy VARCHAR(50) COMMENT '解决策略',
-    resolved_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_resolved (resolved),
-    INDEX idx_table_record (table_name, record_id),
-    INDEX idx_created (created_at),
-    INDEX idx_resolved_by (resolved_by),
-    FOREIGN KEY (resolved_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='同步冲突表';
 
 -- 系统配置表
 CREATE TABLE IF NOT EXISTS system_configs (
@@ -586,6 +621,12 @@ INSERT INTO system_configs (config_key, config_value, description, is_public) VA
 ('ban_credit_score', '30', '封号信用分阈值', FALSE)
 ON DUPLICATE KEY UPDATE config_value=VALUES(config_value);
 
+-- 插入门店网络初始数据
+INSERT IGNORE INTO stores (name, address, phone, image_url, description) VALUES
+('凤凰商城 中南大学店', '长沙市岳麓区麓山南路中南大学本部', '0731-88888888', '/demo-images/store1.jpg', '位于中南大学本部的旗舰店，提供全方位的二手交易撮合服务。'),
+('凤凰商城 湖南大学店', '长沙市岳麓区麓山南路湖南大学天马园区', '0731-88888889', '/demo-images/store2.jpg', '靠近湖大天马公寓，方便学生线下验货。'),
+('凤凰商城 岳麓街道店', '长沙市岳麓区岳麓街道119号', '0731-88888890', '/demo-images/store3.jpg', '社区加盟店，服务周边居民及学生。');
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================
@@ -777,16 +818,55 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE TABLE IF NOT EXISTS search_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    user_id BIGINT,
-    keyword VARCHAR(200) NOT NULL,
-    result_count INT DEFAULT 0,
-    clicked_item_id BIGINT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    keyword VARCHAR(200) NOT NULL COMMENT '搜索关键词',
+    result_count INT DEFAULT 0 COMMENT '搜索结果数量',
+    search_type ENUM('keyword', 'category', 'advanced') DEFAULT 'keyword' COMMENT '搜索类型',
+    filters JSON COMMENT '搜索过滤条件(JSON)',
+    clicked_item_id BIGINT COMMENT '点击的商品ID',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_user (user_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user_id (user_id),
+    INDEX idx_keyword (keyword),
+    INDEX idx_created (created_at),
+    INDEX idx_user_created (user_id, created_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (clicked_item_id) REFERENCES items(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搜索历史表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='搜索历史表';
+
+-- 热门搜索表
+CREATE TABLE IF NOT EXISTS search_trending (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    keyword VARCHAR(200) NOT NULL COMMENT '搜索关键词',
+    search_count INT DEFAULT 1 COMMENT '搜索次数',
+    last_searched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '最后搜索时间',
+    date DATE NOT NULL COMMENT '统计日期',
+    UNIQUE KEY unique_keyword_date (keyword, date),
+    INDEX idx_search_count (search_count DESC),
+    INDEX idx_date (date),
+    INDEX idx_last_searched (last_searched_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='热门搜索统计表';
+
+-- 刷新Token表
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL COMMENT '用户ID',
+    token VARCHAR(500) NOT NULL COMMENT '刷新令牌',
+    access_token VARCHAR(500) COMMENT '关联的访问令牌',
+    expires_at TIMESTAMP NOT NULL COMMENT '过期时间',
+    device_info VARCHAR(500) COMMENT '设备信息',
+    ip_address VARCHAR(50) COMMENT 'IP地址',
+    user_agent TEXT COMMENT '用户代理',
+    is_revoked BOOLEAN DEFAULT FALSE COMMENT '是否已撤销',
+    revoked_at TIMESTAMP NULL COMMENT '撤销时间',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_token (token),
+    INDEX idx_user_id (user_id),
+    INDEX idx_expires (expires_at),
+    INDEX idx_revoked (is_revoked),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='刷新令牌表';
 
 CREATE TABLE IF NOT EXISTS credit_score_history (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -808,28 +888,11 @@ CREATE TABLE IF NOT EXISTS credit_score_history (
     FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分变更记录表';
 
-CREATE TABLE IF NOT EXISTS sync_tasks (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    task_type ENUM('full_sync', 'incremental_sync', 'conflict_resolution') NOT NULL,
-    source_db VARCHAR(50) NOT NULL,
-    target_db VARCHAR(50) NOT NULL,
-    table_name VARCHAR(100),
-    status ENUM('pending', 'running', 'completed', 'failed') DEFAULT 'pending',
-    total_records INT DEFAULT 0,
-    synced_records INT DEFAULT 0,
-    failed_records INT DEFAULT 0,
-    error_message TEXT,
-    started_at TIMESTAMP NULL,
-    completed_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='数据库同步任务表';
-
+-- 性能监控表
 CREATE TABLE IF NOT EXISTS performance_metrics (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    metric_type ENUM('query_time', 'connection_pool', 'sync_latency', 'error_rate') NOT NULL,
-    db_name VARCHAR(50) NOT NULL,
+    metric_type ENUM('query_time', 'connection_pool', 'error_rate') NOT NULL,
+    db_name VARCHAR(50) NOT NULL DEFAULT 'mysql',
     metric_value DECIMAL(10, 2) NOT NULL,
     threshold_value DECIMAL(10, 2),
     is_alert BOOLEAN DEFAULT FALSE,
@@ -839,70 +902,18 @@ CREATE TABLE IF NOT EXISTS performance_metrics (
     INDEX idx_db (db_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='性能监控表';
 
--- ============================================
--- Sync相关表
--- ============================================
-
--- sync_configs table
-CREATE TABLE IF NOT EXISTS sync_configs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    source VARCHAR(64) NOT NULL,
-    target VARCHAR(64) NOT NULL,
-    mode VARCHAR(32) NOT NULL DEFAULT 'realtime',
-    interval_seconds INT NOT NULL DEFAULT 300,
-    enabled BOOLEAN NOT NULL DEFAULT 1,
-    last_run_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    sync_version INT DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- sync_logs table
-CREATE TABLE IF NOT EXISTS sync_logs (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    config_id BIGINT NOT NULL,
-    status VARCHAR(32) NOT NULL,
-    started_at TIMESTAMP NOT NULL,
-    completed_at TIMESTAMP NULL,
-    stats JSON NOT NULL DEFAULT ('{}'),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    sync_version INT DEFAULT 0,
-    FOREIGN KEY (config_id) REFERENCES sync_configs(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- conflict_records table
-CREATE TABLE IF NOT EXISTS conflict_records (
-    id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    table_name VARCHAR(128) NOT NULL,
-    record_id VARCHAR(64) NOT NULL,
-    source VARCHAR(64) NOT NULL,
-    target VARCHAR(64) NOT NULL,
-    status VARCHAR(32) NOT NULL DEFAULT 'pending',
-    resolved_by BIGINT NULL,
-    resolved_at TIMESTAMP NULL,
-    resolution_note VARCHAR(255) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    sync_version INT DEFAULT 0,
-    FOREIGN KEY (resolved_by) REFERENCES users(id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- daily_stats table
+-- 每日统计表
 CREATE TABLE IF NOT EXISTS daily_stats (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     stat_date DATE NOT NULL UNIQUE,
-    sync_success_count INT NOT NULL DEFAULT 0,
-    sync_conflict_count INT NOT NULL DEFAULT 0,
     ai_request_count INT NOT NULL DEFAULT 0,
     inventory_changes INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    sync_version INT DEFAULT 0
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 完成
-SELECT 'MySQL/MariaDB schema created successfully!' AS message;
+SELECT 'MySQL schema created successfully!' AS message;
 
 -- 插入默认角色
 INSERT IGNORE INTO roles (name, description) VALUES
@@ -936,109 +947,15 @@ INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES
 (4, 1), (4, 4), (4, 5), (4, 6), (4, 7), (4, 8);
 
 -- ============================================
--- 同步配置示例数据
--- ============================================
-INSERT IGNORE INTO sync_configs (id, source, target, mode, interval_seconds, enabled, last_run_at) VALUES
-(1, 'mysql', 'mariadb', 'realtime', 60, 1, NOW() - INTERVAL 5 MINUTE),
-(2, 'mysql', 'postgres', 'scheduled', 300, 1, NOW() - INTERVAL 10 MINUTE),
-(3, 'mysql', 'sqlite', 'manual', 3600, 1, NOW() - INTERVAL 1 HOUR),
-(4, 'mariadb', 'postgres', 'realtime', 60, 1, NOW() - INTERVAL 3 MINUTE),
-(5, 'postgres', 'sqlite', 'scheduled', 600, 0, NOW() - INTERVAL 2 HOUR);
-
--- ============================================
--- 同步日志示例数据 (最近30条)
--- ============================================
-INSERT IGNORE INTO sync_logs (config_id, status, started_at, completed_at, stats) VALUES
-(1, 'completed', NOW() - INTERVAL 5 MINUTE, NOW() - INTERVAL 4 MINUTE, '{"rows_synced": 156, "conflicts": 2}'),
-(2, 'completed', NOW() - INTERVAL 10 MINUTE, NOW() - INTERVAL 8 MINUTE, '{"rows_synced": 89, "conflicts": 0}'),
-(1, 'completed', NOW() - INTERVAL 15 MINUTE, NOW() - INTERVAL 14 MINUTE, '{"rows_synced": 203, "conflicts": 1}'),
-(3, 'completed', NOW() - INTERVAL 1 HOUR, NOW() - INTERVAL 58 MINUTE, '{"rows_synced": 45, "conflicts": 0}'),
-(4, 'completed', NOW() - INTERVAL 3 MINUTE, NOW() - INTERVAL 2 MINUTE, '{"rows_synced": 78, "conflicts": 3}'),
-(1, 'completed', NOW() - INTERVAL 20 MINUTE, NOW() - INTERVAL 19 MINUTE, '{"rows_synced": 112, "conflicts": 0}'),
-(2, 'failed', NOW() - INTERVAL 2 HOUR, NOW() - INTERVAL 115 MINUTE, '{"error": "Connection timeout"}'),
-(1, 'completed', NOW() - INTERVAL 25 MINUTE, NOW() - INTERVAL 24 MINUTE, '{"rows_synced": 67, "conflicts": 1}'),
-(4, 'completed', NOW() - INTERVAL 8 MINUTE, NOW() - INTERVAL 7 MINUTE, '{"rows_synced": 134, "conflicts": 0}'),
-(1, 'running', NOW() - INTERVAL 1 MINUTE, NULL, '{"rows_synced": 0, "conflicts": 0}');
-
--- ============================================
--- 每日统计示例数据 (最近14天)
--- ============================================
-INSERT IGNORE INTO daily_stats (stat_date, sync_success_count, sync_conflict_count, ai_request_count, inventory_changes) VALUES
-(CURDATE() - INTERVAL 13 DAY, 245, 12, 89, 156),
-(CURDATE() - INTERVAL 12 DAY, 312, 8, 102, 203),
-(CURDATE() - INTERVAL 11 DAY, 287, 15, 78, 189),
-(CURDATE() - INTERVAL 10 DAY, 198, 5, 134, 145),
-(CURDATE() - INTERVAL 9 DAY, 356, 18, 156, 267),
-(CURDATE() - INTERVAL 8 DAY, 423, 22, 189, 312),
-(CURDATE() - INTERVAL 7 DAY, 389, 9, 167, 278),
-(CURDATE() - INTERVAL 6 DAY, 267, 11, 145, 198),
-(CURDATE() - INTERVAL 5 DAY, 445, 14, 201, 334),
-(CURDATE() - INTERVAL 4 DAY, 378, 7, 178, 289),
-(CURDATE() - INTERVAL 3 DAY, 412, 16, 223, 356),
-(CURDATE() - INTERVAL 2 DAY, 356, 10, 198, 267),
-(CURDATE() - INTERVAL 1 DAY, 489, 13, 245, 398),
-(CURDATE(), 234, 6, 112, 178);
-
--- ============================================
--- 冲突记录示例数据
--- ============================================
-INSERT IGNORE INTO conflict_records (
-    table_name,
-    record_id,
-    source_db,
-    target_db,
-    conflict_type,
-    local_data,
-    remote_data,
-    resolved,
-    resolution_strategy,
-    resolved_by,
-    resolved_at
-) VALUES
-('users', 15, 'mysql', 'mariadb', 'data_inconsistency', '{"email": "user15@a.edu"}', '{"email": "user15@b.edu"}', 0, NULL, NULL, NULL),
-('items', 42, 'mysql', 'postgres', 'data_inconsistency', '{"price": 199.00}', '{"price": 189.00}', 0, NULL, NULL, NULL),
-('items', 78, 'mariadb', 'postgres', 'version_mismatch', '{"status": "active"}', '{"status": "sold"}', 1, 'manual_review', 1, NOW() - INTERVAL 1 HOUR),
-('transactions', 123, 'mysql', 'mariadb', 'constraint_violation', '{"status": "completed"}', '{"status": "pending"}', 0, NULL, NULL, NULL),
-('users', 88, 'postgres', 'sqlite', 'data_inconsistency', '{"credit_score": 85}', '{"credit_score": 90}', 1, 'auto_merge', 1, NOW() - INTERVAL 30 MINUTE);
-
--- ============================================
--- 管理员账户 (密码: admin123)
--- ============================================
-INSERT IGNORE INTO users (id, username, email, password_hash, is_active, is_verified, credit_score) VALUES
-(9999, 'admin', 'admin@campus.edu', '$5$rounds=535000$abcdefghijklmnop$Y8L5Y1N3PxM7Q2R4T6V8W0X2Z4A6C8E0G2I4K6M8O0', 1, 1, 100);
-
--- 为管理员分配admin角色
-INSERT IGNORE INTO user_roles (user_id, role_id) 
-SELECT 9999, id FROM roles WHERE name = 'admin';
-
--- ============================================
 -- 性能指标示例数据
 -- ============================================
 INSERT IGNORE INTO performance_metrics (db_name, metric_type, metric_value, recorded_at) VALUES
-('mysql', 'query_time_avg', 12.5, NOW() - INTERVAL 1 HOUR),
-('mysql', 'connections', 45, NOW() - INTERVAL 1 HOUR),
-('mysql', 'query_time_avg', 15.2, NOW() - INTERVAL 30 MINUTE),
-('mysql', 'connections', 52, NOW() - INTERVAL 30 MINUTE),
-('mysql', 'query_time_avg', 11.8, NOW()),
-('mysql', 'connections', 48, NOW()),
-('mariadb', 'query_time_avg', 10.3, NOW() - INTERVAL 1 HOUR),
-('mariadb', 'connections', 38, NOW() - INTERVAL 1 HOUR),
-('mariadb', 'query_time_avg', 13.1, NOW() - INTERVAL 30 MINUTE),
-('mariadb', 'connections', 42, NOW() - INTERVAL 30 MINUTE),
-('mariadb', 'query_time_avg', 9.7, NOW()),
-('mariadb', 'connections', 40, NOW()),
-('postgres', 'query_time_avg', 8.9, NOW() - INTERVAL 1 HOUR),
-('postgres', 'connections', 32, NOW() - INTERVAL 1 HOUR),
-('postgres', 'query_time_avg', 11.2, NOW() - INTERVAL 30 MINUTE),
-('postgres', 'connections', 35, NOW() - INTERVAL 30 MINUTE),
-('postgres', 'query_time_avg', 7.5, NOW()),
-('postgres', 'connections', 30, NOW()),
-('sqlite', 'query_time_avg', 5.2, NOW() - INTERVAL 1 HOUR),
-('sqlite', 'connections', 1, NOW() - INTERVAL 1 HOUR),
-('sqlite', 'query_time_avg', 6.1, NOW() - INTERVAL 30 MINUTE),
-('sqlite', 'connections', 1, NOW() - INTERVAL 30 MINUTE),
-('sqlite', 'query_time_avg', 4.8, NOW()),
-('sqlite', 'connections', 1, NOW());
+('mysql', 'query_time', 12.5, NOW() - INTERVAL 1 HOUR),
+('mysql', 'connection_pool', 45, NOW() - INTERVAL 1 HOUR),
+('mysql', 'query_time', 15.2, NOW() - INTERVAL 30 MINUTE),
+('mysql', 'connection_pool', 52, NOW() - INTERVAL 30 MINUTE),
+('mysql', 'query_time', 11.8, NOW()),
+('mysql', 'connection_pool', 48, NOW());
 
 SET FOREIGN_KEY_CHECKS = 1;
 

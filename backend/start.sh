@@ -35,48 +35,10 @@ wait_for_service() {
 }
 
 wait_for_service mysql 3306 "MySQL"
-wait_for_service mariadb 3306 "MariaDB"
-wait_for_service postgres 5432 "PostgreSQL"
 wait_for_service redis 6379 "Redis"
 
 # 额外等待确保数据库初始化完成
 sleep 5
-
-# ========================================
-# 初始化 SQLite
-# ========================================
-SQLITE_DB="/app/data/campuswap.db"
-SQLITE_INIT_SCRIPT="/app/sql/init/sqlite_init.sql"
-
-echo "📊 检查 SQLite 数据库..."
-
-init_sqlite() {
-    if [ -f "$SQLITE_INIT_SCRIPT" ]; then
-        echo "🔧 执行 SQLite 初始化脚本..."
-        sqlite3 "$SQLITE_DB" < "$SQLITE_INIT_SCRIPT" 2>/dev/null || true
-        echo "✅ SQLite 初始化完成"
-    else
-        echo "⚠️ SQLite 初始化脚本不存在: $SQLITE_INIT_SCRIPT"
-    fi
-}
-
-if [ -f "$SQLITE_DB" ]; then
-    # 检查是否有表
-    TABLE_COUNT=$(sqlite3 "$SQLITE_DB" "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';" 2>/dev/null || echo "0")
-    
-    if [ "$TABLE_COUNT" -lt "10" ]; then
-        echo "⚠️ SQLite 表不完整 (当前: $TABLE_COUNT 张)，重新初始化..."
-        rm -f "$SQLITE_DB"
-        init_sqlite
-    else
-        # 检查是否有数据
-        USER_COUNT=$(sqlite3 "$SQLITE_DB" "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "0")
-        echo "✅ SQLite 已存在: $TABLE_COUNT 张表, $USER_COUNT 个用户"
-    fi
-else
-    echo "📁 SQLite 数据库不存在，创建并初始化..."
-    init_sqlite
-fi
 
 # ========================================
 # 验证数据库状态
@@ -89,7 +51,8 @@ python3 -c "
 from sqlalchemy import create_engine, text
 import os
 try:
-    engine = create_engine(os.getenv('MYSQL_DSN'))
+    dsn = os.getenv('MYSQL_DSN', 'mysql+pymysql://root:campuswap_root@mysql:3306/campuswap')
+    engine = create_engine(dsn)
     with engine.connect() as conn:
         count = conn.execute(text('SELECT COUNT(*) FROM users')).scalar()
         print(f'  MySQL: {count} 用户')
@@ -97,39 +60,11 @@ except Exception as e:
     print(f'  MySQL: 连接失败 - {e}')
 " 2>/dev/null || echo "  MySQL: 检查失败"
 
-# MariaDB
-python3 -c "
-from sqlalchemy import create_engine, text
-import os
-try:
-    engine = create_engine(os.getenv('MARIADB_DSN'))
-    with engine.connect() as conn:
-        count = conn.execute(text('SELECT COUNT(*) FROM users')).scalar()
-        print(f'  MariaDB: {count} 用户')
-except Exception as e:
-    print(f'  MariaDB: 连接失败 - {e}')
-" 2>/dev/null || echo "  MariaDB: 检查失败"
-
-# PostgreSQL
-python3 -c "
-from sqlalchemy import create_engine, text
-import os
-try:
-    engine = create_engine(os.getenv('POSTGRES_DSN'))
-    with engine.connect() as conn:
-        count = conn.execute(text('SELECT COUNT(*) FROM users')).scalar()
-        print(f'  PostgreSQL: {count} 用户')
-except Exception as e:
-    print(f'  PostgreSQL: 连接失败 - {e}')
-" 2>/dev/null || echo "  PostgreSQL: 检查失败"
-
-# SQLite
-if [ -f "$SQLITE_DB" ]; then
-    USER_COUNT=$(sqlite3 "$SQLITE_DB" "SELECT COUNT(*) FROM users;" 2>/dev/null || echo "0")
-    echo "  SQLite: $USER_COUNT 用户"
-else
-    echo "  SQLite: 数据库不存在"
-fi
+# ========================================
+# 启动应用
+# ========================================
+echo "🚀 启动 API Gateway..."
+exec uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8000 --reload
 
 echo ""
 echo "🚀 启动 API Gateway..."

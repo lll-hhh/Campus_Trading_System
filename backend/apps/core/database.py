@@ -39,35 +39,6 @@ class DatabaseManager:
                 echo=self._settings.debug,
                 future=True,
             ),
-            "mariadb": create_engine(
-                self._settings.mariadb_dsn,
-                pool_pre_ping=True,
-                pool_size=TransactionConfig.POOL_SIZE,
-                max_overflow=TransactionConfig.MAX_OVERFLOW,
-                pool_timeout=TransactionConfig.POOL_TIMEOUT,
-                pool_recycle=TransactionConfig.POOL_RECYCLE,
-                echo=self._settings.debug,
-                future=True,
-            ),
-            "postgres": create_engine(
-                self._settings.postgres_dsn,
-                pool_pre_ping=True,
-                pool_size=TransactionConfig.POOL_SIZE,
-                max_overflow=TransactionConfig.MAX_OVERFLOW,
-                pool_timeout=TransactionConfig.POOL_TIMEOUT,
-                pool_recycle=TransactionConfig.POOL_RECYCLE,
-                echo=self._settings.debug,
-                future=True,
-            ),
-            "sqlite": create_engine(
-                self._settings.sqlite_dsn,
-                pool_pre_ping=True,
-                # SQLite 特殊配置:单写入器,较小的连接池
-                pool_size=1,
-                max_overflow=0,
-                echo=self._settings.debug,
-                future=True,
-            ),
         }
         
         # 配置事务隔离级别和超时
@@ -80,10 +51,10 @@ class DatabaseManager:
             for name, engine in self._engines.items()
         }
         
-        # 注册同步监听器(仅 MySQL 作为主库)
-        register_sync_listeners(self._sessions["mysql"])
+        # 注册同步监听器 (如果需要，目前仅保留 MySQL)
+        # register_sync_listeners(self._sessions["mysql"])
 
-    def get_engine(self, name: str) -> Engine:
+    def get_engine(self, name: str = "mysql") -> Engine:
         """Return the engine for the given database name."""
 
         return self._engines[name]

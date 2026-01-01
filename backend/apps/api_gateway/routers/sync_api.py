@@ -141,7 +141,7 @@ class ConflictResolvePayload(BaseModel):
         default="manual", description="解决策略：source(采纳来源)、target(保留目标)、manual(标记为已解决)、custom(自定义数据)"
     )
     chosen_db: Optional[str] = Field(
-        None, description="选择的数据库：mysql、mariadb、postgres、sqlite"
+        None, description="选择的数据库：mysql"
     )
     custom_data: Optional[dict] = Field(
         None, description="自定义数据（当strategy=custom时使用）"
@@ -171,7 +171,7 @@ async def sync_write(
     """
     四数据库同步写入
     
-    自动将数据写入MySQL、PostgreSQL、MariaDB、SQLite四个数据库
+    自动将数据写入MySQL数据库
     包含版本控制和冲突检测
     """
     try:
@@ -518,40 +518,11 @@ async def get_database_status(
     )
     databases.append(mysql_status)
     
-    # MariaDB
-    mariadb_status = await check_database_health(
-        "MariaDB", 
-        settings.mariadb_dsn,
-        "mariadb",
-        "MariaDB 10.6"
-    )
-    databases.append(mariadb_status)
-    
-    # PostgreSQL
-    postgres_status = await check_database_health(
-        "PostgreSQL",
-        settings.postgres_dsn,
-        "postgres", 
-        "PostgreSQL 14"
-    )
-    databases.append(postgres_status)
-    
-    # SQLite - 直接检查文件
-    sqlite_path = "/app/data/campuswap.db"
-    import os
-    sqlite_status = {
-        "name": "sqlite",
-        "label": "SQLite",
-        "type": "SQLite 3",
-        "host": sqlite_path,
-        "status": "healthy" if os.path.exists(sqlite_path) else "error",
-        "sync_progress": 100,
-        "latency": 1,
-        "last_sync": datetime.utcnow()
+    return {
+        "status": "healthy" if all(db["status"] == "online" for db in databases) else "degraded",
+        "timestamp": datetime.now().isoformat(),
+        "databases": databases
     }
-    databases.append(sqlite_status)
-    
-    return {"databases": databases}
 
 
 async def check_database_health(name: str, dsn: str, db_type: str, version: str) -> dict:
@@ -567,10 +538,6 @@ async def check_database_health(name: str, dsn: str, db_type: str, version: str)
         with engine.connect() as conn:
             # 执行简单查询
             if db_type == "mysql":
-                conn.execute(text("SELECT 1"))
-            elif db_type == "postgres":
-                conn.execute(text("SELECT 1"))
-            elif db_type == "mariadb":
                 conn.execute(text("SELECT 1"))
             
             latency = int((time.time() - start_time) * 1000)

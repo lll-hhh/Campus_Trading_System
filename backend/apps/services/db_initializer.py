@@ -346,25 +346,23 @@ def _create_engines() -> Dict[str, Engine]:
     
     dsn_map = {
         'mysql': 'MYSQL_DSN',
-        'mariadb': 'MARIADB_DSN',
-        'postgres': 'POSTGRES_DSN',
-        'sqlite': 'SQLITE_DSN',
     }
     
     for db_name, env_var in dsn_map.items():
         dsn = os.getenv(env_var)
         if dsn:
             try:
-                # SQLite 需要确保目录存在
-                if db_name == 'sqlite' and dsn.startswith('sqlite:///'):
-                    db_path = dsn.replace('sqlite:///', '')
-                    if db_path.startswith('/'):
-                        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-                
-                engines[db_name] = create_engine(dsn, echo=False)
-                logger.info(f"✅ {db_name} 引擎创建成功")
+                engine = create_engine(
+                    dsn,
+                    pool_size=5,
+                    max_overflow=10,
+                    pool_timeout=30,
+                    pool_recycle=3600,
+                )
+                engines[db_name] = engine
+                logger.info(f"Created engine for {db_name}")
             except Exception as e:
-                logger.warning(f"⚠️ {db_name} 引擎创建失败: {e}")
+                logger.error(f"Failed to create engine for {db_name}: {e}")
     
     return engines
 

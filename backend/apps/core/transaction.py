@@ -30,12 +30,9 @@ class IsolationLevel(str, Enum):
 
 
 class TransactionConfig:
-    """Transaction configuration for different database types."""
+    """Transaction configuration for MySQL."""
 
     MYSQL_ISOLATION = IsolationLevel.REPEATABLE_READ
-    MARIADB_ISOLATION = IsolationLevel.REPEATABLE_READ
-    POSTGRES_ISOLATION = IsolationLevel.READ_COMMITTED
-    SQLITE_ISOLATION = IsolationLevel.SERIALIZABLE
 
     POOL_SIZE = 10
     MAX_OVERFLOW = 20
@@ -50,18 +47,12 @@ class TransactionConfig:
     RETRY_BACKOFF = 2.0
 
     @classmethod
-    def get_isolation_level(cls, db_name: str) -> IsolationLevel:
-        """Get isolation level for specific database."""
-        mapping = {
-            "mysql": cls.MYSQL_ISOLATION,
-            "mariadb": cls.MARIADB_ISOLATION,
-            "postgres": cls.POSTGRES_ISOLATION,
-            "sqlite": cls.SQLITE_ISOLATION,
-        }
-        return mapping.get(db_name, IsolationLevel.READ_COMMITTED)
+    def get_isolation_level(cls, db_name: str = "mysql") -> IsolationLevel:
+        """Get isolation level for MySQL."""
+        return cls.MYSQL_ISOLATION
 
 
-def configure_engine_isolation(engine: Engine, db_name: str) -> None:
+def configure_engine_isolation(engine: Engine, db_name: str = "mysql") -> None:
     """
     Configure engine with appropriate isolation level and timeouts.
     """
@@ -73,25 +64,9 @@ def configure_engine_isolation(engine: Engine, db_name: str) -> None:
         cursor = dbapi_conn.cursor()
         
         try:
-            # ✅ 根据驱动类型判断数据库
-            driver_name = str(type(dbapi_conn).__module__).lower()
-            
-            # MySQL/MariaDB (pymysql 驱动)
-            if 'pymysql' in driver_name or 'mysql' in driver_name:
-                cursor.execute(f"SET SESSION TRANSACTION ISOLATION LEVEL {isolation_level.value}")
-                cursor.execute(f"SET SESSION innodb_lock_wait_timeout = {TransactionConfig.LOCK_TIMEOUT}")
-            
-            # PostgreSQL (psycopg 驱动)
-            elif 'psycopg' in driver_name or 'pg' in driver_name:
-                cursor.execute(f"SET SESSION CHARACTERISTICS AS TRANSACTION ISOLATION LEVEL {isolation_level.value}")
-                cursor.execute(f"SET statement_timeout = '{TransactionConfig.TRANSACTION_TIMEOUT}s'")
-                cursor.execute(f"SET lock_timeout = '{TransactionConfig.LOCK_TIMEOUT}s'")
-            
-            # SQLite
-            elif 'sqlite' in driver_name:
-                cursor.execute("PRAGMA journal_mode = WAL")
-                cursor.execute("PRAGMA synchronous = NORMAL")
-                cursor.execute(f"PRAGMA busy_timeout = {TransactionConfig.LOCK_TIMEOUT * 1000}")
+            # MySQL (pymysql 驱动)
+            cursor.execute(f"SET SESSION TRANSACTION ISOLATION LEVEL {isolation_level.value}")
+            cursor.execute(f"SET SESSION innodb_lock_wait_timeout = {TransactionConfig.LOCK_TIMEOUT}")
             
             logger.debug(f"Configured {db_name} with isolation level: {isolation_level.value}")
             

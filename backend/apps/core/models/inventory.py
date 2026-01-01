@@ -20,6 +20,21 @@ if TYPE_CHECKING:
     from .users import User
 
 
+class Store(BaseModel):
+    """Franchise store information."""
+
+    __tablename__ = "stores"
+
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    address: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone: Mapped[Optional[str]] = mapped_column(String(20))
+    image_url: Mapped[Optional[str]] = mapped_column(String(500))
+    latitude: Mapped[Optional[float]] = mapped_column(Numeric(10, 8))
+    longitude: Mapped[Optional[float]] = mapped_column(Numeric(11, 8))
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class Category(BaseModel):
     """Product category."""
 
@@ -55,7 +70,7 @@ class Item(BaseModel):
     contact_info: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     tags: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
     
-    status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default="available", index=True)
+    status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default="pending", index=True)
     
     is_negotiable: Mapped[bool] = mapped_column(Boolean, default=False)
     is_shipped: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -242,9 +242,6 @@ class SystemSettingsService:
     def _default_database_configs(self) -> Dict[str, Dict[str, Any]]:
         env_map = {
             "mysql": self.settings.mysql_dsn,
-            "mariadb": self.settings.mariadb_dsn,
-            "postgres": self.settings.postgres_dsn,
-            "sqlite": self.settings.sqlite_dsn,
         }
         defaults: Dict[str, Dict[str, Any]] = {}
         for name, dsn in env_map.items():

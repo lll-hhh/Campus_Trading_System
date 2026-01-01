@@ -86,8 +86,8 @@ def create_transaction(payload: TransactionPayload) -> dict[str, Any]:  # âœ… ä¿
             "amount": payload.amount,
             "status": "pending",
             "item_status": "sold",
-            "synced_to": ["mysql", "mariadb", "postgres", "sqlite"],
-            "message": "Transaction created and item marked as sold across all databases",
+            "synced_to": ["mysql"],
+            "message": "Transaction created and item marked as sold",
         }
 
 

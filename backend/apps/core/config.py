@@ -15,10 +15,6 @@ class Settings(BaseSettings):
     debug: bool = Field(default=True)
 
     mysql_dsn: str = Field(..., alias="MYSQL_DSN")
-    mariadb_dsn: str = Field(..., alias="MARIADB_DSN")
-    postgres_dsn: str = Field(..., alias="POSTGRES_DSN")
-    sqlite_dsn: str = Field(..., alias="SQLITE_DSN")
-
     redis_url: str = Field(..., alias="REDIS_URL")
     jwt_secret_key: str = Field("campuswap-secret", alias="JWT_SECRET_KEY")
     jwt_algorithm: str = "HS256"

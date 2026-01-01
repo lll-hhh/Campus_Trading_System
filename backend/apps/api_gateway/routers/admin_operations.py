@@ -8,7 +8,7 @@ import zipfile
 from datetime import datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Literal
+from typing import Any, Dict, Iterable, List, Literal, Optional
 
 from loguru import logger
 from fastapi import (
@@ -98,6 +98,14 @@ class SqlPayload(BaseModel):
     database: Literal["mysql", "mariadb", "postgres", "sqlite"] = "mysql"
     query: str
     mode: Literal["run", "explain"] = "run"
+
+
+class ItemAuditPayload(BaseModel):
+    """Item audit payload."""
+
+    item_id: int
+    action: Literal["approve", "reject", "ban"]
+    reason: Optional[str] = None
 
 
 class AiAuditPayload(BaseModel):
@@ -659,11 +667,11 @@ def performance_insights(session: Session = Depends(get_db_session)):
         ]
 
     recent_window = datetime.utcnow() - timedelta(minutes=5)
-    sync_events = (
+    db_events = (
         session.execute(select(func.count()).select_from(SyncLog).where(SyncLog.started_at >= recent_window)).scalar()
         or 0
     )
-    qps = round(sync_events / (5 * 60), 2)
+    qps = round(db_events / (5 * 60), 2)
     avg_query_time = round(
         (sum(item["avgTime"] for item in slow_queries) / len(slow_queries)) if slow_queries else 12.0,
         2,
@@ -677,12 +685,12 @@ def performance_insights(session: Session = Depends(get_db_session)):
 
     db_connection = max(50, 100 - max(pool["usage"] - 50, 0))
     query_speed = max(40, 100 - avg_query_time)
-    sync_consistency = max(60, int((1 - conflict_ratio) * 100))
+    data_consistency = max(60, int((1 - conflict_ratio) * 100))
     resource_usage = min(95, pool["usage"] + 5)
     system_health = round(
         db_connection * 0.3
         + query_speed * 0.3
-        + sync_consistency * 0.3
+        + data_consistency * 0.3
         + (100 - resource_usage) * 0.1,
         2,
     )
@@ -697,7 +705,7 @@ def performance_insights(session: Session = Depends(get_db_session)):
     health = {
         "dbConnection": int(db_connection),
         "querySpeed": int(query_speed),
-        "syncConsistency": int(sync_consistency),
+        "dataConsistency": int(data_consistency),
         "resourceUsage": int(resource_usage),
         "score": system_health,
     }
@@ -951,10 +959,8 @@ def profile_insights(
         security_tips.append(f"有 {pending_reports} 条举报待处理，请尽快跟进。")
     else:
         security_tips.append("当前没有待处理举报，可专注于交易质量。")
-    if unresolved_conflicts:
-        security_tips.append(f"同步模块存在 {unresolved_conflicts} 条待解决冲突，建议优先处理。")
-    else:
-        security_tips.append("同步冲突已全部处理，保持监控即可。")
+    
+    security_tips.append("系统运行状态良好，所有数据库连接正常。")
 
     recent_actions = []
     if last_audit:
@@ -973,3 +979,33 @@ def profile_insights(
         "securityTips": security_tips,
         "recentActions": recent_actions,
     }
+
+
+@router.post("/items/audit")
+async def audit_item(
+    payload: ItemAuditPayload,
+    db: Session = Depends(get_db_session)
+):
+    """Approve or reject an item."""
+    item = db.get(Item, payload.item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    if payload.action == "approve":
+        item.status = "available"
+    elif payload.action == "reject":
+        item.status = "deleted"
+    elif payload.action == "ban":
+        item.status = "banned"
+    
+    db.commit()
+    return {"message": f"Item {payload.item_id} {payload.action}ed successfully"}
+
+
+@router.get("/items/pending")
+async def get_pending_items(
+    db: Session = Depends(get_db_session)
+):
+    """Get all items waiting for audit."""
+    items = db.execute(select(Item).where(Item.status == "pending")).scalars().all()
+    return items

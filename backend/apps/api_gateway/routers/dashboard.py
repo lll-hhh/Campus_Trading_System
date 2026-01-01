@@ -62,46 +62,45 @@ def get_dashboard_stats(session: Session = Depends(get_db_session)) -> Dict[str,
         )
     ).scalar() or 0
     
-    # 同步统计（今日）
-    today_sync_count = session.execute(text("""
+    # 交易统计（今日）
+    today_trade_count = session.execute(text("""
         SELECT COUNT(*) 
-        FROM sync_logs 
+        FROM transactions 
         WHERE created_at >= :today_start
         AND status = 'completed'
     """), {"today_start": today_start}).scalar() or 0
     
-    # 冲突数量（最近7天未解决的）
-    conflict_count = session.execute(text("""
+    # 咨询数量（今日）
+    today_inquiry_count = session.execute(text("""
         SELECT COUNT(*) 
-        FROM conflict_records 
-        WHERE created_at >= :seven_days_ago
-        AND resolved = 0
-    """), {"seven_days_ago": seven_days_ago}).scalar() or 0
+        FROM messages 
+        WHERE created_at >= :today_start
+    """), {"today_start": today_start}).scalar() or 0
     
     # 趋势计算（简化版：与上周对比）
     fourteen_days_ago = now - timedelta(days=14)
     
-    # 上周同步数
-    last_week_sync = session.execute(text("""
+    # 上周交易数
+    last_week_trades = session.execute(text("""
         SELECT COUNT(*) 
-        FROM sync_logs 
+        FROM transactions 
         WHERE created_at >= :fourteen_days_ago 
         AND created_at < :seven_days_ago
         AND status = 'completed'
     """), {"fourteen_days_ago": fourteen_days_ago, "seven_days_ago": seven_days_ago}).scalar() or 1
     
-    sync_trend = ((today_sync_count - last_week_sync) / max(1, last_week_sync)) * 100
+    trade_trend = ((today_trade_count - last_week_trades) / max(1, last_week_trades)) * 100
     
     return {
         # 前端需要的关键指标
-        "today_sync_count": today_sync_count,
-        "conflict_count": conflict_count,
+        "today_trade_count": today_trade_count,
+        "today_inquiry_count": today_inquiry_count,
         "active_users": active_users,
         "total_revenue": float(recent_revenue),
         
         # 趋势数据
-        "sync_trend": round(sync_trend, 1),
-        "conflict_trend": 0,  # 可以后续计算
+        "trade_trend": round(trade_trend, 1),
+        "inquiry_trend": 0,
         "user_trend": 0,
         "revenue_trend": 0,
         
@@ -134,8 +133,8 @@ def get_daily_stats(limit: int = 7, session: Session = Depends(get_db_session)) 
     return [
         {
             "date": stat.stat_date.isoformat(),
-            "sync_success": stat.sync_success_count,
-            "sync_conflicts": stat.sync_conflict_count,
+            "trade_count": stat.sync_success_count,
+            "inquiry_count": stat.sync_conflict_count,
             "ai_requests": stat.ai_request_count,
             "inventory_changes": stat.inventory_changes,
         }
@@ -172,9 +171,9 @@ def get_latest_inventory(limit: int = 8, session: Session = Depends(get_db_sessi
     return payload
 
 
-@router.get("/sync-logs")
-def get_sync_logs(limit: int = 10, session: Session = Depends(get_db_session)) -> List[Dict[str, Any]]:
-    """Return recent sync logs for activity timeline."""
+@router.get("/system-logs")
+def get_system_logs(limit: int = 10, session: Session = Depends(get_db_session)) -> List[Dict[str, Any]]:
+    """Return recent system logs for activity timeline."""
 
     logs = (
         session.execute(select(SyncLog).order_by(SyncLog.started_at.desc()).limit(limit))
