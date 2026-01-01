@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">类图 - 客户管理模块 (Customer Management)</text>
+  
+  <!-- Customer Class -->
+  <rect x="200" y="100" width="200" height="150" fill="#fff" stroke="#fd7e14" stroke-width="2"/>
+  <line x1="200" y1="130" x2="400" y2="130" stroke="#fd7e14" stroke-width="2"/>
+  <text x="300" y="120" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Customer</text>
+  <text x="210" y="150" font-family="Arial" font-size="12">- id: Integer</text>
+  <text x="210" y="165" font-family="Arial" font-size="12">- name: String</text>
+  <text x="210" y="180" font-family="Arial" font-size="12">- level: String</text>
+  <text x="210" y="195" font-family="Arial" font-size="12">- discount_rate: Float</text>
+  <text x="210" y="210" font-family="Arial" font-size="12">- balance: Float</text>
+  <text x="210" y="225" font-family="Arial" font-size="12">- last_order_date: DateTime</text>
+</svg>

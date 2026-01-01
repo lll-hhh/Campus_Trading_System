@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">类图 - 仓库与库位 (Warehouse &amp; Location)</text>
+  
+  <!-- Warehouse Class -->
+  <rect x="50" y="100" width="180" height="100" fill="#fff" stroke="#6f42c1" stroke-width="2"/>
+  <line x1="50" y1="130" x2="230" y2="130" stroke="#6f42c1" stroke-width="2"/>
+  <text x="140" y="120" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Warehouse</text>
+  <text x="60" y="150" font-family="Arial" font-size="12">- id: Integer</text>
+  <text x="60" y="165" font-family="Arial" font-size="12">- name: String</text>
+  <text x="60" y="180" font-family="Arial" font-size="12">- address: String</text>
+  
+  <!-- Location Class -->
+  <rect x="350" y="100" width="180" height="100" fill="#fff" stroke="#6f42c1" stroke-width="2"/>
+  <line x1="350" y1="130" x2="530" y2="130" stroke="#6f42c1" stroke-width="2"/>
+  <text x="440" y="120" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Location</text>
+  <text x="360" y="150" font-family="Arial" font-size="12">- id: Integer</text>
+  <text x="360" y="165" font-family="Arial" font-size="12">- warehouse_id: Integer</text>
+  <text x="360" y="180" font-family="Arial" font-size="12">- code: String</text>
+  
+  <!-- Relationship -->
+  <line x1="230" y1="150" x2="350" y2="150" stroke="#333" stroke-width="1"/>
+  <text x="290" y="145" font-family="Arial" font-size="12" text-anchor="middle">1..*</text>
+</svg>

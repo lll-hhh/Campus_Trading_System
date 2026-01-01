@@ -115,7 +115,7 @@ onMounted(() => {
 
       <n-empty v-if="!loading && searchHistory.length === 0" description="暂无搜索历史">
         <template #extra>
-          <n-button @click="router.push('/marketplace')">去搜索商品</n-button>
+          <n-button @click="router.push('/marketplace')">去搜索零件</n-button>
         </template>
       </n-empty>
 

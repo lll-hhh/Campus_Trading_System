@@ -8,7 +8,7 @@
       <div class="flex gap-2">
         <button class="text-sm text-slate-500" type="button" @click="handleReset">重置</button>
         <button
-          class="rounded bg-indigo-600 px-4 py-1 text-sm text-white"
+          class="rounded bg-primary px-4 py-1 text-sm text-white"
           type="button"
           :disabled="loading"
           @click="handleSearch"

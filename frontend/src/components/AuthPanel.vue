@@ -36,7 +36,7 @@
       </label>
       <button
         type="submit"
-        class="w-full rounded bg-indigo-600 py-2 text-white"
+        class="w-full rounded bg-primary py-2 text-white"
         :disabled="loading"
       >
         {{ loading ? '登录中...' : '登录' }}
@@ -63,7 +63,7 @@ import { storeToRefs } from 'pinia';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
-const form = reactive({ username: 'admin', password: 'campuswap' });
+const form = reactive({ username: 'admin', password: 'regionwap' });
 
 const { loading, error, lastLoginAt } = storeToRefs(authStore);
 const displayName = computed(() => authStore.displayName);

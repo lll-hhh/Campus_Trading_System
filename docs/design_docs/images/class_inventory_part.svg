@@ -1,0 +1,42 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">库存管理模块类图 - 配件与分类 (Class Diagram: Inventory Part &amp; Category)</text>
+
+  <!-- Part Class -->
+  <rect x="50" y="80" width="280" height="260" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <path d="M 50 110 L 330 110" stroke="#ffa940" stroke-width="2"/>
+  <text x="190" y="102" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Part (配件实体)</text>
+  <text x="60" y="130" font-family="Arial" font-size="11">- id: Integer {PK}</text>
+  <text x="60" y="145" font-family="Arial" font-size="11">- part_code: String (零件编码)</text>
+  <text x="60" y="160" font-family="Arial" font-size="11">- name: String (名称)</text>
+  <text x="60" y="175" font-family="Arial" font-size="11">- brand: String (品牌)</text>
+  <text x="60" y="190" font-family="Arial" font-size="11">- model: String (适用车型)</text>
+  <text x="60" y="205" font-family="Arial" font-size="11">- category_id: Integer {FK}</text>
+  <text x="60" y="220" font-family="Arial" font-size="11">- base_price: Float</text>
+  <text x="60" y="235" font-family="Arial" font-size="11">- unit: String (单位)</text>
+  <path d="M 50 250 L 330 250" stroke="#ffa940" stroke-width="1"/>
+  <text x="60" y="270" font-family="Arial" font-size="11">+ get_stock_level(): int</text>
+  <text x="60" y="285" font-family="Arial" font-size="11">+ update_price(new_price): void</text>
+
+  <!-- Category Class -->
+  <rect x="500" y="80" width="250" height="180" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 500 110 L 750 110" stroke="#52c41a" stroke-width="2"/>
+  <text x="625" y="102" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Category (分类实体)</text>
+  <text x="510" y="130" font-family="Arial" font-size="11">- id: Integer {PK}</text>
+  <text x="510" y="145" font-family="Arial" font-size="11">- name: String (分类名)</text>
+  <text x="510" y="160" font-family="Arial" font-size="11">- code: String (分类编码)</text>
+  <text x="510" y="175" font-family="Arial" font-size="11">- parent_id: Integer {FK}</text>
+  <path d="M 500 190 L 750 190" stroke="#52c41a" stroke-width="1"/>
+  <text x="510" y="210" font-family="Arial" font-size="11">+ get_subcategories(): List</text>
+  <text x="510" y="225" font-family="Arial" font-size="11">+ get_all_parts(): List</text>
+
+  <!-- Relationships -->
+  <line x1="330" y1="150" x2="500" y2="150" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="350" y="145" font-family="Arial" font-size="12">N</text>
+  <text x="480" y="145" font-family="Arial" font-size="12">1</text>
+  
+  <!-- Self-association for Category -->
+  <path d="M 750 130 L 800 130 L 800 200 L 750 200" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="810" y="165" font-family="Arial" font-size="11">Parent-Child</text>
+
+</svg>

@@ -4,7 +4,7 @@
       v-model:value="searchValue"
       :options="autocompleteOptions"
       :loading="loading"
-      placeholder="搜索商品、分类..."
+      placeholder="搜索零件、分类..."
       size="large"
       clearable
       @select="handleSelect"

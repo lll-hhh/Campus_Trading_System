@@ -1,13 +1,13 @@
 <template>
-  <div v-if="isVisible" class="ai-chatbox-container">
+  <div v-if="isVisible" class="ai-chatbox-container" :class="{ 'minimized': isMinimized }">
     <div class="chat-header">
       <div class="header-left">
-        <span class="ai-icon">🤖</span>
-        <span class="header-title">AI 助手</span>
+        <span class="ai-icon">🛠️</span>
+        <span class="header-title">凤凰汽配 AI 助手</span>
       </div>
       <div class="header-actions">
         <button @click="toggleMinimize" class="action-btn">
-          {{ isMinimized ? '📖' : '➖' }}
+          {{ isMinimized ? '展开' : '最小化' }}
         </button>
         <button @click="closeChat" class="action-btn close-btn">✕</button>
       </div>
@@ -16,12 +16,13 @@
     <div v-show="!isMinimized" class="chat-body">
       <div class="messages-container" ref="messagesContainer">
         <div v-if="messages.length === 0" class="welcome-message">
-          <p>👋 您好!我是AI助手,可以帮您:</p>
+          <p class="welcome-title">🔧 凤凰汽配技术支持</p>
+          <p class="welcome-subtitle">您好！我是您的智能汽配专家，随时为您提供技术支持：</p>
           <ul>
-            <li>🔍 分析产品详情和价格</li>
-            <li>⚖️ 解决交易冲突</li>
-            <li>💡 提供购物建议</li>
-            <li>❓ 回答各种问题</li>
+            <li>📊 <strong>零件分析</strong>：深度解析规格与适配性</li>
+            <li>🛡️ <strong>交易保障</strong>：协助处理订单与冲突</li>
+            <li>📈 <strong>市场建议</strong>：提供零件采购与库存建议</li>
+            <li>💬 <strong>即时问答</strong>：解答任何关于平台的问题</li>
           </ul>
         </div>
 
@@ -31,7 +32,7 @@
           :class="['message', msg.role === 'user' ? 'user-message' : 'ai-message']"
         >
           <div class="message-avatar">
-            {{ msg.role === 'user' ? '��' : '🤖' }}
+            {{ msg.role === 'user' ? '👤' : '🤖' }}
           </div>
           <div class="message-content">
             <div v-if="msg.role === 'assistant'" v-html="formatMessage(msg.content)"></div>
@@ -53,10 +54,10 @@
 
       <div class="quick-actions">
         <button @click="analyzeCurrentItem" class="quick-btn" :disabled="!currentItemId">
-          🔍 分析当前商品
+          🔍 零件深度分析
         </button>
         <button @click="showConflictHelp" class="quick-btn">
-          ⚖️ 冲突解决帮助
+          🛡️ 售后/冲突帮助
         </button>
       </div>
 
@@ -64,19 +65,20 @@
         <n-input
           v-model:value="userInput"
           type="textarea"
-          placeholder="输入您的问题..."
+          placeholder="描述您的问题或零件需求..."
           :autosize="{ minRows: 1, maxRows: 4 }"
           @keydown.enter.exact.prevent="sendMessage"
         />
         <button @click="sendMessage" :disabled="!userInput.trim() || isLoading" class="send-btn">
-          {{ isLoading ? '⏳' : '➤' }}
+          {{ isLoading ? '...' : '发送' }}
         </button>
       </div>
     </div>
   </div>
 
   <button v-else @click="openChat" class="chat-toggle-btn">
-    💬
+    <span class="toggle-icon">🛠️</span>
+    <span class="toggle-text">AI 助手</span>
   </button>
 </template>
 
@@ -134,7 +136,7 @@ const sendMessage = async () => {
   await scrollToBottom()
 
   try {
-    const token = localStorage.getItem('campuswap_token')
+    const token = localStorage.getItem('regionwap_token')
     const response = await axios.post(
       '/api/v1/ai/chat',
       {
@@ -178,13 +180,13 @@ const analyzeCurrentItem = async () => {
   isLoading.value = true
   messages.value.push({
     role: 'user',
-    content: '请帮我分析一下当前这个商品'
+    content: '请帮我分析一下当前这个零件'
   })
 
   await scrollToBottom()
 
   try {
-    const token = localStorage.getItem('campuswap_token')
+    const token = localStorage.getItem('regionwap_token')
     const response = await axios.post(
       '/api/v1/ai/quick-actions/analyze-item',
       { item_id: parseInt(currentItemId.value) },
@@ -202,10 +204,10 @@ const analyzeCurrentItem = async () => {
       })
     }
   } catch (error) {
-    console.error('商品分析错误:', error)
+    console.error('零件分析错误:', error)
     messages.value.push({
       role: 'assistant',
-      content: '抱歉,无法分析该商品,请稍后再试。'
+      content: '抱歉,无法分析该零件,请稍后再试。'
     })
   } finally {
     isLoading.value = false
@@ -224,12 +226,12 @@ const showConflictHelp = () => {
     content: `**交易冲突解决指南:**
 
 1. **沟通优先** - 先与对方友好沟通,了解问题所在
-2. **保留证据** - 截图聊天记录、商品照片等
+2. **保留证据** - 截图聊天记录、零件照片等
 3. **平台介入** - 如无法协商,可申请平台客服介入
 4. **合理退款** - 根据实际情况协商退款方案
 
 **常见冲突类型:**
-- 商品描述不符
+- 零件描述不符
 - 质量问题
 - 物流延误
 - 沟通误解
@@ -271,51 +273,43 @@ watch(isVisible, (newVal) => {
   bottom: 80px;
   right: 20px;
   width: 380px;
-  max-height: 600px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  background: #1a1a1a;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  overflow: hidden;
+  border: 1px solid rgba(163, 230, 53, 0.2);
+  font-family: 'Inter', sans-serif;
 }
 
 .chat-header {
+  padding: 16px 20px;
+  background: #242424;
+  color: white;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-radius: 12px 12px 0 0;
-  cursor: move;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .ai-icon {
-  font-size: 24px;
+  font-size: 20px;
 }
 
 .header-title {
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #a3e635;
 }
 
 .header-actions {
@@ -324,71 +318,78 @@ watch(isVisible, (newVal) => {
 }
 
 .action-btn {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
   border: none;
-  color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  color: #888;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
 }
 
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
 }
 
 .close-btn:hover {
-  background: rgba(239, 68, 68, 0.8);
+  background: #ef4444;
+  color: white;
 }
 
 .chat-body {
   display: flex;
   flex-direction: column;
   height: 500px;
+  background: #1a1a1a;
 }
 
 .messages-container {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.messages-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.messages-container::-webkit-scrollbar-thumb {
-  background: #cbd5e0;
-  border-radius: 3px;
+  gap: 16px;
 }
 
 .welcome-message {
   text-align: center;
   padding: 20px;
-  color: #718096;
+  color: #888;
 }
 
-.welcome-message p {
-  font-size: 16px;
-  margin-bottom: 16px;
+.welcome-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #a3e635;
+  margin-bottom: 8px;
+}
+
+.welcome-subtitle {
+  font-size: 13px;
+  margin-bottom: 20px;
+  line-height: 1.6;
 }
 
 .welcome-message ul {
   text-align: left;
   list-style: none;
   padding: 0;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .welcome-message li {
-  padding: 8px 0;
-  font-size: 14px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: #ccc;
+}
+
+.welcome-message li strong {
+  color: #a3e635;
 }
 
 .message {
@@ -397,151 +398,149 @@ watch(isVisible, (newVal) => {
   animation: fadeIn 0.3s ease-out;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .user-message {
   flex-direction: row-reverse;
 }
 
 .message-avatar {
-  font-size: 32px;
-  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  background: #242424;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .message-content {
-  max-width: 70%;
+  max-width: 80%;
   padding: 12px 16px;
   border-radius: 12px;
-  line-height: 1.5;
+  line-height: 1.6;
   font-size: 14px;
 }
 
 .user-message .message-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #a3e635;
+  color: #0a0a0a;
+  font-weight: 700;
 }
 
 .ai-message .message-content {
-  background: #f7fafc;
-  color: #2d3748;
-  border: 1px solid #e2e8f0;
-}
-
-.typing-indicator {
-  display: flex;
-  gap: 4px;
-  padding: 8px 0;
-}
-
-.typing-indicator span {
-  width: 8px;
-  height: 8px;
-  background: #a0aec0;
-  border-radius: 50%;
-  animation: typing 1.4s infinite;
-}
-
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing {
-  0%, 60%, 100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-10px);
-  }
+  background: #242424;
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .quick-actions {
   display: flex;
-  gap: 8px;
-  padding: 12px 16px;
-  border-top: 1px solid #e2e8f0;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #242424;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .quick-btn {
   flex: 1;
-  padding: 8px 12px;
-  background: white;
-  border: 1px solid #cbd5e0;
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid rgba(163, 230, 53, 0.3);
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #a3e635;
   cursor: pointer;
   transition: all 0.2s;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .quick-btn:hover:not(:disabled) {
-  background: #f7fafc;
-  border-color: #667eea;
-  color: #667eea;
-}
-
-.quick-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: #a3e635;
+  color: #0a0a0a;
 }
 
 .input-area {
   display: flex;
-  gap: 8px;
-  padding: 16px;
-  border-top: 1px solid #e2e8f0;
-  background: #fafafa;
+  gap: 12px;
+  padding: 20px;
+  background: #242424;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .send-btn {
-  padding: 0 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  padding: 0 20px;
+  background: #a3e635;
+  color: #0a0a0a;
   border: none;
   border-radius: 8px;
-  font-size: 18px;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.2s;
 }
 
 .send-btn:hover:not(:disabled) {
-  transform: scale(1.05);
-}
-
-.send-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: #bef264;
+  transform: translateY(-2px);
 }
 
 .chat-toggle-btn {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  font-size: 28px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 24px;
+  background: #1a1a1a;
+  color: #a3e635;
+  border: 2px solid #a3e635;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   cursor: pointer;
-  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   z-index: 999;
-  transition: transform 0.2s;
+  transition: all 0.3s;
 }
 
 .chat-toggle-btn:hover {
-  transform: scale(1.1);
+  background: #a3e635;
+  color: #0a0a0a;
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(163, 230, 53, 0.4);
+}
+
+.toggle-icon {
+  font-size: 20px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: #a3e635;
+  border-radius: 50%;
+  animation: typing 1s infinite;
+}
+
+@keyframes typing {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
 }
 </style>

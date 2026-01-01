@@ -31,7 +31,7 @@ const initChart = () => {
   
   const option: echarts.EChartsOption = {
     title: {
-      text: '同步活动热力图',
+      text: '数据库活动热力图',
       left: 'center',
       textStyle: {
         fontSize: 16,
@@ -78,7 +78,7 @@ const initChart = () => {
     },
     series: [
       {
-        name: '同步活动',
+        name: '数据库活动',
         type: 'heatmap',
         data: heatmapData,
         label: {

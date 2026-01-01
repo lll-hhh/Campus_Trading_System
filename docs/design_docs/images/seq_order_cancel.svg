@@ -1,0 +1,54 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">业务流程时序图 - 销售订单取消 (Sequence Diagram: Order Cancel)</text>
+
+  <!-- Lifelines -->
+  <line x1="100" y1="80" x2="100" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="50" y="50" width="100" height="30" fill="#f0f0f0" stroke="#333"/>
+  <text x="100" y="70" font-family="Arial" font-size="12" text-anchor="middle">销售员</text>
+
+  <line x1="300" y1="80" x2="300" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="250" y="50" width="100" height="30" fill="#e6f7ff" stroke="#1890ff"/>
+  <text x="300" y="70" font-family="Arial" font-size="12" text-anchor="middle">交易服务</text>
+
+  <line x1="500" y1="80" x2="500" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="450" y="50" width="100" height="30" fill="#fff7e6" stroke="#ffa940"/>
+  <text x="500" y="70" font-family="Arial" font-size="12" text-anchor="middle">库存服务</text>
+
+  <line x1="700" y1="80" x2="700" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="650" y="50" width="100" height="30" fill="#fff1f0" stroke="#ff4d4f"/>
+  <text x="700" y="70" font-family="Arial" font-size="12" text-anchor="middle">数据库</text>
+
+  <line x1="900" y1="80" x2="900" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="850" y="50" width="100" height="30" fill="#f6ffed" stroke="#52c41a"/>
+  <text x="900" y="70" font-family="Arial" font-size="12" text-anchor="middle">消息队列</text>
+
+  <!-- Messages -->
+  <path d="M 100 120 L 300 120" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="200" y="115" font-family="Arial" font-size="11" text-anchor="middle">1. 请求取消订单</text>
+
+  <path d="M 300 160 L 700 160" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="500" y="155" font-family="Arial" font-size="11" text-anchor="middle">2. 更新订单状态为 CANCELLED</text>
+
+  <path d="M 300 200 L 500 200" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="195" font-family="Arial" font-size="11" text-anchor="middle">3. 调用库存释放接口</text>
+
+  <path d="M 500 240 L 700 240" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="600" y="235" font-family="Arial" font-size="11" text-anchor="middle">4. 增加库存数量</text>
+
+  <path d="M 500 280 L 700 280" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="600" y="275" font-family="Arial" font-size="11" text-anchor="middle">5. 写入库存释放日志</text>
+
+  <path d="M 300 320 L 900 320" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="600" y="315" font-family="Arial" font-size="11" text-anchor="middle">6. 发送订单取消通知</text>
+
+  <path d="M 300 360 L 100 360" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="200" y="355" font-family="Arial" font-size="11" text-anchor="middle">7. 响应取消成功</text>
+
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#333" />
+    </marker>
+  </defs>
+</svg>

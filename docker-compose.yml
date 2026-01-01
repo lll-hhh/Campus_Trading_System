@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   # ========================================
-  # MySQL
+  # MySQL (主数据库)
   # ========================================
   mysql:
     image: docker.m.daocloud.io/library/mysql:8.0
@@ -16,7 +14,6 @@ services:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      # ✅ 挂载初始化脚本目录
       - ./backend/sql/init/mysql:/docker-entrypoint-initdb.d:ro
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     healthcheck:
@@ -30,59 +27,7 @@ services:
     restart: unless-stopped
 
   # ========================================
-  # MariaDB
-  # ========================================
-  mariadb:
-    image: docker.m.daocloud.io/library/mariadb:10.6
-    container_name: campuswap-mariadb
-    environment:
-      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-campuswap_root}
-      MARIADB_DATABASE: ${MARIADB_DATABASE:-campuswap}
-    ports:
-      - "3307:3306"
-    volumes:
-      - mariadb_data:/var/lib/mysql
-      # ✅ 挂载初始化脚本目录
-      - ./backend/sql/init/mariadb:/docker-entrypoint-initdb.d:ro
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks:
-      - campuswap-network
-    restart: unless-stopped
-
-  # ========================================
-  # PostgreSQL
-  # ========================================
-  postgres:
-    image: docker.m.daocloud.io/library/postgres:14
-    container_name: campuswap-postgres
-    environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-campuswap_root}
-      POSTGRES_USER: ${POSTGRES_USER:-campuswap}
-      POSTGRES_DB: ${POSTGRES_DB:-campuswap}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      # ✅ 挂载初始化脚本目录
-      - ./backend/sql/init/postgres:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U campuswap -d campuswap"]
-      interval: 5s
-      timeout: 5s
-      retries: 30
-      start_period: 30s
-    networks:
-      - campuswap-network
-    restart: unless-stopped
-
-  # ========================================
-  # Redis
+  # Redis (缓存与消息队列)
   # ========================================
   redis:
     image: docker.m.daocloud.io/library/redis:7-alpine
@@ -110,9 +55,6 @@ services:
     container_name: campuswap-gateway
     environment:
       - MYSQL_DSN=mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
-      - MARIADB_DSN=mysql+pymysql://root:campuswap_root@mariadb:3306/campuswap
-      - POSTGRES_DSN=postgresql+psycopg://campuswap:campuswap_root@postgres:5432/campuswap
-      - SQLITE_DSN=sqlite:////app/data/campuswap.db
       - REDIS_URL=redis://redis:6379/0
       - GLM_API_KEY=${GLM_API_KEY:-}
       - GLM_MODEL=${GLM_MODEL:-glm-4-flash}
@@ -124,10 +66,6 @@ services:
       - gateway_data:/app/data
     depends_on:
       mysql:
-        condition: service_healthy
-      mariadb:
-        condition: service_healthy
-      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -162,7 +100,5 @@ networks:
 
 volumes:
   mysql_data:
-  mariadb_data:
-  postgres_data:
   redis_data:
   gateway_data:

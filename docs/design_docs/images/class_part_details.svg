@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">类图 - 配件详情扩展 (Part Details)</text>
+  
+  <!-- PartDetail Class -->
+  <rect x="200" y="100" width="200" height="150" fill="#fff" stroke="#17a2b8" stroke-width="2"/>
+  <line x1="200" y1="130" x2="400" y2="130" stroke="#17a2b8" stroke-width="2"/>
+  <text x="300" y="120" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">PartDetail</text>
+  <text x="210" y="150" font-family="Arial" font-size="12">- id: Integer</text>
+  <text x="210" y="165" font-family="Arial" font-size="12">- part_id: Integer</text>
+  <text x="210" y="180" font-family="Arial" font-size="12">- material: String</text>
+  <text x="210" y="195" font-family="Arial" font-size="12">- weight: Float</text>
+  <text x="210" y="210" font-family="Arial" font-size="12">- dimensions: String</text>
+  <text x="210" y="225" font-family="Arial" font-size="12">- warranty_period: Integer</text>
+</svg>

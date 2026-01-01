@@ -17,7 +17,7 @@
           v-for="page in visiblePages"
           :key="page"
           class="rounded px-3 py-1 text-sm"
-          :class="page === currentPage ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'"
+          :class="page === currentPage ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600'"
           @click="$emit('jump', page)"
         >
           {{ page }}

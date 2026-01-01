@@ -1,103 +1,92 @@
 <template>
-  <div class="orders min-h-screen bg-gray-50">
-    <div class="max-w-6xl mx-auto py-6 px-4">
-      <div class="bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold mb-6">📝 我的订单</h1>
-        
+  <div class="orders min-h-screen bg-slate-50 py-12">
+    <div class="max-w-6xl mx-auto px-4">
+      <div class="mb-10">
+        <h1 class="text-4xl font-black tracking-tighter text-dark uppercase">订单管理 <span class="text-primary">Orders</span></h1>
+        <p class="text-gray-400 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">Track your procurement and sales history</p>
+      </div>
+      
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <!-- 标签页 -->
         <n-spin :show="loading">
-          <n-tabs v-model:value="activeTab" type="segment" animated>
-            <n-tab-pane name="buying" tab="我买到的">
-              <n-timeline class="mt-6">
-                <n-timeline-item
+          <n-tabs v-model:value="activeTab" type="line" animated class="p-8">
+            <n-tab-pane name="buying" tab="采购订单 PROCUREMENT">
+              <div class="space-y-6 mt-6">
+                <div
                   v-for="order in buyingOrders"
                   :key="order.id"
-                  :type="order.status === 'completed' ? 'success' : 'info'"
+                  class="group bg-white rounded-xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-primary/5 transition-all flex flex-col md:flex-row gap-6 items-center"
                 >
-                  <template #header>
-                    <div class="flex items-center justify-between">
-                      <span class="font-bold">订单 #{{ order.id }}</span>
-                      <n-tag :type="getStatusType(order.status)" size="small">
+                  <div class="w-24 h-24 bg-gray-50 rounded-xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">
+                    {{ order.emoji }}
+                  </div>
+                  <div class="flex-1 text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start gap-3 mb-2">
+                      <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Order #{{ order.id }}</span>
+                      <n-tag :type="getStatusType(order.status)" size="small" round class="uppercase text-[10px] font-black tracking-widest">
                         {{ getStatusText(order.status) }}
                       </n-tag>
                     </div>
-                  </template>
-                  
-                  <n-card class="mt-2">
-                    <div class="flex gap-4">
-                      <div class="w-20 h-20 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center">
-                        <span class="text-3xl">{{ order.emoji }}</span>
-                      </div>
-                      <div class="flex-1">
-                        <h3 class="font-bold mb-1">{{ order.itemName }}</h3>
-                        <p class="text-gray-600 text-sm mb-2">卖家: {{ order.seller }}</p>
-                        <div class="flex items-center justify-between">
-                          <span class="text-red-500 font-bold">¥{{ order.price }}</span>
-                          <div class="flex gap-2">
-                            <n-button v-if="order.status === 'pending'" size="small" type="primary" @click="handleContactSeller(order)">
-                              联系卖家
-                            </n-button>
-                            <n-button v-if="order.status === 'completed'" size="small">
-                              评价
-                            </n-button>
-                          </div>
-                        </div>
-                      </div>
+                    <h3 class="text-xl font-black tracking-tighter text-dark mb-1">{{ order.itemName }}</h3>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">供应商: {{ order.seller }} | {{ formatDate(order.created_at) }}</p>
+                  </div>
+                  <div class="flex flex-col items-center md:items-end gap-2">
+                    <span class="text-2xl font-black tracking-tighter text-dark">¥{{ order.price }}</span>
+                    <div class="flex gap-2">
+                      <n-button v-if="order.status === 'pending'" size="small" strong round type="primary" class="uppercase text-[10px] tracking-widest font-black" @click="handleContactSeller(order)">
+                        联系商户
+                      </n-button>
+                      <n-button v-if="order.status === 'completed'" size="small" strong round class="uppercase text-[10px] tracking-widest font-black">
+                        评价零件
+                      </n-button>
                     </div>
-                  </n-card>
-                </n-timeline-item>
+                  </div>
+                </div>
                 
-                <n-empty v-if="buyingOrders.length === 0" description="暂无购买记录">
+                <n-empty v-if="buyingOrders.length === 0" description="暂无采购记录">
                   <template #extra>
-                    <n-button type="primary" @click="$router.push('/marketplace')">去逛逛</n-button>
+                    <n-button type="primary" strong round @click="$router.push('/marketplace')">前往零件市场</n-button>
                   </template>
                 </n-empty>
-              </n-timeline>
+              </div>
             </n-tab-pane>
             
-            <n-tab-pane name="selling" tab="我卖出的">
-              <n-timeline class="mt-6">
-                <n-timeline-item
+            <n-tab-pane name="selling" tab="销售订单 SALES">
+              <div class="space-y-6 mt-6">
+                <div
                   v-for="order in sellingOrders"
                   :key="order.id"
-                  :type="order.status === 'completed' ? 'success' : 'warning'"
+                  class="group bg-white rounded-xl border border-gray-100 p-6 hover:shadow-xl hover:shadow-primary/5 transition-all flex flex-col md:flex-row gap-6 items-center"
                 >
-                  <template #header>
-                    <div class="flex items-center justify-between">
-                      <span class="font-bold">订单 #{{ order.id }}</span>
-                      <n-tag :type="getStatusType(order.status)" size="small">
+                  <div class="w-24 h-24 bg-gray-50 rounded-xl flex items-center justify-center text-4xl group-hover:scale-110 transition-transform">
+                    {{ order.emoji }}
+                  </div>
+                  <div class="flex-1 text-center md:text-left">
+                    <div class="flex items-center justify-center md:justify-start gap-3 mb-2">
+                      <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">Order #{{ order.id }}</span>
+                      <n-tag :type="getStatusType(order.status)" size="small" round class="uppercase text-[10px] font-black tracking-widest">
                         {{ getStatusText(order.status) }}
                       </n-tag>
                     </div>
-                  </template>
-                  
-                  <n-card class="mt-2">
-                    <div class="flex gap-4">
-                      <div class="w-20 h-20 bg-gradient-to-br from-green-100 to-blue-100 rounded flex items-center justify-center">
-                        <span class="text-3xl">{{ order.emoji }}</span>
-                      </div>
-                      <div class="flex-1">
-                        <h3 class="font-bold mb-1">{{ order.itemName }}</h3>
-                        <p class="text-gray-600 text-sm mb-2">买家: {{ order.buyer }}</p>
-                        <div class="flex items-center justify-between">
-                          <span class="text-green-600 font-bold">+¥{{ order.price }}</span>
-                          <div class="flex gap-2">
-                            <n-button v-if="order.status === 'pending'" size="small" type="success" @click="handleConfirmTransaction(order)">
-                              确认交易
-                            </n-button>
-                          </div>
-                        </div>
-                      </div>
+                    <h3 class="text-xl font-black tracking-tighter text-dark mb-1">{{ order.itemName }}</h3>
+                    <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">采购商: {{ order.buyer }} | {{ formatDate(order.created_at) }}</p>
+                  </div>
+                  <div class="flex flex-col items-center md:items-end gap-2">
+                    <span class="text-2xl font-black tracking-tighter text-primary">+¥{{ order.price }}</span>
+                    <div class="flex gap-2">
+                      <n-button v-if="order.status === 'pending'" size="small" strong round type="primary" class="uppercase text-[10px] tracking-widest font-black" @click="handleConfirmTransaction(order)">
+                        确认发货
+                      </n-button>
                     </div>
-                  </n-card>
-                </n-timeline-item>
+                  </div>
+                </div>
                 
                 <n-empty v-if="sellingOrders.length === 0" description="暂无销售记录">
                   <template #extra>
-                    <n-button type="primary" @click="$router.push('/publish')">发布商品</n-button>
+                    <n-button type="primary" strong round @click="$router.push('/marketplace')">发布零件供应</n-button>
                   </template>
                 </n-empty>
-              </n-timeline>
+              </div>
             </n-tab-pane>
           </n-tabs>
         </n-spin>
@@ -141,7 +130,7 @@ const loadOrders = async () => {
     const buyingResponse = await http.get('/orders', { params: { role: 'buyer' } })
     buyingOrders.value = buyingResponse.data.orders.map((order: any) => ({
       id: order.id,
-      itemName: order.item_info?.item_title || '商品',
+      itemName: order.item_info?.item_title || '零件',
       seller: order.seller_name,
       seller_id: order.seller_id,
       item_id: order.item_id,
@@ -155,7 +144,7 @@ const loadOrders = async () => {
     const sellingResponse = await http.get('/orders', { params: { role: 'seller' } })
     sellingOrders.value = sellingResponse.data.orders.map((order: any) => ({
       id: order.id,
-      itemName: order.item_info?.item_title || '商品',
+      itemName: order.item_info?.item_title || '零件',
       buyer: order.buyer_name,
       buyer_id: order.buyer_id,
       item_id: order.item_id,
@@ -170,6 +159,15 @@ const loadOrders = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  })
 }
 
 const getStatusType = (status: string) => {

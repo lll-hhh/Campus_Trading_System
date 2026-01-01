@@ -1,25 +1,18 @@
+# 🔧 凤凰汽配管理系统
+# Phoenix Auto Parts Management System
 
+基于 FastAPI + Vue3 + TypeScript 的现代化企业级汽配管理系统。
 
-# 🎓 校园二手交易系统
-# Campus Trading System
+## 🌟 核心特性
 
-<div align="center">
-
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.10+-green.svg)
-![Vue](https://img.shields.io/badge/Vue-3.4-brightgreen.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-teal.svg)
-![Status](https://img.shields.io/badge/Status-100%25%20Complete-brightgreen.svg)
-
-基于 FastAPI + Vue3 + TypeScript 的现代化校园二手交易平台
-
-**特色：四数据库异构同步 • WebSocket实时通知 • AI智能定价**
-
-[功能特性](#-功能特性) • [快速开始](#-快速开始) • [部署指南](#-部署指南) • [开发文档](#-开发文档)
-
-</div>
-
----
+- **零件管理** - 覆盖发动机、制动、滤清器等全品类配件，支持 OE 号唯一性校验
+- **库存中心** - 实时库存监控、入库/出库管理、库存预警、周转率分析
+- **销售管理** - 订单创建、财务结算、销售报表自动生成
+- **供应商管理** - 供应商档案、进货价追踪、合作评价
+- **AI 智能助手** - 零件适配性分析、智能定价建议、技术咨询
+- **即时通讯** - 内部员工实时沟通，支持图片与业务卡片发送
+- **审计日志** - 工业级操作记录，确保每一笔库存变动可追溯
+- **高性能架构** - 基于 FastAPI 的异步处理能力，支持高并发业务场景
 
 ## 📖 目录
 
@@ -33,8 +26,7 @@
 - [开发指南](#-开发指南)
 - [常见问题](#-常见问题)
 - [项目状态](#-项目状态)
-- [贡献指南](#-贡献指南)
-- [许可证](#-许可证)
+- [贡献指南](#-许可证)
 
 ---
 
@@ -46,28 +38,16 @@
 - **消息中心** - 实时聊天、系统通知、交易提醒
 - **收藏夹** - 收藏商品、降价提醒
 
-#### 互动功能
-- 🔄 **冲突处理** - 版本冲突检测、乐观锁控制、一致性校验
-- 📈 **同步统计** - 成功率、失败率、延迟统计、可视化图表
-- 🎯 **冲突解决** - 手动解决冲突、自动重试机制
-
-#### 系统管理
-- 👥 **用户管理** - 用户列表、状态管理、权限控制
-- 📊 **数据看板** - 交易统计、用户活跃度、收入分析
-- 📈 **数据分析** - 图表可视化、趋势分析、报表生成
-- 🗃️ **数据表管理** - 表结构查看、数据增删改查
-- ⚙️ **系统设置** - 系统配置、参数调整
-- 📝 **审计日志** - 操作记录、安全审计
+### 系统管理
+- 👥 **用户管理** - 用户列表、状态管理、权限控制 (RBAC)
+- 📊 **数据看板** - 销售统计、库存分布、业务活跃度分析
+- 📈 **报表中心** - 自动生成 PDF/Excel 格式的业务报表
+- ⚙️ **系统设置** - 基础参数配置、通知设置
+- 📝 **审计日志** - 详细的操作记录与安全审计
 
 ### 🚀 技术亮点
 
-1. **四数据库异构同步** ⭐
-   - 支持 MySQL、PostgreSQL、MariaDB、SQLite 四种数据库
-   - 基于乐观锁的并发控制（版本号机制）
-   - 实时冲突检测和处理
-   - 数据一致性保证
-
-2. **WebSocket 实时通信**
+1. **WebSocket 实时通信**
    - 实时消息推送
    - 在线状态同步
    - 心跳保活机制
@@ -125,9 +105,9 @@
 ### 数据库
 
 - **MySQL** 8.0+ - 主数据库
-- **PostgreSQL** 15+ - 同步数据库
-- **MariaDB** 10+ - 同步数据库
-- **SQLite** 3+ - 同步数据库
+- **MySQL 8.0** - 核心业务数据库
+- **Redis** - 分布式缓存与消息中间件
+- **Celery** - 异步任务队列
 
 ### 基础设施
 
@@ -185,7 +165,6 @@ Campus_Trading_System/
 │   │   │   ├── PublishItemView.vue    # 发布商品
 │   │   │   ├── MessagesView.vue       # 消息中心
 │   │   │   ├── SearchResultsView.vue  # 搜索结果
-│   │   │   ├── SyncMonitorView.vue    # 同步监控
 │   │   │   └── ...
 │   │   ├── stores/           # 状态管理
 │   │   │   ├── auth.ts       # 认证状态
@@ -698,13 +677,12 @@ sudo systemctl restart nginx
 </details>
 
 <details>
-<summary><b>数据库同步相关</b></summary>
+<summary><b>业务管理相关</b></summary>
 
-- `GET /api/v1/sync/status` - 获取同步状态
-- `POST /api/v1/sync/start` - 启动同步
-- `POST /api/v1/sync/stop` - 停止同步
-- `GET /api/v1/sync/conflicts` - 获取冲突列表
-- `POST /api/v1/sync/conflicts/{id}/resolve` - 解决冲突
+- `GET /api/v1/inventory/status` - 获取库存状态
+- `POST /api/v1/orders/create` - 创建销售订单
+- `GET /api/v1/reports/sales` - 获取销售报表
+- `GET /api/v1/parts/search` - 零件搜索
 </details>
 
 ---
@@ -1171,7 +1149,7 @@ kill -9 <PID>
 #### 4. Token 注入方式
 
 - **方式 A：环境变量** — 在 `backend/.env` 中配置 `AI_PROVIDER`, `AI_API_KEY`，由 `settings.py` 初始化时写入 `SystemSetting`。
-- **方式 B：后台面板** — 在 `SystemSettingsView` 新增 “AI 提供商” 页签，调用 `/admin/operations/ai/provider` 保存/测试；提交时只在后端留存，前端不回显明文 Token。
+- **方式 B：后台面板** — 在 `SystemSettingsView` 新增 “AI 提供商” 页签，调用 `/admin/operations/ai/provider` 保存/测试；值仅在后端持久化，前端不回显明文 Token。
 - **方式 C：一次性临时 Token** — 提供 `POST /ai/assistant/token`（管理员权限）生成临时使用权并写入 Redis，适用于演示或更换模型时。
 
 #### 5. 上线检查表

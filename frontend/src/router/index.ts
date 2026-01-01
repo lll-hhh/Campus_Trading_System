@@ -20,12 +20,12 @@ import LoginView from '@/views/LoginView.vue';
 import ItemDetailView from '@/views/ItemDetailView.vue';
 import PublishItemView from '@/views/PublishItemView.vue';
 import SearchResultsView from '@/views/SearchResultsView.vue';
+import StoreNetworkView from '@/views/StoreNetworkView.vue';
 import NotFoundView from '@/views/NotFoundView.vue';
 import ForbiddenView from '@/views/ForbiddenView.vue';
 import ServerErrorView from '@/views/ServerErrorView.vue';
 
 // 管理员页面
-import AdminConsoleView from '@/views/AdminConsoleView.vue';
 import AnalyticsView from '@/views/AnalyticsView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import SystemSettingsView from '@/views/SystemSettingsView.vue';
@@ -33,7 +33,6 @@ import UserManagementView from '@/views/UserManagementView.vue';
 import AdminPerformanceView from '@/views/AdminPerformanceView.vue';
 import AdminOperationsView from '@/views/AdminOperationsView.vue';
 import AdminTablesView from '@/views/AdminTablesView.vue';
-import SyncMonitorView from '@/views/SyncMonitorView.vue';
 import AdminProfileView from '@/views/AdminProfileView.vue';
 import AdminAIView from '@/views/AdminAIView.vue';
 
@@ -80,55 +79,61 @@ const router = createRouter({
           path: 'marketplace',
           name: 'marketplace',
           component: MarketplaceView,
-          meta: { title: '商品市场', icon: '🏪', role: 'user' }
+          meta: { title: '汽配市场', icon: '🏪', role: 'user' }
+        },
+        {
+          path: 'stores',
+          name: 'stores',
+          component: StoreNetworkView,
+          meta: { title: '门店网络', icon: '📍', role: 'user' }
         },
         {
           path: 'item/:id',
           name: 'item-detail',
           component: ItemDetailView,
-          meta: { title: '商品详情', icon: '📦', role: 'user' }
+          meta: { title: '零件详情', icon: '📦', role: 'user' }
         },
         {
           path: 'publish',
           name: 'publish-item',
           component: PublishItemView,
-          meta: { title: '发布商品', icon: '📝', role: 'user', requiresAuth: true }
+          meta: { title: '发布零件', icon: '📝', role: 'user', requiresAuth: true }
         },
         {
           path: 'cart',
           name: 'cart',
           component: ShoppingCartView,
-          meta: { title: '购物车', icon: '🛒', role: 'user', requiresAuth: true }
+          meta: { title: '采购车', icon: '🛒', role: 'user', requiresAuth: true }
         },
         {
           path: 'checkout',
           name: 'checkout',
           component: CheckoutView,
-          meta: { title: '订单确认', icon: '📦', role: 'user', requiresAuth: true }
+          meta: { title: '采购确认', icon: '📦', role: 'user', requiresAuth: true }
         },
         {
           path: 'messages',
           name: 'messages',
           component: MessagesView,
-          meta: { title: '消息', icon: '💬', role: 'user', requiresAuth: true }
+          meta: { title: '商户消息', icon: '💬', role: 'user', requiresAuth: true }
         },
         {
           path: 'my-items',
           name: 'my-items',
           component: MyItemsView,
-          meta: { title: '我的商品', icon: '📦', role: 'user', requiresAuth: true }
+          meta: { title: '我的库存', icon: '📦', role: 'user', requiresAuth: true }
         },
         {
           path: 'orders',
           name: 'orders',
           component: OrdersView,
-          meta: { title: '交易记录', icon: '📝', role: 'user', requiresAuth: true }
+          meta: { title: '采购订单', icon: '📝', role: 'user', requiresAuth: true }
         },
         {
           path: 'profile',
           name: 'profile',
           component: ProfileCenterView,
-          meta: { title: '个人中心', icon: '👤', role: 'user', requiresAuth: true }
+          meta: { title: '商户中心', icon: '👤', role: 'user', requiresAuth: true }
         },
         {
           path: 'user/profile',
@@ -181,12 +186,6 @@ const router = createRouter({
           meta: { title: '数据分析', icon: '📈', role: 'admin', requiresAdmin: true }
         },
         {
-          path: 'console',
-          name: 'admin-console',
-          component: AdminConsoleView,
-          meta: { title: '四库同步', icon: '🔄', role: 'admin', requiresAdmin: true }
-        },
-        {
           path: 'performance',
           name: 'admin-performance',
           component: AdminPerformanceView,
@@ -196,7 +195,7 @@ const router = createRouter({
           path: 'operations',
           name: 'admin-operations',
           component: AdminOperationsView,
-          meta: { title: '高级操作', icon: '⚙️', role: 'admin', requiresAdmin: true }
+          meta: { title: '系统运维', icon: '⚙️', role: 'admin', requiresAdmin: true }
         },
         {
           path: 'tables',
@@ -215,12 +214,6 @@ const router = createRouter({
           name: 'admin-settings',
           component: SystemSettingsView,
           meta: { title: '系统设置', icon: '🔧', role: 'admin', requiresAdmin: true }
-        },
-        {
-          path: 'sync-monitor',
-          name: 'sync-monitor',
-          component: SyncMonitorView,
-          meta: { title: '同步监控', icon: '🔄', role: 'admin', requiresAdmin: true }
         },
         {
           path: 'ai',

@@ -1,169 +1,127 @@
 <template>
-  <div class="space-y-6">
-    <section class="rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
-      <p class="text-xs uppercase tracking-widest">Admin Console</p>
-      <h1 class="mt-2 text-3xl font-semibold">同步与风控作业区</h1>
-      <p class="mt-2 text-sm text-amber-800/80">
-        查看跨库状态、处理冲突、触发手动同步。该区域仅向具有 market_admin 角色的用户展示全部内容。
-      </p>
-    </section>
+  <div class="admin-console min-h-screen bg-[#f4f4f4]">
+    <!-- Header Section -->
+    <div class="bg-[#2e3235] text-white py-8 mb-8">
+      <div class="max-w-7xl mx-auto px-4">
+        <h1 class="text-3xl font-black tracking-tighter uppercase italic">
+          Admin <span class="text-primary">Console</span>
+          <span class="block text-sm font-normal tracking-widest mt-1 opacity-60 italic">PHOENIX AUTO PARTS / OPERATIONS & RISK CONTROL</span>
+        </h1>
+      </div>
+    </div>
 
-    <section v-if="!isAdmin" class="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center">
-      <h2 class="text-xl font-semibold text-slate-800">你当前没有管理员权限</h2>
-      <p class="mt-2 text-sm text-slate-500">请联系平台负责人开通 market_admin 角色，或者前往市场页继续浏览。</p>
-      <RouterLink class="mt-4 inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-white" to="/market">
-        返回市场中心
-      </RouterLink>
-    </section>
-
-    <template v-else>
-      <section class="grid gap-4 xl:grid-cols-2">
-        <SyncStatusCard />
-        <ConflictTable />
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+      <section v-if="!isAdmin" class="bg-white border-2 border-dashed border-gray-200 p-12 text-center">
+        <h2 class="text-2xl font-black uppercase italic tracking-widest text-gray-400 mb-4">Access Denied</h2>
+        <p class="text-sm font-bold uppercase tracking-tighter text-gray-500 mb-8">You do not have the required MARKET_ADMIN permissions.</p>
+        <n-button type="primary" size="large" class="uppercase font-bold italic tracking-widest" @click="router.push('/marketplace')">
+          Return to Marketplace
+        </n-button>
       </section>
 
-      <section class="grid gap-4 lg:grid-cols-2">
-        <article class="rounded-2xl bg-white p-4 shadow">
-          <header class="flex items-center justify-between">
-            <div>
-              <p class="text-xs uppercase text-slate-400">快速操作</p>
-              <h3 class="text-lg font-semibold text-slate-900">常用指令</h3>
+      <template v-else>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div class="bg-white border border-gray-200 p-8">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter mb-6 flex items-center gap-2">
+              <span class="w-2 h-6 bg-primary"></span>
+              快速操作
+            </h2>
+            <div class="space-y-4">
+              <div class="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 border border-gray-100 gap-4">
+                <div>
+                  <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">系统维护</div>
+                  <div class="text-sm font-black uppercase italic">清理系统缓存</div>
+                </div>
+                <n-button size="small" type="primary" secondary class="uppercase font-bold italic">
+                  立即执行
+                </n-button>
+              </div>
+
+              <div class="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 border border-gray-100 gap-4">
+                <div>
+                  <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">数据备份</div>
+                  <div class="text-sm font-black uppercase italic">导出全量数据 (JSON)</div>
+                </div>
+                <n-button size="small" ghost class="uppercase font-bold italic">
+                  下载备份
+                </n-button>
+              </div>
+
+              <div class="flex flex-col md:flex-row md:items-center justify-between p-4 bg-gray-50 border border-gray-100 gap-4">
+                <div>
+                  <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">实验室</div>
+                  <div class="text-sm font-black uppercase italic">AI 智能审核模式</div>
+                </div>
+                <n-button
+                  size="small"
+                  type="success"
+                  :loading="aiAuditLoading"
+                  :secondary="aiAuditEnabled"
+                  @click="toggleAiAudit"
+                  class="uppercase font-bold italic"
+                >
+                  {{ aiAuditEnabled ? '禁用 AI' : '启用 AI' }}
+                </n-button>
+              </div>
             </div>
-            <button class="text-sm text-indigo-600" :disabled="triggering" @click="triggerSync">
-              {{ triggering ? '执行中...' : '立即同步' }}
-            </button>
-          </header>
-          <ul class="mt-4 space-y-3 text-sm text-slate-600">
-            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span>回放滞留事件</span>
-                <span class="ml-2 text-xs text-slate-400">Redis Stream</span>
-              </div>
-              <n-button size="small" type="primary" secondary :loading="replaying" @click="replayStalled">
-                回放最近失败任务
-              </n-button>
-            </li>
-            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span>导出冲突报告</span>
-                <span class="ml-2 text-xs text-slate-400">CSV</span>
-              </div>
-              <n-button size="small" ghost :loading="exportingConflicts" @click="exportConflicts">
-                下载最新报告
-              </n-button>
-            </li>
-            <li class="flex flex-col gap-2 rounded border border-slate-100 p-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span>开启 AI 审核模式</span>
-                <span class="ml-2 text-xs text-slate-400">实验室</span>
-              </div>
-              <n-button
-                size="small"
-                type="success"
-                :loading="aiAuditLoading"
-                :secondary="aiAuditEnabled"
-                @click="toggleAiAudit"
-              >{{ aiAuditEnabled ? '关闭 AI 审核' : '立即开启' }}</n-button>
-            </li>
-          </ul>
-        </article>
-        <article class="rounded-2xl bg-white p-4 shadow">
-          <header>
-            <p class="text-xs uppercase text-slate-400">策略提醒</p>
-            <h3 class="text-lg font-semibold text-slate-900">风控概览</h3>
-          </header>
-          <ul class="mt-4 space-y-2 text-sm text-slate-600">
-            <li>• 发布高峰集中在 18:00-22:00，建议开启限流。</li>
-            <li>• 近两日共有 4 条高风险交易等待审核。</li>
-            <li>• 邮件告警配置完整，最近一次发送 5 分钟前。</li>
-          </ul>
-        </article>
-      </section>
-
-      <section class="rounded-2xl bg-white p-4 shadow">
-        <header class="flex items-center justify-between">
-          <div>
-            <p class="text-xs uppercase text-slate-400">趋势分析</p>
-            <h3 class="text-lg font-semibold text-slate-900">同步走势</h3>
           </div>
-          <RouterLink class="text-sm text-indigo-600" to="/dashboard">查看仪表盘</RouterLink>
-        </header>
-        <SyncStatChart />
-      </section>
-    </template>
+
+          <div class="bg-[#2e3235] text-white p-8">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter mb-6 flex items-center gap-2">
+              <span class="w-2 h-6 bg-primary"></span>
+              Risk Overview
+            </h2>
+            <ul class="space-y-4">
+              <li class="flex items-start gap-3">
+                <span class="text-primary font-black mt-1">»</span>
+                <p class="text-xs font-bold uppercase tracking-widest opacity-60 leading-relaxed">Peak traffic detected between 18:00-22:00. Rate limiting recommended.</p>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-primary font-black mt-1">»</span>
+                <p class="text-xs font-bold uppercase tracking-widest opacity-60 leading-relaxed">4 High-risk transactions pending manual review.</p>
+              </li>
+              <li class="flex items-start gap-3">
+                <span class="text-primary font-black mt-1">»</span>
+                <p class="text-xs font-bold uppercase tracking-widest opacity-60 leading-relaxed">Alert system fully operational. Last check: 5m ago.</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 p-8">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter flex items-center gap-2">
+              <span class="w-2 h-6 bg-primary"></span>
+              系统运行概览
+            </h2>
+            <n-button quaternary type="primary" @click="router.push('/admin/dashboard')" class="uppercase font-bold italic tracking-widest">
+              查看完整仪表盘
+            </n-button>
+          </div>
+          <div class="h-64 flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 text-gray-400 font-bold uppercase tracking-widest">
+            系统监控数据加载中...
+          </div>
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { storeToRefs } from 'pinia';
+import { computed, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
 
-import ConflictTable from '@/components/ConflictTable.vue';
-import SyncStatChart from '@/components/SyncStatChart.vue';
-import SyncStatusCard from '@/components/SyncStatusCard.vue';
 import { useAuthStore } from '@/stores/auth';
-import { useSyncStore } from '@/stores/sync';
 import { http as api } from '@/lib/http';
 
 const authStore = useAuthStore();
-const syncStore = useSyncStore();
-const { runningManual } = storeToRefs(syncStore);
+const router = useRouter();
 const isAdmin = computed(() => authStore.isAdmin);
-const triggering = computed(() => runningManual.value);
 const message = useMessage();
 
-const replaying = ref(false);
-const exportingConflicts = ref(false);
 const aiAuditEnabled = ref(false);
 const aiAuditLoading = ref(false);
-
-async function replayStalled() {
-  if (replaying.value) return;
-  replaying.value = true;
-  try {
-    await api.post('/admin/operations/sync/replay');
-    message.success('已触发回放最近失败任务');
-  } catch (error) {
-    console.error('回放滞留事件失败:', error);
-    message.error('回放失败，请稍后重试');
-  } finally {
-    replaying.value = false;
-  }
-}
-
-async function exportConflicts() {
-  if (exportingConflicts.value) return;
-  exportingConflicts.value = true;
-  try {
-    const response = await api.get('/admin/operations/conflicts/export', {
-      responseType: 'blob',
-    });
-    const disposition = response.headers['content-disposition'] as string | undefined;
-    let filename = `conflicts-${Date.now()}.csv`;
-    if (disposition) {
-      const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
-      const encoded = match?.[1] || match?.[2];
-      if (encoded) {
-        filename = decodeURIComponent(encoded);
-      }
-    }
-    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-    message.success('冲突报告已导出');
-  } catch (error) {
-    console.error('导出冲突报告失败:', error);
-    message.error('导出失败，请稍后再试');
-  } finally {
-    exportingConflicts.value = false;
-  }
-}
 
 async function fetchAiAuditStatus() {
   try {
@@ -190,17 +148,11 @@ async function toggleAiAudit() {
   }
 }
 
-watch(
-  () => isAdmin.value,
-  (authorized) => {
-    if (authorized) {
-      fetchAiAuditStatus();
-    }
-  },
-  { immediate: true }
-);
-
-function triggerSync() {
-  syncStore.triggerManualRun();
-}
+fetchAiAuditStatus();
 </script>
+
+<style scoped>
+.admin-console {
+  font-family: 'Inter', sans-serif;
+}
+</style>

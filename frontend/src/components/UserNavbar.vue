@@ -3,12 +3,14 @@ import { ref, computed, h } from 'vue'  // ✅ 添加 h
 import { useRouter, RouterLink } from 'vue-router'  // ✅ 添加 RouterLink
 import { NLayout, NLayoutHeader, NMenu, NButton, NSpace, NAvatar, NDropdown, NBadge } from 'naive-ui'
 import { useAuthStore } from '../stores/auth'
+import { useMessageStore } from '../stores/message'
 import NotificationCenter from './NotificationCenter.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
+const messageStore = useMessageStore()
 
-const unreadMessages = ref(5)
+const unreadMessages = computed(() => messageStore.totalUnread)
 
 const isLoggedIn = computed(() => authStore.isAuthenticated)
 const userName = computed(() => authStore.user?.displayName || authStore.user?.username || '用户')
@@ -16,15 +18,15 @@ const userName = computed(() => authStore.user?.displayName || authStore.user?.u
 // ✅ 修复：使用正确的 n-menu options 格式
 const menuOptions = computed(() => [
   {
-    label: () => h(RouterLink, { to: '/marketplace' }, { default: () => '🏪 商品市场' }),
+    label: () => h(RouterLink, { to: '/marketplace' }, { default: () => '🏪 零件市场' }),
     key: 'marketplace'
   },
   {
-    label: () => h(RouterLink, { to: '/cart' }, { default: () => '🛒 购物车' }),
+    label: () => h(RouterLink, { to: '/cart' }, { default: () => '🛒 采购车' }),
     key: 'cart'
   },
   {
-    label: () => h(RouterLink, { to: '/my-items' }, { default: () => '📦 我的商品' }),
+    label: () => h(RouterLink, { to: '/my-items' }, { default: () => '📦 我的零件' }),
     key: 'my-items'
   },
   {
@@ -136,7 +138,7 @@ const handlePublish = () => {
           type="primary"
           @click="handlePublish"
         >
-          + 发布商品
+          + 发布零件
         </n-button>
 
         <div v-if="isLoggedIn" class="user-info">

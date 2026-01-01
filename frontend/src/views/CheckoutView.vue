@@ -1,103 +1,94 @@
 <template>
-  <div class="checkout-view min-h-screen bg-gray-50">
-    <div class="max-w-4xl mx-auto py-6 px-4">
-      <div class="bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold mb-6">📦 订单确认</h1>
-        
-        <!-- 加载中 -->
-        <n-spin v-if="loading" class="flex justify-center py-12">
-          <template #description>加载中...</template>
-        </n-spin>
-        
-        <!-- 商品列表 -->
-        <div v-else-if="checkoutItems.length > 0">
-          <n-card v-for="item in checkoutItems" :key="item.item_id" class="mb-4">
-            <div class="flex gap-4">
-              <div class="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center">
-                <n-image 
-                  v-if="item.item_image" 
-                  :src="item.item_image" 
-                  class="w-full h-full object-cover rounded"
-                  fallback-src=""
-                />
-                <span v-else class="text-3xl">📦</span>
+  <div class="checkout-view min-h-screen bg-[#f4f4f4]">
+    <!-- Header Section -->
+    <div class="bg-[#2e3235] text-white py-8 mb-8">
+      <div class="max-w-4xl mx-auto px-4">
+        <h1 class="text-3xl font-black tracking-tighter uppercase italic">
+          Order <span class="text-primary">Confirmation</span>
+          <span class="block text-sm font-normal tracking-widest mt-1 opacity-60 italic">PHOENIX AUTO PARTS / FINAL REVIEW</span>
+        </h1>
+      </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-4 pb-12">
+      <n-spin :show="loading">
+        <div v-if="checkoutItems.length > 0" class="space-y-8">
+          <!-- Delivery Information -->
+          <div class="bg-white border border-gray-200 p-8">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter mb-6 flex items-center gap-2">
+              <span class="w-2 h-6 bg-primary"></span>
+              Logistics Information
+            </h2>
+            <n-form ref="formRef" :model="deliveryForm" :rules="deliveryRules" label-placement="top">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <n-form-item label="RECEIVER NAME" path="receiver_name" class="font-bold tracking-widest text-[10px]">
+                  <n-input v-model:value="deliveryForm.receiver_name" placeholder="Enter name" class="uppercase" />
+                </n-form-item>
+                <n-form-item label="CONTACT PHONE" path="receiver_phone" class="font-bold tracking-widest text-[10px]">
+                  <n-input v-model:value="deliveryForm.receiver_phone" placeholder="Enter phone number" />
+                </n-form-item>
               </div>
-              <div class="flex-1">
-                <h3 class="font-bold text-lg mb-2">{{ item.item_title }}</h3>
-                <p class="text-gray-500 text-sm mb-2">卖家: {{ item.seller_name }}</p>
-                <div class="flex items-center justify-between">
-                  <span class="text-red-500 font-bold text-xl">¥{{ item.item_price }}</span>
-                  <span class="text-gray-400">x {{ item.quantity }}</span>
-                </div>
-              </div>
-            </div>
-          </n-card>
-          
-          <!-- 订单汇总 -->
-          <n-divider />
-          
-          <!-- 收货信息表单 -->
-          <n-card title="📍 收货信息" class="mb-6">
-            <n-form ref="formRef" :model="deliveryForm" :rules="deliveryRules">
-              <n-form-item label="收货人" path="receiver_name">
-                <n-input 
-                  v-model:value="deliveryForm.receiver_name" 
-                  placeholder="请输入收货人姓名"
-                />
-              </n-form-item>
-              <n-form-item label="联系电话" path="receiver_phone">
-                <n-input 
-                  v-model:value="deliveryForm.receiver_phone" 
-                  placeholder="请输入联系电话"
-                />
-              </n-form-item>
-              <n-form-item label="收货地址" path="receiver_address">
+              <n-form-item label="DELIVERY ADDRESS" path="receiver_address" class="font-bold tracking-widest text-[10px]">
                 <n-input 
                   v-model:value="deliveryForm.receiver_address" 
                   type="textarea"
-                  placeholder="请输入详细收货地址"
+                  placeholder="Enter full delivery address"
                   :autosize="{ minRows: 2, maxRows: 4 }"
                 />
               </n-form-item>
             </n-form>
-          </n-card>
-          
-          <div class="flex justify-between items-center mb-6">
-            <span class="text-gray-600">商品总计 ({{ totalQuantity }} 件)</span>
-            <span class="text-red-500 font-bold text-2xl">¥{{ totalAmount.toFixed(2) }}</span>
           </div>
-          
-          <!-- 卖家联系方式 -->
-          <n-card title="卖家联系方式" class="mb-6">
-            <div v-for="seller in uniqueSellers" :key="seller.id" class="flex items-center justify-between py-2 border-b last:border-b-0">
-              <div class="flex items-center gap-3">
-                <n-avatar :size="40">{{ seller.name.charAt(0) }}</n-avatar>
-                <span class="font-medium">{{ seller.name }}</span>
+
+          <!-- Parts Review -->
+          <div class="bg-white border border-gray-200 p-8">
+            <h2 class="text-xl font-black uppercase italic tracking-tighter mb-6 flex items-center gap-2">
+              <span class="w-2 h-6 bg-primary"></span>
+              Parts Review
+            </h2>
+            <div class="divide-y divide-gray-100">
+              <div v-for="item in checkoutItems" :key="item.item_id" class="py-4 flex gap-6 items-center">
+                <div class="w-20 h-20 bg-gray-100 flex-shrink-0 border border-gray-100">
+                  <img v-if="item.item_image" :src="item.item_image" class="w-full h-full object-cover" />
+                  <div v-else class="w-full h-full flex items-center justify-center text-2xl opacity-20">📦</div>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Seller: {{ item.seller_name }}</div>
+                  <h3 class="font-black text-base uppercase italic truncate">{{ item.item_title }}</h3>
+                  <div class="flex justify-between items-baseline mt-2">
+                    <span class="text-lg font-black text-[#2e3235]">¥{{ item.item_price }}</span>
+                    <span class="text-sm font-bold text-gray-400 uppercase tracking-tighter">Qty: {{ item.quantity }}</span>
+                  </div>
+                </div>
               </div>
-              <n-button type="primary" @click="contactSeller(seller)">
-                💬 发送消息
-              </n-button>
             </div>
-          </n-card>
-          
-          <!-- 操作按钮 -->
-          <div class="flex gap-4">
-            <n-button size="large" @click="router.back()">返回购物车</n-button>
-            <n-button type="primary" size="large" class="flex-1" @click="createOrders">
-              确认下单
-            </n-button>
+          </div>
+
+          <!-- Final Summary -->
+          <div class="bg-[#2e3235] text-white p-8">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+              <div class="text-center md:text-left">
+                <div class="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-1">Total Procurement Amount</div>
+                <div class="text-4xl font-black text-primary italic">¥{{ totalAmount.toFixed(2) }}</div>
+              </div>
+              <div class="flex gap-4 w-full md:w-auto">
+                <n-button size="large" ghost @click="router.back()" class="flex-1 md:flex-none uppercase font-bold italic">
+                  Back
+                </n-button>
+                <n-button type="primary" size="large" class="flex-1 md:flex-none h-14 px-12 text-lg font-black uppercase italic tracking-widest" @click="createOrders">
+                  Confirm Order
+                </n-button>
+              </div>
+            </div>
           </div>
         </div>
-        
-        <!-- 空状态 -->
-        <n-empty v-else description="没有待结算的商品">
-          <template #extra>
-            <n-button type="primary" @click="router.push('/marketplace')">
-              去逛逛
-            </n-button>
-          </template>
-        </n-empty>
-      </div>
+
+        <div v-else class="bg-white border border-gray-200 py-24 text-center">
+          <h2 class="text-2xl font-black uppercase italic tracking-widest text-gray-400 mb-6">No items to checkout</h2>
+          <n-button type="primary" size="large" class="uppercase font-bold italic" @click="router.push('/marketplace')">
+            Return to Marketplace
+          </n-button>
+        </div>
+      </n-spin>
     </div>
   </div>
 </template>
@@ -161,7 +152,7 @@ const uniqueSellers = computed(() => {
   return Array.from(sellerMap.values())
 })
 
-// 加载结算商品
+// 加载结算零件
 const loadCheckoutItems = async () => {
   try {
     const itemIds = route.query.items?.toString().split(',').map(Number) || []
@@ -170,7 +161,7 @@ const loadCheckoutItems = async () => {
       return
     }
     
-    // 从购物车获取商品详情
+    // 从采购车获取零件详情
     const response = await http.get('/cart')
     const allItems = response.data.items || []
     checkoutItems.value = allItems.filter((item: any) => itemIds.includes(item.id))
@@ -195,7 +186,7 @@ const createOrders = async () => {
     // 验证表单
     await formRef.value?.validate()
     
-    // 为每个商品创建订单
+    // 为每个零件创建订单
     for (const item of checkoutItems.value) {
       await http.post('/orders', {
         item_id: item.item_id,

@@ -6,7 +6,7 @@
         <n-input
           v-model:value="searchQuery"
           size="large"
-          placeholder="搜索商品..."
+          placeholder="搜索零件..."
           clearable
           @keyup.enter="handleSearch"
         >
@@ -182,7 +182,7 @@
 
     <!-- 空状态 -->
     <div v-else class="empty-state">
-      <n-empty description="没有找到相关商品">
+      <n-empty description="没有找到相关零件">
         <template #icon>
           <n-icon size="64" :component="SearchOutline" />
         </template>
@@ -255,7 +255,8 @@ const sortOptions = [
   { label: '价格从低到高', value: 'price_asc' },
   { label: '价格从高到低', value: 'price_desc' },
   { label: '最新发布', value: 'time_desc' },
-  { label: '最受欢迎', value: 'popular' }
+  { label: '最受欢迎', value: 'popular' },
+  { label: '收藏最多', value: 'favorite_desc' }
 ]
 
 // 计算属性

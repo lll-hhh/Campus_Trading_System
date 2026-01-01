@@ -1,0 +1,67 @@
+<svg width="1000" height="700" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">业务流程时序图 - 销售下单 (Sequence Diagram - Sales Order)</text>
+
+  <!-- Lifelines -->
+  <line x1="80" y1="80" x2="80" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="30" y="50" width="100" height="30" fill="#f0f0f0" stroke="#333"/>
+  <text x="80" y="70" font-family="Arial" font-size="12" text-anchor="middle">销售员</text>
+
+  <line x1="230" y1="80" x2="230" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="180" y="50" width="100" height="30" fill="#e6f7ff" stroke="#1890ff"/>
+  <text x="230" y="70" font-family="Arial" font-size="12" text-anchor="middle">前端界面</text>
+
+  <line x1="380" y1="80" x2="380" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="330" y="50" width="100" height="30" fill="#f6ffed" stroke="#52c41a"/>
+  <text x="380" y="70" font-family="Arial" font-size="12" text-anchor="middle">交易服务</text>
+
+  <line x1="530" y1="80" x2="530" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="480" y="50" width="100" height="30" fill="#fff7e6" stroke="#ffa940"/>
+  <text x="530" y="70" font-family="Arial" font-size="12" text-anchor="middle">库存服务</text>
+
+  <line x1="680" y1="80" x2="680" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="630" y="50" width="100" height="30" fill="#f9f0ff" stroke="#722ed1"/>
+  <text x="680" y="70" font-family="Arial" font-size="12" text-anchor="middle">消息队列 (Redis)</text>
+
+  <line x1="830" y1="80" x2="830" y2="650" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="780" y="50" width="100" height="30" fill="#fff1f0" stroke="#ff4d4f"/>
+  <text x="830" y="70" font-family="Arial" font-size="12" text-anchor="middle">数据库 (MySQL)</text>
+
+  <!-- Messages -->
+  <path d="M 80 120 L 230 120" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="155" y="115" font-family="Arial" font-size="11" text-anchor="middle">1. 选择配件并下单</text>
+
+  <path d="M 230 160 L 380 160" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="305" y="155" font-family="Arial" font-size="11" text-anchor="middle">2. POST /orders</text>
+
+  <path d="M 380 200 L 530 200" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="455" y="195" font-family="Arial" font-size="11" text-anchor="middle">3. 检查库存可用性</text>
+
+  <path d="M 530 240 L 830 240" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="680" y="235" font-family="Arial" font-size="11" text-anchor="middle">4. 锁定库存 (乐观锁)</text>
+
+  <path d="M 830 280 L 530 280" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="680" y="275" font-family="Arial" font-size="11" text-anchor="middle">5. 锁定成功</text>
+
+  <path d="M 530 320 L 380 320" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="455" y="315" font-family="Arial" font-size="11" text-anchor="middle">6. 库存确认</text>
+
+  <path d="M 380 360 L 830 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="605" y="355" font-family="Arial" font-size="11" text-anchor="middle">7. 创建订单记录 (事务)</text>
+
+  <path d="M 380 400 L 680 400" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="530" y="395" font-family="Arial" font-size="11" text-anchor="middle">8. 发送异步通知 (Celery)</text>
+
+  <path d="M 380 440 L 230 440" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="305" y="435" font-family="Arial" font-size="11" text-anchor="middle">9. 返回订单号</text>
+
+  <path d="M 230 480 L 80 480" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="155" y="475" font-family="Arial" font-size="11" text-anchor="middle">10. 提示下单成功</text>
+
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#333" />
+    </marker>
+  </defs>
+</svg>

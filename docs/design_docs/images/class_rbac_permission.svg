@@ -1,0 +1,40 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">权限管理模块类图 - 权限与资源 (Class Diagram: RBAC Permission &amp; Resource)</text>
+
+  <!-- Permission Class -->
+  <rect x="50" y="80" width="250" height="200" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 50 110 L 300 110" stroke="#52c41a" stroke-width="2"/>
+  <text x="175" y="102" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Permission (权限实体)</text>
+  <text x="60" y="130" font-family="Arial" font-size="11">- id: Integer {PK}</text>
+  <text x="60" y="145" font-family="Arial" font-size="11">- name: String (权限名)</text>
+  <text x="60" y="160" font-family="Arial" font-size="11">- code: String (标识符)</text>
+  <text x="60" y="175" font-family="Arial" font-size="11">- resource_id: Integer {FK}</text>
+  <text x="60" y="190" font-family="Arial" font-size="11">- action: String (READ/WRITE/DELETE)</text>
+  <path d="M 50 210 L 300 210" stroke="#52c41a" stroke-width="1"/>
+  <text x="60" y="230" font-family="Arial" font-size="11">+ check_access(user): bool</text>
+
+  <!-- Resource Class -->
+  <rect x="450" y="80" width="250" height="180" fill="#fffbe6" stroke="#faad14" stroke-width="2"/>
+  <path d="M 450 110 L 700 110" stroke="#faad14" stroke-width="2"/>
+  <text x="575" y="102" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Resource (资源实体)</text>
+  <text x="460" y="130" font-family="Arial" font-size="11">- id: Integer {PK}</text>
+  <text x="460" y="145" font-family="Arial" font-size="11">- name: String (资源名)</text>
+  <text x="460" y="160" font-family="Arial" font-size="11">- type: String (MENU/API/BUTTON)</text>
+  <text x="460" y="175" font-family="Arial" font-size="11">- path: String (路径/URL)</text>
+  <text x="460" y="190" font-family="Arial" font-size="11">- parent_id: Integer</text>
+
+  <!-- RolePermission Association -->
+  <rect x="50" y="350" width="250" height="80" fill="#fff7e6" stroke="#ffa940" stroke-width="1" stroke-dasharray="5,5"/>
+  <text x="175" y="375" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">RolePermission (关联表)</text>
+  <text x="60" y="395" font-family="Arial" font-size="11">- role_id: Integer</text>
+  <text x="60" y="410" font-family="Arial" font-size="11">- permission_id: Integer</text>
+
+  <!-- Relationships -->
+  <line x1="300" y1="150" x2="450" y2="150" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="320" y="145" font-family="Arial" font-size="12">N</text>
+  <text x="430" y="145" font-family="Arial" font-size="12">1</text>
+  
+  <line x1="175" y1="280" x2="175" y2="350" stroke="#8c8c8c" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+</svg>

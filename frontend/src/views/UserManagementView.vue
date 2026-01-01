@@ -7,7 +7,7 @@
 
     <section class="flex flex-wrap gap-4">
       <button
-        class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+        class="rounded-lg bg-primary px-4 py-2 text-sm text-white hover:bg-primary/90"
         @click="openUserModal()"
       >
         ➕ 创建用户
@@ -29,7 +29,7 @@
         v-model="searchQuery"
         type="text"
         placeholder="搜索用户..."
-        class="rounded-lg border-2 border-slate-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
+        class="rounded-lg border-2 border-slate-300 px-4 py-2 text-sm focus:border-primary focus:outline-none"
       >
     </section>
 
@@ -60,7 +60,7 @@
               <td class="p-3 text-sm">{{ user.id }}</td>
               <td class="p-3">
                 <div class="flex items-center gap-2">
-                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-600">
+                  <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
                     {{ user.username[0]?.toUpperCase() }}
                   </div>
                   <span class="font-medium">{{ user.username }}</span>
@@ -87,7 +87,7 @@
               </td>
               <td class="p-3 text-sm text-slate-600">{{ user.created_at }}</td>
               <td class="p-3 text-right">
-                <button class="mr-2 text-blue-600 hover:text-blue-800" @click="openUserModal(user)">编辑</button>
+                <button class="mr-2 text-primary hover:text-primary/80" @click="openUserModal(user)">编辑</button>
                 <button class="text-red-600 hover:text-red-800" :disabled="deletingUserId === user.id" @click="deleteUser(user.id)">
                   {{ deletingUserId === user.id ? '删除中...' : '删除' }}
                 </button>
@@ -105,7 +105,7 @@
           <div
             v-for="role in roles"
             :key="role.id"
-            class="rounded-lg border-2 border-slate-200 p-4 hover:border-blue-300"
+            class="rounded-lg border-2 border-slate-200 p-4 hover:border-primary/30"
           >
             <div class="flex items-start justify-between gap-3">
               <div>
@@ -122,7 +122,7 @@
                 </div>
               </div>
               <div class="flex gap-2 text-sm text-slate-500">
-                <button class="text-blue-600 hover:text-blue-800" @click="openRoleModal(role)">编辑</button>
+                <button class="text-primary hover:text-primary/80" @click="openRoleModal(role)">编辑</button>
                 <button class="text-red-600 hover:text-red-800" @click="deleteRole(role.id)">删除</button>
               </div>
             </div>
@@ -143,7 +143,7 @@
               <p class="text-xs text-slate-500">{{ permission.resource }}:{{ permission.action }}</p>
               <p v-if="permission.description" class="text-xs text-slate-400">{{ permission.description }}</p>
             </div>
-            <span class="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
+            <span class="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary/90">
               {{ permission.role_count ?? 0 }} 角色使用
             </span>
           </div>
@@ -193,7 +193,7 @@
               </td>
               <td class="p-2 text-center">
                 <button
-                  class="rounded bg-blue-600 px-3 py-1 text-xs text-white disabled:opacity-60"
+                  class="rounded bg-primary px-3 py-1 text-xs text-white disabled:opacity-60"
                   :disabled="rolePermissionSaving[role.id]"
                   @click="saveRolePermissions(role.id)"
                 >
@@ -218,11 +218,11 @@
         <form class="space-y-4" @submit.prevent="handleSaveUser">
           <div>
             <label class="block text-sm font-medium text-slate-700">用户名</label>
-            <input v-model="userForm.username" required type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none">
+            <input v-model="userForm.username" required type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700">邮箱</label>
-            <input v-model="userForm.email" required type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none">
+            <input v-model="userForm.email" required type="email" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700">密码</label>
@@ -231,7 +231,7 @@
               :required="!isEditingUser"
               type="password"
               placeholder="至少 6 位"
-              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none"
             >
             <p class="mt-1 text-xs text-slate-500" v-if="isEditingUser">留空表示不修改密码</p>
           </div>
@@ -250,7 +250,7 @@
             <select
               v-model="userForm.role_ids"
               multiple
-              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none"
             >
               <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
             </select>
@@ -258,7 +258,7 @@
           </div>
           <div class="flex justify-end gap-3">
             <button type="button" class="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700" @click="closeUserModal">取消</button>
-            <button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-60" :disabled="savingUser">
+            <button type="submit" class="rounded-lg bg-primary px-4 py-2 text-sm text-white disabled:opacity-60" :disabled="savingUser">
               {{ savingUser ? '保存中...' : '保存' }}
             </button>
           </div>
@@ -278,18 +278,18 @@
         <form class="space-y-4" @submit.prevent="handleSaveRole">
           <div>
             <label class="block text-sm font-medium text-slate-700">角色名称</label>
-            <input v-model="roleForm.name" required type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none">
+            <input v-model="roleForm.name" required type="text" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none">
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700">描述</label>
-            <textarea v-model="roleForm.description" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none" />
+            <textarea v-model="roleForm.description" rows="3" class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none" />
           </div>
           <div>
             <label class="block text-sm font-medium text-slate-700">权限</label>
             <select
               v-model="roleForm.permission_ids"
               multiple
-              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-blue-500 focus:outline-none"
+              class="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 focus:border-primary focus:outline-none"
             >
               <option v-for="perm in permissions" :key="perm.id" :value="perm.id">
                 {{ perm.name }} ({{ perm.resource }}:{{ perm.action }})
@@ -419,8 +419,8 @@ const getRoleColor = (role: string) => {
   const colors: Record<string, string> = {
     管理员: 'bg-red-100 text-red-700',
     admin: 'bg-red-100 text-red-700',
-    教师: 'bg-blue-100 text-blue-700',
-    学生: 'bg-green-100 text-green-700',
+    教师: 'bg-primary/10 text-primary/90',
+    商户: 'bg-green-100 text-green-700',
     用户: 'bg-green-100 text-green-700',
     审核员: 'bg-purple-100 text-purple-700',
     分析师: 'bg-yellow-100 text-yellow-700',

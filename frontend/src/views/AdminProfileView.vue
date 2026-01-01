@@ -11,7 +11,7 @@
         </div>
         <div class="flex flex-wrap gap-3">
           <button
-            class="rounded-full bg-indigo-600 px-4 py-2 text-sm text-white shadow hover:bg-indigo-700"
+            class="rounded-full bg-primary px-4 py-2 text-sm text-white shadow hover:bg-primary"
             @click="goSettings"
           >
             ⚙️ 系统设置
@@ -38,7 +38,7 @@
           <span
             v-for="role in roles"
             :key="role"
-            class="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600"
+            class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary"
           >
             {{ role }}
           </span>
@@ -61,15 +61,15 @@
         <ul class="space-y-3 text-sm text-slate-600">
           <li class="flex items-center justify-between rounded-lg border border-slate-100 p-3">
             <span>查看系统告警与监控</span>
-            <button class="text-indigo-600" @click="goMonitor">前往</button>
+            <button class="text-primary" @click="goMonitor">前往</button>
           </li>
           <li class="flex items-center justify-between rounded-lg border border-slate-100 p-3">
             <span>管理管理员账号与角色</span>
-            <button class="text-indigo-600" @click="goUserAdmin">前往</button>
+            <button class="text-primary" @click="goUserAdmin">前往</button>
           </li>
           <li class="flex items-center justify-between rounded-lg border border-slate-100 p-3">
             <span>审计日志与安全事件</span>
-            <button class="text-indigo-600" @click="goTables('audit_logs')">前往</button>
+            <button class="text-primary" @click="goTables('audit_logs')">前往</button>
           </li>
         </ul>
       </article>

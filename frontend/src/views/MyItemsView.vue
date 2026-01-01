@@ -1,95 +1,113 @@
 <template>
-  <div class="my-items min-h-screen bg-gray-50">
-    <div class="max-w-6xl mx-auto py-6 px-4">
-      <div class="bg-white rounded-lg shadow p-6">
-        <h1 class="text-2xl font-bold mb-6">📦 我的商品</h1>
+  <div class="my-items min-h-screen bg-[#f4f4f4]">
+    <!-- Header Section -->
+    <div class="bg-[#2e3235] text-white py-8 mb-8">
+      <div class="max-w-7xl mx-auto px-4">
+        <h1 class="text-3xl font-black tracking-tighter uppercase italic">
+          My <span class="text-primary">Inventory</span>
+          <span class="block text-sm font-normal tracking-widest mt-1 opacity-60 italic">PHOENIX AUTO PARTS / STOCK MANAGEMENT</span>
+        </h1>
+      </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto px-4 pb-12">
+      <div class="bg-white shadow-sm border border-gray-200">
         <n-spin :show="loading">
-          <n-tabs v-model:value="activeTab" type="segment" animated>
-            <n-tab-pane name="selling" tab="在售中">
-              <div v-if="sellingItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                <n-card v-for="item in sellingItems" :key="item.id" hoverable>
-                  <div class="flex gap-4">
-                    <div class="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      <img
-                        :src="getItemImageUrl(item.images, item.id)"
-                        :alt="item.title"
-                        class="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <h3 class="font-bold mb-1 truncate">{{ item.title }}</h3>
-                      <p class="text-red-500 font-bold mb-2">¥{{ item.price }}</p>
-                      <div class="text-sm text-gray-500 space-y-1">
-                        <div>👁️ {{ item.views }} 浏览</div>
-                        <div>💬 {{ item.inquiries }} 咨询</div>
-                      </div>
-                      <div class="flex gap-2 mt-3">
-                        <n-button size="small" @click="editItem(item)">编辑</n-button>
-                        <n-button size="small" type="error" @click="removeItem(item)">下架</n-button>
-                      </div>
+          <n-tabs v-model:value="activeTab" type="line" animated class="px-6 pt-4">
+            <n-tab-pane name="selling" tab="在售中 (SELLING)">
+              <div v-if="sellingItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 pb-6">
+                <div v-for="item in sellingItems" :key="item.id" class="group bg-white border border-gray-200 hover:border-primary transition-all duration-300">
+                  <div class="relative aspect-video overflow-hidden bg-gray-100">
+                    <img
+                      :src="getItemImageUrl(item.images, item.id)"
+                      :alt="item.title"
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div class="absolute top-0 left-0 bg-primary text-white text-[10px] font-bold px-2 py-1 uppercase tracking-tighter">
+                      Active
                     </div>
                   </div>
-                </n-card>
+                  <div class="p-4">
+                    <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Part ID: #{{ item.id }}</div>
+                    <h3 class="font-black text-lg leading-tight mb-2 uppercase italic truncate">{{ item.title }}</h3>
+                    <div class="flex items-baseline gap-2 mb-4">
+                      <span class="text-2xl font-black text-[#2e3235]">¥{{ item.price }}</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-4 text-[10px] font-bold uppercase tracking-tighter text-gray-500">
+                      <div class="bg-gray-50 p-2 border border-gray-100">
+                        👁️ {{ item.views }} Views
+                      </div>
+                      <div class="bg-gray-50 p-2 border border-gray-100">
+                        💬 {{ item.inquiries }} Inquiries
+                      </div>
+                    </div>
+
+                    <div class="flex gap-2">
+                      <n-button block strong secondary type="primary" @click="editItem(item)" class="uppercase font-bold italic">
+                        Edit
+                      </n-button>
+                      <n-button block strong secondary type="error" @click="removeItem(item)" class="uppercase font-bold italic">
+                        Remove
+                      </n-button>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div v-else class="text-center text-gray-400 py-12">
-                <span class="text-4xl block mb-2">🤔</span>
-                <p>还没有在售商品，快去发布吧～</p>
+              <div v-else class="text-center text-gray-400 py-20">
+                <p class="text-xl font-bold uppercase italic tracking-widest">No active parts in inventory</p>
+                <n-button type="primary" class="mt-4 uppercase font-bold italic" @click="router.push('/publish')">Add New Part</n-button>
               </div>
             </n-tab-pane>
 
-            <n-tab-pane name="sold" tab="已售出">
-              <div v-if="soldItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                <n-card v-for="item in soldItems" :key="item.id">
-                  <div class="flex gap-4">
-                    <div class="w-24 h-24 bg-gray-200 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      <img
-                        :src="getItemImageUrl(item.images, item.id)"
-                        :alt="item.title"
-                        class="w-full h-full object-cover opacity-80"
-                      />
-                    </div>
-                    <div class="flex-1">
-                      <h3 class="font-bold mb-1">{{ item.title }}</h3>
-                      <p class="text-gray-500 mb-2">¥{{ item.price }}</p>
-                      <n-tag type="success" size="small">已售出</n-tag>
-                      <div class="text-sm text-gray-500 mt-2">
-                        成交时间: {{ formatDate(item.updated_at || item.created_at) }}
-                      </div>
+            <n-tab-pane name="sold" tab="已售出 (SOLD)">
+              <div v-if="soldItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 pb-6">
+                <div v-for="item in soldItems" :key="item.id" class="bg-white border border-gray-200 opacity-75">
+                  <div class="relative aspect-video overflow-hidden bg-gray-100">
+                    <img
+                      :src="getItemImageUrl(item.images, item.id)"
+                      :alt="item.title"
+                      class="w-full h-full object-cover grayscale"
+                    />
+                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span class="text-white font-black text-2xl uppercase italic tracking-tighter border-4 border-white px-4 py-1">SOLD</span>
                     </div>
                   </div>
-                </n-card>
+                  <div class="p-4">
+                    <h3 class="font-black text-lg leading-tight mb-2 uppercase italic truncate text-gray-500">{{ item.title }}</h3>
+                    <p class="text-xl font-black text-gray-400 mb-2">¥{{ item.price }}</p>
+                    <div class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                      Sold Date: {{ formatDate(item.updated_at || item.created_at) }}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div v-else class="text-center text-gray-400 py-12">
-                <span class="text-4xl block mb-2">🕒</span>
-                <p>还没有售出的商品</p>
+              <div v-else class="text-center text-gray-400 py-20">
+                <p class="text-xl font-bold uppercase italic tracking-widest">No sold parts yet</p>
               </div>
             </n-tab-pane>
 
-            <n-tab-pane name="removed" tab="已下架">
-              <div v-if="removedItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
-                <n-card v-for="item in removedItems" :key="item.id">
-                  <div class="flex gap-4">
-                    <div class="w-24 h-24 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      <img
-                        :src="getItemImageUrl(item.images, item.id)"
-                        :alt="item.title"
-                        class="w-full h-full object-cover grayscale"
-                      />
-                    </div>
-                    <div class="flex-1">
-                      <h3 class="font-bold mb-1">{{ item.title }}</h3>
-                      <p class="text-gray-500 mb-2">¥{{ item.price }}</p>
-                      <n-tag size="small">已下架</n-tag>
-                      <div class="text-sm text-gray-500 mt-2">
-                        下架时间: {{ formatDate(item.updated_at || item.created_at) }}
-                      </div>
-                    </div>
+            <n-tab-pane name="removed" tab="已下架 (ARCHIVED)">
+              <div v-if="removedItems.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6 pb-6">
+                <div v-for="item in removedItems" :key="item.id" class="bg-white border border-gray-200">
+                  <div class="relative aspect-video overflow-hidden bg-gray-100">
+                    <img
+                      :src="getItemImageUrl(item.images, item.id)"
+                      :alt="item.title"
+                      class="w-full h-full object-cover grayscale"
+                    />
                   </div>
-                </n-card>
+                  <div class="p-4">
+                    <h3 class="font-black text-lg leading-tight mb-2 uppercase italic truncate">{{ item.title }}</h3>
+                    <p class="text-xl font-black text-gray-400 mb-4">¥{{ item.price }}</p>
+                    <n-button block strong secondary @click="restoreItem(item)" class="uppercase font-bold italic">
+                      Relist Part
+                    </n-button>
+                  </div>
+                </div>
               </div>
-              <div v-else class="text-center text-gray-400 py-12">
-                <span class="text-6xl block mb-4">📭</span>
-                <p>暂无下架商品</p>
+              <div v-else class="text-center text-gray-400 py-20">
+                <p class="text-xl font-bold uppercase italic tracking-widest">Archive is empty</p>
               </div>
             </n-tab-pane>
           </n-tabs>
@@ -101,21 +119,21 @@
     <n-modal
       v-model:show="editModalVisible"
       preset="card"
-      title="编辑商品"
+      title="编辑零件"
       size="huge"
       :bordered="false"
       :segmented="false"
     >
       <n-form :model="editForm" label-placement="top">
-        <n-form-item label="商品标题" path="title">
-          <n-input v-model:value="editForm.title" placeholder="请输入商品标题" />
+        <n-form-item label="零件标题" path="title">
+          <n-input v-model:value="editForm.title" placeholder="请输入零件标题" />
         </n-form-item>
         
-        <n-form-item label="商品描述" path="description">
+        <n-form-item label="零件描述" path="description">
           <n-input 
             v-model:value="editForm.description" 
             type="textarea" 
-            placeholder="请输入商品描述"
+            placeholder="请输入零件描述"
             :autosize="{ minRows: 3, maxRows: 6 }"
           />
         </n-form-item>
@@ -130,11 +148,11 @@
           />
         </n-form-item>
         
-        <n-form-item label="商品成色" path="condition">
+        <n-form-item label="零件成色" path="condition">
           <n-select 
             v-model:value="editForm.condition" 
             :options="conditionOptions"
-            placeholder="请选择商品成色"
+            placeholder="请选择零件成色"
           />
         </n-form-item>
       </n-form>
@@ -151,11 +169,13 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { NButton, NCard, NSpin, NTabPane, NTabs, NTag, useMessage, NModal, NForm, NFormItem, NInput, NInputNumber, NSelect, NSpace } from 'naive-ui'
+import { useRouter } from 'vue-router'
+import { NButton, NCard, NSpin, NTabPane, NTabs, NTag, useMessage, NModal, NForm, NFormItem, NInput, NInputNumber, NSelect, NSpace, NAvatar } from 'naive-ui'
 import { http } from '@/lib/http'
 
 type TabKey = 'selling' | 'sold' | 'removed'
 
+const router = useRouter()
 const message = useMessage()
 const activeTab = ref<TabKey>('selling')
 const loading = ref(false)
@@ -231,8 +251,8 @@ const loadItems = async (tabKey: TabKey, options: { force?: boolean } = {}) => {
     itemsByTab[tabKey] = formatItems(response.data.items)
     fetchedTabs[tabKey] = true
   } catch (error: any) {
-    console.error('加载我的商品失败:', error)
-    message.error(error.response?.data?.detail || '加载我的商品失败')
+    console.error('加载我的零件失败:', error)
+    message.error(error.response?.data?.detail || '加载我的零件失败')
   } finally {
     loading.value = false
   }
@@ -268,7 +288,7 @@ const saveEdit = async () => {
       condition: editForm.condition
     })
     
-    message.success('商品信息已更新')
+    message.success('零件信息已更新')
     editModalVisible.value = false
     editingItem.value = null
     
@@ -288,7 +308,7 @@ const cancelEdit = () => {
 const removeItem = async (item: any) => {
   try {
     await http.put(`/items/${item.id}`, { status: 'removed' })
-    message.success('商品已下架')
+    message.success('零件已下架')
     fetchedTabs.removed = false
     await refreshTab(activeTab.value)
   } catch (error: any) {
@@ -297,9 +317,21 @@ const removeItem = async (item: any) => {
   }
 }
 
+const restoreItem = async (item: any) => {
+  try {
+    await http.put(`/items/${item.id}`, { status: 'available' })
+    message.success('零件已重新上架')
+    fetchedTabs.selling = false
+    await refreshTab(activeTab.value)
+  } catch (error: any) {
+    console.error('上架失败:', error)
+    message.error(error.response?.data?.detail || '上架失败')
+  }
+}
+
 const sellingItems = computed(() => itemsByTab.selling)
 const soldItems = computed(() => itemsByTab.sold)
-const removedItems = computed(() => itemsByTab.sold)
+const removedItems = computed(() => itemsByTab.removed)
 
 // 本地占位图列表
 const PLACEHOLDER_IMAGES = [
@@ -327,7 +359,7 @@ const getFullImageUrl = (relativeUrl: string) => {
   return `${serverUrl}${relativeUrl}`
 }
 
-// 获取商品图片URL，支持随机占位图
+// 获取零件图片URL，支持随机占位图
 const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
   if (Array.isArray(images) && images.length > 0) {
     return getFullImageUrl(images[0])
@@ -361,3 +393,21 @@ onMounted(() => {
   loadItems('selling', { force: true })
 })
 </script>
+
+<style scoped>
+.n-tabs :deep(.n-tabs-tab-wrapper) {
+  padding: 0 16px;
+}
+
+.n-tabs :deep(.n-tabs-tab__label) {
+  font-weight: 900;
+  text-transform: uppercase;
+  font-style: italic;
+  letter-spacing: 0.05em;
+}
+
+.n-tabs :deep(.n-tabs-bar) {
+  height: 4px;
+  background-color: #82b440 !important;
+}
+</style>

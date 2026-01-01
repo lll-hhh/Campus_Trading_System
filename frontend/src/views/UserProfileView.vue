@@ -31,7 +31,7 @@ const userInfo = ref<any>({
   id: 1,
   username: '张三',
   email: 'zhangsan@example.com',
-  student_id: 'S10001',
+  license_id: 'S10001',
   avatar: '',
   credit_score: 95,
   role: 'user',
@@ -61,7 +61,7 @@ const loadUserData = async () => {
       id: response.data.user_id,
       username: response.data.display_name || '用户',
       email: response.data.email || '已登录用户',
-      student_id: response.data.student_id || '已认证',
+      license_id: response.data.license_id || '已认证',
       avatar: response.data.avatar || '',
       credit_score: response.data.credit_score || 95,
       role: response.data.roles?.[0] || 'user',
@@ -75,7 +75,7 @@ const loadUserData = async () => {
 
 const loadStats = async () => {
   try {
-    // 加载商品统计
+    // 加载零件统计
     const itemsResponse = await api.get('/items/my', { params: { page_size: 1 } })
     stats.value.items_count = itemsResponse.data.total
 
@@ -110,7 +110,7 @@ const loadRecentItems = async () => {
     const response = await api.get('/items/my', { params: { page_size: 3 } })
     recentItems.value = response.data.items
   } catch (error: any) {
-    console.error('加载最近商品失败:', error)
+    console.error('加载最近零件失败:', error)
   }
 }
 
@@ -178,7 +178,7 @@ onMounted(() => {
                 已认证
               </n-tag>
             </div>
-            <div style="color: #666">学号: {{ userInfo.student_id }}</div>
+            <div style="color: #666">执照号: {{ userInfo.license_id }}</div>
             <div style="color: #666">邮箱: {{ userInfo.email }}</div>
             <div>
               <n-tag type="info">信用分: {{ userInfo.credit_score }}</n-tag>
@@ -190,7 +190,7 @@ onMounted(() => {
 
         <n-grid :cols="4" :x-gap="24">
           <n-grid-item>
-            <n-statistic label="发布商品" :value="stats.items_count" />
+            <n-statistic label="发布零件" :value="stats.items_count" />
           </n-grid-item>
           <n-grid-item>
             <n-statistic label="已售出" :value="stats.sold_count" />
@@ -208,9 +208,9 @@ onMounted(() => {
       <n-card title="快捷操作">
         <n-space>
           <n-button type="primary" @click="router.push('/marketplace')">
-            浏览商品
+            浏览零件
           </n-button>
-          <n-button @click="goToMyItems">我的商品</n-button>
+          <n-button @click="goToMyItems">我的零件</n-button>
           <n-button @click="goToOrders">交易记录</n-button>
           <n-button @click="goToFavorites">我的收藏</n-button>
           <n-button @click="router.push('/messages')">
@@ -224,7 +224,7 @@ onMounted(() => {
       <!-- 最近活动 -->
       <n-card title="最近活动">
         <n-tabs type="line" v-model:value="activeTab">
-          <n-tab-pane name="items" tab="我的商品">
+          <n-tab-pane name="items" tab="我的零件">
             <n-list hoverable clickable>
               <n-list-item v-for="item in recentItems" :key="item.id">
                 <n-thing :title="item.title" :description="`发布于 ${new Date(item.created_at).toLocaleDateString()}`">
@@ -240,9 +240,9 @@ onMounted(() => {
                 </n-thing>
               </n-list-item>
               <n-list-item v-if="recentItems.length === 0">
-                <n-thing title="暂无商品" description="您还没有发布商品">
+                <n-thing title="暂无零件" description="您还没有发布零件">
                   <template #footer>
-                    <n-button @click="router.push('/marketplace')">去发布商品</n-button>
+                    <n-button @click="router.push('/marketplace')">去发布零件</n-button>
                   </template>
                 </n-thing>
               </n-list-item>
@@ -269,7 +269,7 @@ onMounted(() => {
               <n-list-item v-if="recentTransactions.length === 0">
                 <n-thing title="暂无交易记录" description="您还没有交易记录">
                   <template #footer>
-                    <n-button @click="router.push('/marketplace')">去浏览商品</n-button>
+                    <n-button @click="router.push('/marketplace')">去浏览零件</n-button>
                   </template>
                 </n-thing>
               </n-list-item>
@@ -289,9 +289,9 @@ onMounted(() => {
                 </n-thing>
               </n-list-item>
               <n-list-item v-if="recentFavorites.length === 0">
-                <n-thing title="暂无收藏" description="您还没有收藏商品">
+                <n-thing title="暂无收藏" description="您还没有收藏零件">
                   <template #footer>
-                    <n-button @click="router.push('/marketplace')">去浏览商品</n-button>
+                    <n-button @click="router.push('/marketplace')">去浏览零件</n-button>
                   </template>
                 </n-thing>
               </n-list-item>

@@ -1,0 +1,40 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">ER 图 - 库存基础数据 (ER Diagram: Inventory Basic)</text>
+
+  <!-- Table: parts -->
+  <rect x="400" y="250" width="200" height="200" rx="10" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <text x="500" y="280" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">parts</text>
+  <line x1="400" y1="290" x2="600" y2="290" stroke="#ffa940" stroke-width="2"/>
+  <text x="410" y="310" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="410" y="330" font-family="Arial" font-size="12">part_code (U)</text>
+  <text x="410" y="350" font-family="Arial" font-size="12">name</text>
+  <text x="410" y="370" font-family="Arial" font-size="12">FK: category_id</text>
+  <text x="410" y="390" font-family="Arial" font-size="12">FK: supplier_id</text>
+  <text x="410" y="410" font-family="Arial" font-size="12">base_price</text>
+
+  <!-- Table: categories -->
+  <rect x="400" y="50" width="200" height="120" rx="10" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="80" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">categories</text>
+  <line x1="400" y1="90" x2="600" y2="90" stroke="#52c41a" stroke-width="2"/>
+  <text x="410" y="110" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="410" y="130" font-family="Arial" font-size="12">name (U)</text>
+  <text x="410" y="150" font-family="Arial" font-size="12">parent_id (FK)</text>
+
+  <!-- Table: suppliers -->
+  <rect x="50" y="250" width="200" height="140" rx="10" fill="#e6fffb" stroke="#13c2c2" stroke-width="2"/>
+  <text x="150" y="280" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">suppliers</text>
+  <line x1="50" y1="290" x2="250" y2="290" stroke="#13c2c2" stroke-width="2"/>
+  <text x="60" y="310" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="60" y="330" font-family="Arial" font-size="12">name</text>
+  <text x="60" y="350" font-family="Arial" font-size="12">contact_person</text>
+  <text x="60" y="370" font-family="Arial" font-size="12">phone</text>
+
+  <!-- Relationships -->
+  <line x1="500" y1="170" x2="500" y2="250" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="510" y="210" font-family="Arial" font-size="12">1 : N</text>
+  
+  <line x1="250" y1="320" x2="400" y2="320" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="325" y="310" font-family="Arial" font-size="12" text-anchor="middle">1 : N</text>
+
+</svg>

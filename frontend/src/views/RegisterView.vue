@@ -1,72 +1,80 @@
 <template>
-  <div class="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-    <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-        注册新账户
-      </h2>
+  <div class="flex min-h-screen flex-1 flex-col justify-center px-6 py-12 lg:px-8 bg-dark relative overflow-hidden">
+    <!-- Background Decoration -->
+    <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+      <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary blur-[120px] rounded-full"></div>
+      <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary blur-[120px] rounded-full"></div>
     </div>
 
-    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <div class="space-y-6">
-        <!-- 错误提示 -->
-        <div v-if="errorMessage" class="rounded-md bg-red-50 p-4">
-          <div class="text-sm text-red-700">{{ errorMessage }}</div>
-        </div>
-
-        <div>
-          <label for="username" class="block text-sm font-medium leading-6 text-gray-900">用户名</label>
-          <div class="mt-2">
-            <input v-model="form.username" id="username" type="text" required placeholder="3-20个字符" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-          </div>
-        </div>
-
-        <div>
-          <label for="email" class="block text-sm font-medium leading-6 text-gray-900">邮箱</label>
-          <div class="mt-2">
-            <input v-model="form.email" id="email" type="email" required placeholder="your@email.com" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-          </div>
-        </div>
-
-        <!-- 新增：学号字段 -->
-        <div>
-          <label for="studentId" class="block text-sm font-medium leading-6 text-gray-900">学号</label>
-          <div class="mt-2">
-            <input v-model="form.studentId" id="studentId" type="text" required placeholder="8-12位数字" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-          </div>
-        </div>
-
-        <div>
-          <label for="password" class="block text-sm font-medium leading-6 text-gray-900">密码</label>
-          <div class="mt-2">
-            <input v-model="form.password" id="password" type="password" required placeholder="至少6个字符" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-          </div>
-        </div>
-
-        <div>
-          <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">确认密码</label>
-          <div class="mt-2">
-            <input v-model="form.confirmPassword" id="confirmPassword" type="password" required placeholder="再次输入密码" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6" />
-          </div>
-        </div>
-
-        <div>
-          <button 
-            @click="handleRegister" 
-            :disabled="isLoading"
-            type="button" 
-            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
-          >
-            {{ isLoading ? '注册中...' : '注册' }}
-          </button>
+    <div class="sm:mx-auto sm:w-full sm:max-w-sm relative z-10">
+      <div class="flex justify-center mb-8">
+        <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg shadow-primary/20">
+          P
         </div>
       </div>
-
-      <p class="mt-10 text-center text-sm text-gray-500">
-        已有账号？
-        <RouterLink to="/login" class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">
-          去登录
-        </RouterLink>
+      <h2 class="text-center text-4xl font-black tracking-tighter text-white uppercase">
+        JOIN <span class="text-primary">PHOENIX</span>
+      </h2>
+      <p class="mt-2 text-center text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">
+        Become a Certified Auto Parts Merchant
       </p>
+    </div>
+
+    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+      <div class="bg-white/5 backdrop-blur-xl p-10 rounded-2xl border border-white/10 shadow-2xl">
+        <div class="space-y-5">
+          <!-- 错误提示 -->
+          <div v-if="errorMessage" class="rounded-lg bg-red-500/10 border border-red-500/20 p-4">
+            <div class="text-xs font-bold uppercase tracking-widest text-red-400">{{ errorMessage }}</div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="username" class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">商户名称 Name</label>
+              <input v-model="form.username" id="username" type="text" required placeholder="Merchant Name" class="block w-full rounded-xl border-0 bg-white/5 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm transition-all" />
+            </div>
+            <div>
+              <label for="licenseId" class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">执照编号 License</label>
+              <input v-model="form.licenseId" id="licenseId" type="text" required placeholder="8-12 digits" class="block w-full rounded-xl border-0 bg-white/5 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm transition-all" />
+            </div>
+          </div>
+
+          <div>
+            <label for="email" class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">联系邮箱 Email</label>
+            <input v-model="form.email" id="email" type="email" required placeholder="your@email.com" class="block w-full rounded-xl border-0 bg-white/5 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm transition-all" />
+          </div>
+
+          <div>
+            <label for="password" class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">设置密码 Password</label>
+            <input v-model="form.password" id="password" type="password" required placeholder="Min 6 characters" class="block w-full rounded-xl border-0 bg-white/5 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm transition-all" />
+          </div>
+
+          <div>
+            <label for="confirmPassword" class="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">确认密码 Confirm</label>
+            <input v-model="form.confirmPassword" id="confirmPassword" type="password" required placeholder="Repeat password" class="block w-full rounded-xl border-0 bg-white/5 py-3 px-4 text-white shadow-sm ring-1 ring-inset ring-white/10 placeholder:text-gray-600 focus:ring-2 focus:ring-inset focus:ring-primary sm:text-sm transition-all" />
+          </div>
+
+          <div class="pt-4">
+            <button 
+              @click="handleRegister" 
+              :disabled="isLoading"
+              type="button" 
+              class="flex w-full justify-center rounded-xl bg-primary px-4 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-lg shadow-primary/20 hover:bg-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 transition-all active:scale-[0.98]"
+            >
+              {{ isLoading ? 'Processing...' : '提交入驻申请 Join Now' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-10 pt-8 border-t border-white/5 text-center">
+          <p class="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            已有商户账号？
+            <RouterLink to="/login" class="text-primary hover:text-white transition-colors ml-2">
+              立即登录 Login
+            </RouterLink>
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -83,7 +91,7 @@ const errorMessage = ref('')
 const form = ref({
   username: '',
   email: '',
-  studentId: '',
+  licenseId: '',
   password: '',
   confirmPassword: ''
 })
@@ -93,12 +101,12 @@ const handleRegister = async () => {
   
   // 前端验证
   if (form.value.username.length < 3 || form.value.username.length > 20) {
-    errorMessage.value = '用户名需要3-20个字符'
+    errorMessage.value = '商户名称需要3-20个字符'
     return
   }
   
-  if (!/^[0-9]{8,12}$/.test(form.value.studentId)) {
-    errorMessage.value = '学号需要8-12位数字'
+  if (!/^[0-9]{8,12}$/.test(form.value.licenseId)) {
+    errorMessage.value = '执照编号需要8-12位数字'
     return
   }
   
@@ -118,7 +126,7 @@ const handleRegister = async () => {
     await api.post('/auth/register', {
       username: form.value.username,
       email: form.value.email,
-      student_id: form.value.studentId,
+      license_id: form.value.licenseId,
       password: form.value.password,
       confirm_password: form.value.confirmPassword
     })

@@ -1,85 +1,21 @@
 <template>
   <div class="admin-operations-container">
-    <h1>⚙️ 管理员高级操作中心</h1>
+    <n-h1 class="mb-6">🛠️ 凤凰汽配 · 系统运维与审核中心</n-h1>
 
-    <!-- 批量操作区 (未实现，暂时隐藏) -->
-    <n-card v-if="false" title="📦 批量数据操作" class="section-card">
-      <n-space vertical size="large">
-        <n-alert type="warning" title="⚠️ 危险操作警告" :bordered="false">
-          批量操作将影响多条数据，请谨慎操作！建议先备份数据库。
-        </n-alert>
-
-        <n-tabs type="line" animated>
-          <n-tab-pane name="batch-user" tab="用户批量管理">
-            <n-space vertical>
-              <n-form inline>
-                <n-form-item label="选择条件">
-                  <n-select v-model:value="batchUserCondition" :options="userConditionOptions" style="width: 200px" />
-                </n-form-item>
-                <n-form-item label="操作">
-                  <n-select v-model:value="batchUserAction" :options="userActionOptions" style="width: 200px" />
-                </n-form-item>
-                <n-form-item>
-                  <n-button type="primary" @click="executeBatchUserOperation">
-                    执行批量操作
-                  </n-button>
-                </n-form-item>
-              </n-form>
-              <n-statistic label="预计影响用户数" :value="estimatedUserCount">
-                <template #suffix>人</template>
-              </n-statistic>
-            </n-space>
-          </n-tab-pane>
-
-          <n-tab-pane name="batch-item" tab="商品批量管理">
-            <n-space vertical>
-              <n-form inline>
-                <n-form-item label="商品状态">
-                  <n-select v-model:value="batchItemStatus" :options="itemStatusOptions" style="width: 150px" />
-                </n-form-item>
-                <n-form-item label="天数阈值">
-                  <n-input-number v-model:value="batchItemDays" :min="1" style="width: 120px" />
-                </n-form-item>
-                <n-form-item label="操作">
-                  <n-select v-model:value="batchItemAction" :options="itemActionOptions" style="width: 150px" />
-                </n-form-item>
-                <n-form-item>
-                  <n-button type="primary" @click="executeBatchItemOperation">
-                    执行批量操作
-                  </n-button>
-                </n-form-item>
-              </n-form>
-              <n-statistic label="预计影响商品数" :value="estimatedItemCount">
-                <template #suffix>件</template>
-              </n-statistic>
-            </n-space>
-          </n-tab-pane>
-
-          <n-tab-pane name="batch-transaction" tab="交易批量处理">
-            <n-space vertical>
-              <n-form inline>
-                <n-form-item label="交易类型">
-                  <n-checkbox-group v-model:value="selectedTransactionTypes">
-                    <n-space>
-                      <n-checkbox value="pending" label="待处理" />
-                      <n-checkbox value="cancelled" label="已取消" />
-                      <n-checkbox value="timeout" label="超时未完成" />
-                    </n-space>
-                  </n-checkbox-group>
-                </n-form-item>
-                <n-form-item label="保留最近(天)">
-                  <n-input-number v-model:value="transactionDays" :min="1" :max="365" style="width: 140px" />
-                </n-form-item>
-                <n-form-item>
-                  <n-button type="error" @click="cleanupTransactions">
-                    清理选中类型的交易记录
-                  </n-button>
-                </n-form-item>
-              </n-form>
-            </n-space>
-          </n-tab-pane>
-        </n-tabs>
-      </n-space>
+    <!-- 零件审核 -->
+    <n-card title="⚖️ 零件审核" class="section-card mb-6">
+      <template #header-extra>
+        <n-space>
+          <n-tag type="warning" round>待审核: {{ pendingItems.length }}</n-tag>
+        </n-space>
+      </template>
+      
+      <n-data-table
+        :columns="auditColumns"
+        :data="pendingItems"
+        :loading="pendingLoading"
+        :pagination="{ pageSize: 10 }"
+      />
     </n-card>
 
     <!-- 数据导入导出 -->
@@ -91,7 +27,7 @@
             <n-checkbox-group v-model:value="exportTables">
               <n-space vertical>
                 <n-checkbox value="users" label="用户数据" />
-                <n-checkbox value="items" label="商品数据" />
+                <n-checkbox value="items" label="零件数据" />
                 <n-checkbox value="transactions" label="交易数据" />
                 <n-checkbox value="comments" label="评论数据" />
                 <n-checkbox value="messages" label="消息数据" />
@@ -99,14 +35,7 @@
               </n-space>
             </n-checkbox-group>
             <n-select v-model:value="exportFormat" :options="exportFormatOptions" placeholder="选择导出格式" />
-            <n-space>
-              <n-button type="primary" @click="exportData">
-                🔽 导出数据
-              </n-button>
-              <n-button @click="scheduleExport">
-                📅 定时导出
-              </n-button>
-            </n-space>
+            <n-button type="primary" @click="exportData">🔽 导出数据</n-button>
           </n-space>
         </n-gi>
 
@@ -114,16 +43,9 @@
           <h3>📥 数据导入</h3>
           <n-space vertical>
             <n-select v-model:value="importTable" :options="importTableOptions" placeholder="选择目标表" />
-            <n-upload
-              :max="1"
-              accept=".sql,.json,.csv"
-              @before-upload="handleBeforeUpload"
-            >
+            <n-upload :max="1" accept=".sql,.json,.csv" @before-upload="handleBeforeUpload">
               <n-button>选择文件</n-button>
             </n-upload>
-            <n-alert v-if="uploadedFile" type="info" :bordered="false">
-              已选择: {{ uploadedFile.name }} ({{ uploadedFile.file ? (uploadedFile.file.size / 1024).toFixed(2) : '0' }} KB)
-            </n-alert>
             <n-radio-group v-model:value="importMode">
               <n-space>
                 <n-radio value="replace" label="替换模式" />
@@ -131,144 +53,8 @@
                 <n-radio value="update" label="更新模式" />
               </n-space>
             </n-radio-group>
-            <n-button type="primary" :disabled="!uploadedFile" :loading="importLoading" @click="importData">
-              🔼 开始导入
-            </n-button>
+            <n-button type="primary" :disabled="!uploadedFile" :loading="importLoading" @click="importData">🔼 开始导入</n-button>
           </n-space>
-        </n-gi>
-      </n-grid>
-    </n-card>
-
-    <!-- 同步冲突管理 - 跳转到专用监控页 -->
-    <n-card title="🔄 数据库同步管理" class="section-card">
-      <n-space vertical size="large">
-        <n-alert type="info" :bordered="false">
-          完整的同步监控、冲突管理功能已集成到专用监控页面，提供实时监控、批量操作等功能。
-        </n-alert>
-        
-        <n-descriptions :column="2" bordered>
-          <n-descriptions-item label="功能特性">
-            实时数据库状态监控
-          </n-descriptions-item>
-          <n-descriptions-item label="冲突处理">
-            可视化冲突详情对比
-          </n-descriptions-item>
-          <n-descriptions-item label="同步统计">
-            成功率、失败率分析
-          </n-descriptions-item>
-          <n-descriptions-item label="批量操作">
-            支持批量解决冲突
-          </n-descriptions-item>
-        </n-descriptions>
-
-        <n-space justify="center">
-          <n-button type="primary" size="large" @click="$router.push('/admin/sync-monitor')">
-            <template #icon>
-              <n-icon><ServerOutline /></n-icon>
-            </template>
-            前往同步监控页面
-          </n-button>
-        </n-space>
-      </n-space>
-    </n-card>
-
-    <!-- SQL 执行器 (未实现，暂时隐藏) -->
-    <n-card v-if="false" title="💻 高级 SQL 执行器" class="section-card">
-      <n-space vertical>
-        <n-alert type="warning" title="⚠️ 高级功能" :bordered="false">
-          仅限高级管理员使用，错误的 SQL 可能导致数据丢失！
-        </n-alert>
-        
-        <n-select v-model:value="sqlTargetDb" :options="databaseOptions" placeholder="选择目标数据库" />
-        
-        <n-input
-          v-model:value="sqlQuery"
-          type="textarea"
-          placeholder="输入 SQL 语句..."
-          :rows="8"
-          :autosize="{ minRows: 8, maxRows: 20 }"
-        />
-        
-        <n-space>
-          <n-button type="primary" :loading="sqlLoading" @click="executeSql">▶️ 执行 SQL</n-button>
-          <n-button :loading="sqlLoading" @click="explainSql">📊 EXPLAIN 分析</n-button>
-          <n-button @click="formatSql">🎨 格式化</n-button>
-          <n-button type="error" @click="clearSql">🗑️ 清空</n-button>
-        </n-space>
-
-        <n-card v-if="sqlResult" title="执行结果" size="small">
-          <n-code :code="JSON.stringify(sqlResult, null, 2)" language="json" />
-        </n-card>
-      </n-space>
-    </n-card>
-
-    <!-- 系统维护工具 (未实现，暂时隐藏) -->
-    <n-card v-if="false" title="🛠️ 系统维护工具" class="section-card">
-      <n-grid :cols="3" :x-gap="15" :y-gap="15">
-        <n-gi>
-          <n-card title="🧹 数据清理" size="small">
-            <n-space vertical>
-              <n-button block @click="cleanupExpiredSessions">清理过期会话</n-button>
-              <n-button block @click="cleanupDeletedRecords">清理已删除记录</n-button>
-              <n-button block @click="cleanupTempFiles">清理临时文件</n-button>
-              <n-button block type="warning" @click="vacuum">VACUUM 优化</n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-
-        <n-gi>
-          <n-card title="📊 索引管理" size="small">
-            <n-space vertical>
-              <n-button block @click="analyzeIndexes">分析索引使用率</n-button>
-              <n-button block @click="rebuildIndexes">重建索引</n-button>
-              <n-button block @click="suggestIndexes">智能索引建议</n-button>
-              <n-button block type="primary" @click="optimizeTables">优化表结构</n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-
-        <n-gi>
-          <n-card title="🔐 安全审计" size="small">
-            <n-space vertical>
-              <n-button block @click="viewAuditLogs">查看审计日志</n-button>
-              <n-button block @click="exportAuditLogs">导出审计日志</n-button>
-              <n-button block type="warning" @click="detectAnomalies">检测异常行为</n-button>
-              <n-button block type="error" @click="lockSuspiciousUsers">锁定可疑用户</n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-
-        <n-gi>
-          <n-card title="📈 性能优化" size="small">
-            <n-space vertical>
-              <n-button block @click="analyzeSlowQueries">慢查询分析</n-button>
-              <n-button block @click="cacheWarming">预热缓存</n-button>
-              <n-button block @click="adjustConnPool">调整连接池</n-button>
-              <n-button block type="primary" @click="autoOptimize">自动优化</n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-
-        <n-gi>
-          <n-card title="💾 备份恢复" size="small">
-            <n-space vertical>
-              <n-button block type="primary" @click="createBackup">创建备份</n-button>
-              <n-button block @click="viewBackups">查看备份列表</n-button>
-              <n-button block type="warning" @click="restoreBackup">恢复备份</n-button>
-              <n-button block @click="scheduleBackup">定时备份设置</n-button>
-            </n-space>
-          </n-card>
-        </n-gi>
-
-        <n-gi>
-          <n-card title="🔄 同步管理" size="small">
-            <n-space vertical>
-              <n-button block @click="forceSyncAll">强制全量同步</n-button>
-              <n-button block @click="pauseSync">暂停同步</n-button>
-              <n-button block @click="resumeSync">恢复同步</n-button>
-              <n-button block type="primary" @click="configureSyncRules">配置同步规则</n-button>
-            </n-space>
-          </n-card>
         </n-gi>
       </n-grid>
     </n-card>
@@ -276,11 +62,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
-import type { UploadFileInfo } from 'naive-ui'
-import { useMessage } from 'naive-ui'
-import { ServerOutline } from '@vicons/ionicons5'
+import { ref, watch, onMounted, h } from 'vue'
+import {
+  NCard,
+  NSpace,
+  NButton,
+  NTabs,
+  NTabPane,
+  NForm,
+  NFormItem,
+  NSelect,
+  NInput,
+  NInputNumber,
+  NStatistic,
+  NAlert,
+  NCheckbox,
+  NCheckboxGroup,
+  NGrid,
+  NGi,
+  NUpload,
+  NDataTable,
+  useMessage,
+  type UploadFileInfo
+} from 'naive-ui'
 import { http as api } from '@/lib/http'
+import { ServerOutline } from '@vicons/ionicons5'
 
 const message = useMessage()
 
@@ -310,7 +116,7 @@ const userActionOptions = [
   { label: '重置信用分', value: 'reset_credit' }
 ]
 
-// 批量商品操作
+// 批量零件操作
 const batchItemStatus = ref('available')
 const batchItemDays = ref(90)
 const batchItemAction = ref('archive')
@@ -349,7 +155,7 @@ const exportFormatOptions = [
 
 const importTableOptions = [
   { label: '用户数据', value: 'users' },
-  { label: '商品数据', value: 'items' },
+  { label: '零件数据', value: 'items' },
   { label: '交易数据', value: 'transactions' },
   { label: '评论数据', value: 'comments' },
   { label: '消息数据', value: 'messages' },
@@ -357,24 +163,9 @@ const importTableOptions = [
 ]
 
 // SQL 执行器
-const sqlTargetDb = ref<'MySQL' | 'PostgreSQL' | 'MariaDB' | 'SQLite'>('MySQL')
 const sqlQuery = ref('')
 const sqlResult = ref<any>(null)
 const sqlLoading = ref(false)
-
-const databaseOptions = [
-  { label: 'MySQL', value: 'MySQL' },
-  { label: 'PostgreSQL', value: 'PostgreSQL' },
-  { label: 'MariaDB', value: 'MariaDB' },
-  { label: 'SQLite', value: 'SQLite' }
-]
-
-const DB_VALUE_MAP: Record<string, 'mysql' | 'postgres' | 'mariadb' | 'sqlite'> = {
-  MySQL: 'mysql',
-  PostgreSQL: 'postgres',
-  MariaDB: 'mariadb',
-  SQLite: 'sqlite'
-}
 
 const fetchUserEstimate = async () => {
   userEstimateLoading.value = true
@@ -400,7 +191,7 @@ const fetchItemEstimate = async () => {
     )
     estimatedItemCount.value = data.count
   } catch (error) {
-    handleError(error, '无法获取商品数量')
+    handleError(error, '无法获取零件数量')
   } finally {
     itemEstimateLoading.value = false
   }
@@ -441,10 +232,10 @@ const executeBatchItemOperation = async () => {
         dry_run: false
       }
     )
-    message.success(`成功处理 ${data.affected} 件商品`)
+    message.success(`成功处理 ${data.affected} 件零件`)
     fetchItemEstimate()
   } catch (error) {
-    handleError(error, '批量商品操作失败')
+    handleError(error, '批量零件操作失败')
   }
 }
 
@@ -562,7 +353,7 @@ const runSql = async (mode: 'run' | 'explain') => {
   sqlLoading.value = true
   try {
     const { data } = await api.post('/admin/operations/sql', {
-      database: DB_VALUE_MAP[sqlTargetDb.value],
+      database: 'mysql',
       query: sqlQuery.value.trim(),
       mode
     })
@@ -588,73 +379,59 @@ const clearSql = () => {
   sqlResult.value = null
 }
 
-type MaintenanceTaskKey =
-  | 'cleanup_expired_sessions'
-  | 'cleanup_deleted_records'
-  | 'cleanup_temp_files'
-  | 'vacuum_tables'
-  | 'analyze_indexes'
-  | 'rebuild_indexes'
-  | 'suggest_indexes'
-  | 'optimize_tables'
-  | 'view_audit_logs'
-  | 'export_audit_logs'
-  | 'detect_anomalies'
-  | 'lock_suspicious_users'
-  | 'analyze_slow_queries'
-  | 'cache_warming'
-  | 'adjust_connection_pool'
-  | 'auto_optimize'
-  | 'create_backup'
-  | 'view_backups'
-  | 'restore_backup'
-  | 'schedule_backup'
+const pendingItems = ref<any[]>([])
+const pendingLoading = ref(false)
 
-const runMaintenanceTask = async (task: MaintenanceTaskKey, successText: string) => {
+const loadPendingItems = async () => {
+  pendingLoading.value = true
   try {
-    const { data } = await api.post('/admin/operations/maintenance', { task })
-    const affected = data?.affected_rows ?? 0
-    const messageText = data?.message || successText
-    message.success(`${messageText}${affected ? `（影响 ${affected} 行）` : ''}`)
+    const response = await api.get('/admin/operations/items/pending')
+    pendingItems.value = response.data
   } catch (error) {
-    handleError(error, `${successText}失败`)
+    message.error('加载待审核零件失败')
+  } finally {
+    pendingLoading.value = false
   }
 }
 
-// 系统维护工具（接入后台任务）
-const cleanupExpiredSessions = () => runMaintenanceTask('cleanup_expired_sessions', '过期会话清理任务已提交')
-const cleanupDeletedRecords = () => runMaintenanceTask('cleanup_deleted_records', '已提交删除记录清理任务')
-const cleanupTempFiles = () => runMaintenanceTask('cleanup_temp_files', '临时文件清理完成')
-const vacuum = () => runMaintenanceTask('vacuum_tables', 'VACUUM 优化任务已记录')
-const analyzeIndexes = () => runMaintenanceTask('analyze_indexes', '索引分析任务已发起')
-const rebuildIndexes = () => runMaintenanceTask('rebuild_indexes', '索引重建执行中')
-const suggestIndexes = () => runMaintenanceTask('suggest_indexes', '索引建议报告已生成')
-const optimizeTables = () => runMaintenanceTask('optimize_tables', '表结构优化已提交')
-const viewAuditLogs = () => runMaintenanceTask('view_audit_logs', '已获取最新审计日志')
-const exportAuditLogs = () => runMaintenanceTask('export_audit_logs', '审计日志导出任务已提交')
-const detectAnomalies = () => runMaintenanceTask('detect_anomalies', '已触发异常检测')
-const lockSuspiciousUsers = () => runMaintenanceTask('lock_suspicious_users', '可疑用户已锁定')
-const analyzeSlowQueries = () => runMaintenanceTask('analyze_slow_queries', '慢查询分析任务已执行')
-const cacheWarming = () => runMaintenanceTask('cache_warming', '缓存预热已启动')
-const adjustConnPool = () => runMaintenanceTask('adjust_connection_pool', '连接池参数调整请求已发送')
-const autoOptimize = () => runMaintenanceTask('auto_optimize', '自动优化策略已执行')
-const createBackup = () => runMaintenanceTask('create_backup', '备份任务已加入队列')
-const viewBackups = () => runMaintenanceTask('view_backups', '已拉取备份信息')
-const restoreBackup = () => runMaintenanceTask('restore_backup', '恢复任务已启动，请关注进度')
-const scheduleBackup = () => runMaintenanceTask('schedule_backup', '定时备份计划已更新')
-
-const forceSyncAll = async () => {
+const auditItem = async (itemId: number, status: 'available' | 'banned', reason: string = '') => {
   try {
-    await api.post('/sync/run')
-    message.success('已触发全量同步任务')
+    // 映射前端状态到后端 action
+    const action = status === 'available' ? 'approve' : 'reject'
+    
+    await api.post('/admin/operations/items/audit', {
+      item_id: itemId,
+      action: action,
+      reason: reason
+    })
+    message.success(status === 'available' ? '审核通过' : '已驳回')
+    loadPendingItems()
   } catch (error) {
-    handleError(error, '触发全量同步失败')
+    message.error('操作失败')
   }
 }
 
-const pauseSync = () => message.info('同步暂停功能待实现')
-const resumeSync = () => message.info('同步恢复功能待实现')
-const configureSyncRules = () => message.info('请前往同步设置页面配置规则')
+const auditColumns = [
+  { title: 'ID', key: 'id', width: 60 },
+  { title: '标题', key: 'title' },
+  { title: '价格', key: 'price', render: (row: any) => `¥${row.price}` },
+  { title: '卖家', key: 'seller_name' },
+  { title: '发布时间', key: 'created_at', render: (row: any) => new Date(row.created_at).toLocaleString() },
+  {
+    title: '操作',
+    key: 'actions',
+    render: (row: any) => h(NSpace, {}, {
+      default: () => [
+        h(NButton, { size: 'small', type: 'success', onClick: () => auditItem(row.id, 'available') }, { default: () => '通过' }),
+        h(NButton, { size: 'small', type: 'error', onClick: () => auditItem(row.id, 'banned') }, { default: () => '驳回' })
+      ]
+    })
+  }
+]
+
+onMounted(() => {
+  loadPendingItems()
+})
 </script>
 
 <style scoped>

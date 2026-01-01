@@ -16,8 +16,8 @@ const tables = [
   { key: 'users', label: '用户管理', endpoint: '/admin/tables/users' },
   { key: 'user_profiles', label: '用户档案', endpoint: '/admin/tables/user_profiles' },
   { key: 'categories', label: '分类管理', endpoint: '/admin/tables/categories' },
-  { key: 'items', label: '商品管理', endpoint: '/admin/tables/items' },
-  { key: 'item_images', label: '商品图片', endpoint: '/admin/tables/item_images' },
+  { key: 'items', label: '零件管理', endpoint: '/admin/tables/items' },
+  { key: 'item_images', label: '零件图片', endpoint: '/admin/tables/item_images' },
   { key: 'comments', label: '评论管理', endpoint: '/admin/tables/comments' },
   { key: 'transactions', label: '交易管理', endpoint: '/admin/tables/transactions' },
   { key: 'messages', label: '消息管理', endpoint: '/admin/tables/messages' },
@@ -26,7 +26,6 @@ const tables = [
   
   // 系统管理表
   { key: 'audit_logs', label: '审计日志', endpoint: '/admin/tables/audit_logs' },
-  { key: 'conflict_records', label: '冲突记录', endpoint: '/admin/tables/conflict_records' },
   { key: 'system_configs', label: '系统配置', endpoint: '/admin/tables/system_configs' },
   { key: 'system_settings', label: '系统设置', endpoint: '/admin/tables/system_settings' },
   { key: 'roles', label: '角色管理', endpoint: '/admin/tables/roles' },
@@ -45,7 +44,6 @@ const tables = [
   { key: 'notifications', label: '通知管理', endpoint: '/admin/tables/notifications' },
   { key: 'search_history', label: '搜索历史', endpoint: '/admin/tables/search_history' },
   { key: 'credit_score_history', label: '信用分历史', endpoint: '/admin/tables/credit_score_history' },
-  { key: 'sync_tasks', label: '同步任务', endpoint: '/admin/tables/sync_tasks' },
   { key: 'performance_metrics', label: '性能指标', endpoint: '/admin/tables/performance_metrics' },
 ]
 

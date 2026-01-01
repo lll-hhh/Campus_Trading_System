@@ -1,0 +1,55 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold" fill="#333">系统物理部署架构图 (Deployment Diagram)</text>
+
+  <!-- Internet/User -->
+  <rect x="400" y="80" width="200" height="60" rx="10" fill="#f0f0f0" stroke="#333" stroke-width="2"/>
+  <text x="500" y="115" font-family="Arial" font-size="16" text-anchor="middle">终端用户 (Browser)</text>
+
+  <!-- Nginx Node -->
+  <rect x="350" y="180" width="300" height="80" rx="5" fill="#e6fffb" stroke="#13c2c2" stroke-width="2"/>
+  <text x="500" y="210" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Nginx 反向代理容器</text>
+  <text x="500" y="235" font-family="Arial" font-size="12" text-anchor="middle">Port: 80 / 443</text>
+
+  <!-- Frontend Node -->
+  <rect x="100" y="320" width="200" height="100" rx="5" fill="#e6f7ff" stroke="#1890ff" stroke-width="2"/>
+  <text x="200" y="350" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Frontend 容器</text>
+  <text x="200" y="380" font-family="Arial" font-size="12" text-anchor="middle">Vue 3 + Vite 静态资源</text>
+
+  <!-- Backend Node -->
+  <rect x="400" y="320" width="200" height="100" rx="5" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="350" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Backend 容器</text>
+  <text x="500" y="380" font-family="Arial" font-size="12" text-anchor="middle">FastAPI / Gunicorn</text>
+
+  <!-- Redis Node -->
+  <rect x="700" y="320" width="200" height="100" rx="5" fill="#fff0f6" stroke="#eb2f96" stroke-width="2"/>
+  <text x="800" y="350" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Redis 容器</text>
+  <text x="800" y="380" font-family="Arial" font-size="12" text-anchor="middle">缓存 &amp; 消息队列</text>
+
+  <!-- MySQL Node -->
+  <rect x="400" y="480" width="200" height="80" rx="5" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <text x="500" y="515" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">MySQL 8.0 容器</text>
+  <text x="500" y="540" font-family="Arial" font-size="12" text-anchor="middle">持久化存储 (Volume)</text>
+
+  <!-- Connections -->
+  <path d="M 500 140 L 500 180" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  
+  <path d="M 400 260 L 250 320" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="300" y="280" font-family="Arial" font-size="11" text-anchor="middle">静态请求</text>
+
+  <path d="M 600 260 L 500 320" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="580" y="280" font-family="Arial" font-size="11" text-anchor="middle">API 请求</text>
+
+  <path d="M 500 420 L 500 480" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="530" y="455" font-family="Arial" font-size="11">SQL</text>
+
+  <path d="M 600 370 L 700 370" stroke="#8c8c8c" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+  <text x="650" y="360" font-family="Arial" font-size="11" text-anchor="middle">Cache/Task</text>
+
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8c8c8c" />
+    </marker>
+  </defs>
+</svg>

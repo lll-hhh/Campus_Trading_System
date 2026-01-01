@@ -4,13 +4,13 @@ import  { http as api } from '@/lib/http';
 
 export interface DailyTrend {
   date: string;
-  sync_success: number;
-  sync_conflicts: number;
+  trade_count: number;
+  inquiry_count: number;
   ai_requests: number;
   inventory_changes: number;
 }
 
-export interface SyncLogEntry {
+export interface SystemLogEntry {
   id: number;
   config_id: number | null;
   status: string;
@@ -31,7 +31,7 @@ export interface InventoryItemCard {
 export const useDashboardStore = defineStore('dashboard', {
   state: () => ({
     dailyStats: [] as DailyTrend[],
-    syncLogs: [] as SyncLogEntry[],
+    systemLogs: [] as SystemLogEntry[],
     latestItems: [] as InventoryItemCard[],
     loading: false,
     error: ''
@@ -43,11 +43,11 @@ export const useDashboardStore = defineStore('dashboard', {
       try {
         const [stats, logs, inventory] = await Promise.all([
           api.get<DailyTrend[]>('/dashboard/daily-stats'),
-          api.get<SyncLogEntry[]>('/dashboard/sync-logs'),
+          api.get<SystemLogEntry[]>('/dashboard/system-logs'),
           api.get<InventoryItemCard[]>('/dashboard/inventory')
         ]);
         this.dailyStats = stats.data.reverse();
-        this.syncLogs = logs.data;
+        this.systemLogs = logs.data;
         this.latestItems = inventory.data;
       } catch (error) {
         this.error = (error as Error).message;

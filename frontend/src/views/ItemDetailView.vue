@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, h } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { 
   NCard, 
@@ -34,7 +34,56 @@ const itemId = computed(() => route.params.id as string)
 const loading = ref(false)
 const commentLoading = ref(false)
 
-// 商品详情接口
+// 辅助函数
+const getStatusType = (status: string) => {
+  switch (status) {
+    case 'available': return 'success'
+    case 'pending': return 'warning'
+    case 'sold': return 'info'
+    case 'offline': return 'error'
+    default: return 'default'
+  }
+}
+
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'available': return '在售'
+    case 'pending': return '审核中'
+    case 'sold': return '已售'
+    case 'offline': return '已下架'
+    default: return '未知'
+  }
+}
+
+const getCategoryLabel = (category: string) => {
+  const options = [
+    { label: '发动机系统', value: 'engine' },
+    { label: '制动系统', value: 'brakes' },
+    { label: '滤清器', value: 'filters' },
+    { label: '蓄电池', value: 'batteries' },
+    { label: '轮胎轮毂', value: 'tires' },
+    { label: '灯光照明', value: 'lighting' },
+    { label: '悬挂系统', value: 'suspension' },
+    { label: '传动系统', value: 'transmission' },
+    { label: '车身外观', value: 'body' },
+    { label: '内饰配件', value: 'interior' },
+    { label: '其他配件', value: 'other' }
+  ]
+  return options.find(o => o.value === category)?.label || category
+}
+
+const getConditionLabel = (condition: string) => {
+  const options = [
+    { label: '原厂全新', value: 'new' },
+    { label: '原厂拆车', value: 'like-new' },
+    { label: '品牌件', value: 'excellent' },
+    { label: '副厂件', value: 'good' },
+    { label: '翻新件', value: 'used' }
+  ]
+  return options.find(o => o.value === condition)?.label || condition
+}
+
+// 零件详情接口
 interface ItemDetail {
   id: number
   title: string
@@ -55,7 +104,7 @@ interface ItemDetail {
     avatar?: string
     rating: number
     totalSales: number
-    campus?: string
+    region?: string
     responseRate: number
   }
   created_at: string
@@ -73,9 +122,11 @@ interface Comment {
   rating: number
   content: string
   created_at: string
+  parent_comment_id?: number
+  replies?: Comment[]
 }
 
-// 商品详情
+// 零件详情
 const item = ref<ItemDetail>({
   id: 0,
   title: '',
@@ -98,7 +149,7 @@ const comments = ref<Comment[]>([])
 // 相似推荐
 const similarItems = ref<ItemDetail[]>([])
 
-// 商品详情弹窗状态
+// 零件详情弹窗状态
 const showDetailDialog = ref(false)
 const detailLoading = ref(false)
 type DetailDialogItem = ItemDetail & { isFavorited?: boolean }
@@ -127,7 +178,7 @@ const newComment = reactive({
 // 是否已收藏
 const isFavorited = ref(false)
 
-// 加载商品详情
+// 加载零件详情
 const loadItemDetail = async () => {
   loading.value = true
   try {
@@ -152,7 +203,7 @@ const loadItemDetail = async () => {
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.value.seller_name}`,
         rating: 4.8,
         totalSales: 0,
-        campus: '校园用户',
+        region: '凤凰用户',
         responseRate: 95
       }
     }
@@ -163,12 +214,12 @@ const loadItemDetail = async () => {
       currentItem.value.isFavorited = isFavorited.value
     }
     
-    // 加载相似商品
+    // 加载相似零件
     await loadSimilarItems()
     
   } catch (error: any) {
-    console.error('加载商品详情失败:', error)
-    message.error(error.response?.data?.detail || '加载商品详情失败')
+    console.error('加载零件详情失败:', error)
+    message.error(error.response?.data?.detail || '加载零件详情失败')
   } finally {
     loading.value = false
   }
@@ -207,7 +258,7 @@ const loadComments = async () => {
   }
 }
 
-// 加载相似商品
+// 加载相似零件
 const loadSimilarItems = async () => {
   try {
     const response = await http.get('/items', {
@@ -217,7 +268,7 @@ const loadSimilarItems = async () => {
         status: 'available'
       }
     })
-    // 过滤掉当前商品
+    // 过滤掉当前零件
     similarItems.value = response.data.items
       .filter((i: ItemDetail) => i.id !== item.value.id)
       .slice(0, 4)
@@ -229,11 +280,11 @@ const loadSimilarItems = async () => {
         }
       })
   } catch (error) {
-    console.error('加载相似商品失败:', error)
+    console.error('加载相似零件失败:', error)
   }
 }
 
-// ✅ 新增：加入购物车
+// ✅ 新增：加入采购车
 const handleAddToCart = async (targetItem?: ItemDetail) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
@@ -246,15 +297,15 @@ const handleAddToCart = async (targetItem?: ItemDetail) => {
       item_id: data.id,
       quantity: 1
     })
-    message.success(`"${data.title}" 已加入购物车`)
+    message.success(`"${data.title}" 已加入采购车`)
   } catch (error: any) {
     const detail = error.response?.data?.detail
-    if (detail === '不能购买自己发布的商品') {
-      message.warning('不能购买自己的商品哦~')
-    } else if (detail === '商品已下架或已售出，无法添加到购物车') {
-      message.warning('该商品已下架或已售出')
+    if (detail === '不能购买自己发布的零件') {
+      message.warning('不能购买自己的零件哦~')
+    } else if (detail === '零件已下架或已售出，无法添加到采购车') {
+      message.warning('该零件已下架或已售出')
     } else {
-      message.error(detail || '加入购物车失败')
+      message.error(detail || '加入采购车失败')
     }
   }
 }
@@ -267,9 +318,9 @@ const handleBuyNow = () => {
     return
   }
   
-  // 检查是否是自己的商品
+  // 检查是否是自己的零件
   if (item.value.seller_id === authStore.user?.id) {
-    message.warning('不能购买自己的商品')
+    message.warning('不能购买自己的零件')
     return
   }
   
@@ -403,7 +454,7 @@ const handleSubmitComment = async () => {
   }
 }
 
-// 查看相似商品
+// 查看相似零件
 const handleViewSimilarItem = (id: number) => {
   router.push(`/item/${id}`)
 }
@@ -460,7 +511,7 @@ const getFullImageUrl = (relativeUrl: string) => {
   return `${serverUrl}${relativeUrl}`
 }
 
-// 获取商品图片URL，支持随机占位图
+// 获取零件图片URL，支持随机占位图
 const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
   return buildDisplayImages(images, itemId || 0)[0]
 }
@@ -486,326 +537,192 @@ onMounted(async () => {
   await loadItemDetail()
   await loadComments()
 })
+
+// 回复相关
+const handleReply = (parentComment: Comment) => {
+  if (!authStore.isAuthenticated) {
+    message.warning('请先登录后再回复')
+    router.push('/login')
+    return
+  }
+  
+  dialog.info({
+    title: `回复 ${parentComment.user.username}`,
+    content: () => h(NInput, {
+      type: 'textarea',
+      placeholder: '请输入回复内容...',
+      onUpdateValue: (v) => { replyContent.value = v }
+    }),
+    positiveText: '提交',
+    negativeText: '取消',
+    onPositiveClick: async () => {
+      if (!replyContent.value) {
+        message.error('回复内容不能为空')
+        return false
+      }
+      await submitReply(parentComment.id)
+    }
+  })
+}
+
+const replyContent = ref('')
+
+const submitReply = async (parentId: number) => {
+  try {
+    await http.post('/api/v1/comments', {
+      item_id: item.value.id,
+      content: replyContent.value,
+      parent_comment_id: parentId,
+      rating: 5
+    })
+    message.success('回复成功')
+    replyContent.value = ''
+    loadComments() // 刷新评论列表
+  } catch (error) {
+    console.error('回复失败:', error)
+    message.error('回复失败，请稍后再试')
+  }
+}
 </script>
 
 <template>
-  <div class="item-detail-view">
+  <div class="item-detail-view max-w-7xl mx-auto py-12 px-4">
     <n-spin :show="loading">
-      <n-card>
-        <n-grid :cols="2" :x-gap="24" responsive="screen">
-          <!-- 左侧：图片轮播 -->
-          <n-grid-item>
-            <n-carousel autoplay show-arrow>
-              <img
-                v-for="(image, index) in itemDisplayImages"
-                :key="index"
-                :src="image"
-                class="carousel-img"
-              />
-            </n-carousel>
-            
-            <!-- 商品统计 -->
-            <n-space justify="space-around" style="margin-top: 16px">
-              <span>👁️ {{ item.view_count }} 次浏览</span>
-              <span>❤️ {{ item.favorite_count }} 人喜欢</span>
-              <span>📅 {{ formatDate(item.created_at) }}</span>
-            </n-space>
-          </n-grid-item>
-
-          <!-- 右侧：商品信息 -->
-          <n-grid-item>
-            <n-space vertical :size="16">
-              <!-- 标题 -->
-              <h1 style="font-size: 28px; margin: 0">{{ item.title }}</h1>
-
-              <!-- 价格 -->
-              <div class="price-section">
-                <span class="current-price">¥{{ item.price }}</span>
-                <span v-if="item.originalPrice && item.originalPrice > item.price" class="original-price">
-                  ¥{{ item.originalPrice }}
-                </span>
-                <n-tag v-if="item.originalPrice && item.originalPrice > item.price" type="error" size="small">
-                  省{{ item.originalPrice - item.price }}元
-                </n-tag>
-              </div>
-
-              <!-- 标签 -->
-              <n-space>
-                <n-tag type="success">{{ item.category }}</n-tag>
-                <n-tag type="info">{{ item.condition }}</n-tag>
-                <n-tag :type="item.status === 'available' ? 'warning' : 'error'">
-                  {{ item.status === 'available' ? '在售' : item.status === 'sold' ? '已售出' : item.status }}
-                </n-tag>
-              </n-space>
-
-              <!-- 卖家信息 -->
-              <n-card size="small" title="卖家信息">
-                <n-space align="center">
-                  <n-avatar :src="item.seller?.avatar" size="large" />
-                  <div>
-                    <div style="font-weight: bold; font-size: 16px">
-                      {{ item.seller?.username || item.seller_name }}
-                    </div>
-                    <n-space :size="8">
-                      <n-rate :value="item.seller?.rating || 5" readonly size="small" />
-                      <span style="font-size: 12px; color: #999">
-                        {{ item.seller?.totalSales || 0 }} 笔交易
-                      </span>
-                    </n-space>
-                    <div style="font-size: 12px; color: #666; margin-top: 4px">
-                      📍 {{ item.seller?.campus || '校园用户' }} | 回复率 {{ item.seller?.responseRate || 95 }}%
-                    </div>
-                  </div>
-                </n-space>
-              </n-card>
-
-              <!-- 交易地点 -->
-              <n-descriptions :column="1" bordered size="small">
-                <n-descriptions-item label="📍 交易地点">
-                  {{ item.location || '线下当面交易' }}
-                </n-descriptions-item>
-              </n-descriptions>
-
-              <!-- 操作按钮 -->
-              <n-space>
-                <n-button 
-                  type="primary" 
-                  size="large" 
-                  @click="handleBuyNow()"
-                  :disabled="item.status !== 'available'"
-                >
-                  💰 立即购买
-                </n-button>
-                <n-button 
-                  size="large" 
-                  @click="handleAddToCart()"
-                  :disabled="item.status !== 'available'"
-                >
-                  🛒 加入购物车
-                </n-button>
-                <n-button size="large" @click="handleContactSeller()">
-                  💬 联系卖家
-                </n-button>
-                <n-button
-                  :type="isFavorited ? 'error' : 'default'"
-                  size="large"
-                  @click="handleToggleFavorite()"
-                >
-                  {{ isFavorited ? '❤️ 已收藏' : '🤍 收藏' }}
-                </n-button>
-              </n-space>
-            </n-space>
-          </n-grid-item>
-        </n-grid>
-      </n-card>
-
-      <!-- 详情和评论 -->
-      <n-card style="margin-top: 24px">
-        <n-tabs type="line" animated>
-          <!-- 商品详情 -->
-          <n-tab-pane name="details" tab="📝 商品详情">
-            <div class="description" v-html="item.description.replace(/\n/g, '<br>')"></div>
-          </n-tab-pane>
-
-          <!-- 用户评价 -->
-          <n-tab-pane name="comments" tab="💬 用户评价">
-            <!-- 发表评论 -->
-            <n-card size="small" title="发表评价" style="margin-bottom: 24px">
-              <n-space vertical>
-                <div>
-                  <span style="margin-right: 8px">评分：</span>
-                  <n-rate v-model:value="newComment.rating" />
-                </div>
-                <n-input
-                  v-model:value="newComment.content"
-                  type="textarea"
-                  placeholder="分享你的使用体验..."
-                  :rows="3"
+      <div v-if="item.id" class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+        <!-- 左侧：图片展示 -->
+        <div class="lg:col-span-7">
+          <div class="sticky top-24">
+            <div class="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm mb-6">
+              <n-carousel show-arrow dot-type="line" class="h-[600px] bg-gray-50">
+                <img
+                  v-for="(img, index) in itemDisplayImages"
+                  :key="index"
+                  :src="img"
+                  class="w-full h-full object-contain p-8"
                 />
-                <n-button type="primary" @click="handleSubmitComment()">
-                  提交评价
-                </n-button>
-              </n-space>
-            </n-card>
-
-            <!-- 评论列表 -->
-            <n-spin :show="commentLoading">
-              <n-space vertical :size="16">
-                <div v-for="comment in comments" :key="comment.id" class="comment-item">
-                  <n-space align="start">
-                    <n-avatar :src="comment.user.avatar" />
-                    <div style="flex: 1">
-                      <div style="font-weight: bold">{{ comment.user.username }}</div>
-                      <n-rate :value="comment.rating" readonly size="small" />
-                      <p style="margin: 8px 0">{{ comment.content }}</p>
-                      <span style="font-size: 12px; color: #999">
-                        {{ formatDate(comment.created_at) }}
-                      </span>
-                    </div>
-                  </n-space>
-                </div>
-                
-                <n-empty v-if="comments.length === 0" description="暂无评价" />
-              </n-space>
-            </n-spin>
-          </n-tab-pane>
-        </n-tabs>
-      </n-card>
-
-      <!-- 相似推荐 -->
-      <n-card title="🔍 相似推荐" style="margin-top: 24px">
-        <n-grid :cols="4" :x-gap="16" :y-gap="16" responsive="screen">
-          <n-grid-item v-for="similarItem in similarItems" :key="similarItem.id">
-            <n-card
-              hoverable
-              class="similar-item"
-              @click="handleViewSimilarItem(similarItem.id)"
-            >
-              <img 
-                :src="getItemImageUrl(similarItem.images, similarItem.id)" 
-                class="similar-item-img" 
-              />
-              <div class="similar-item-title">{{ similarItem.title }}</div>
-              <div class="similar-item-price">¥{{ similarItem.price }}</div>
-              <div class="similar-item-seller">卖家: {{ similarItem.seller_name }}</div>
-
-              <!-- 在商品卡片的底部操作区域添加 -->
-              <div class="flex gap-2 mt-3">
-                <n-button 
-                  size="small" 
-                  type="primary"
-                  @click.stop="handleAddToCart(similarItem)"
-                >
-                  🛒 加购
-                </n-button>
-                <n-button 
-                  size="small"
-                  @click.stop="viewItemDetail(similarItem)"
-                >
-                  查看详情
-                </n-button>
+              </n-carousel>
+            </div>
+            <!-- 缩略图预览 (如果有多个图片) -->
+            <div v-if="itemDisplayImages.length > 1" class="flex gap-4 overflow-x-auto pb-2">
+              <div 
+                v-for="(img, index) in itemDisplayImages" 
+                :key="index"
+                class="w-24 h-24 rounded-xl border-2 border-gray-100 overflow-hidden cursor-pointer hover:border-primary transition-colors flex-shrink-0"
+              >
+                <img :src="img" class="w-full h-full object-cover" />
               </div>
-            </n-card>
-          </n-grid-item>
-        </n-grid>
-        <n-empty v-if="similarItems.length === 0" description="暂无相似商品" />
-      </n-card>
-    </n-spin>
+            </div>
+          </div>
+        </div>
 
-    <!-- 商品详情弹窗（新加） -->
-    <n-dialog v-model:show="showDetailDialog" width="80%" :mask-closable="false">
-      <template #header>
-        <div class="text-lg font-bold">{{ currentItem.title }}</div>
-      </template>
-      
-      <template #default>
-        <n-spin :show="detailLoading">
-          <!-- 图片轮播 -->
-          <n-carousel autoplay show-arrow>
-            <img
-              v-for="(image, index) in dialogDisplayImages"
-              :key="index"
-              :src="image"
-              class="carousel-img"
-            />
-          </n-carousel>
-          
-          <!-- 商品信息 -->
-          <div class="p-4">
-            <!-- 价格 -->
-            <div class="price-section">
-              <span class="current-price">¥{{ currentItem.price }}</span>
-              <span v-if="currentItem.originalPrice && currentItem.originalPrice > currentItem.price" class="original-price">
-                ¥{{ currentItem.originalPrice }}
-              </span>
-              <n-tag v-if="currentItem.originalPrice && currentItem.originalPrice > currentItem.price" type="error" size="small">
-                省{{ currentItem.originalPrice - currentItem.price }}元
-              </n-tag>
+        <!-- 右侧：零件信息 -->
+        <div class="lg:col-span-5">
+          <div class="flex flex-col h-full">
+            <!-- 标题和状态 -->
+            <div class="mb-8">
+              <div class="flex items-center gap-3 mb-4">
+                <span class="bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                  {{ getCategoryLabel(item.category) }}
+                </span>
+                <span :class="`bg-gray-100 text-gray-500 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full` ">
+                  {{ getConditionLabel(item.condition) }}
+                </span>
+              </div>
+              <h1 class="text-4xl font-black tracking-tighter text-dark leading-tight mb-4">
+                {{ item.title }}
+              </h1>
+              <div class="flex items-center gap-6 text-gray-400 text-[10px] font-bold uppercase tracking-widest">
+                <span>OEM: {{ item.id.toString().padStart(8, '0') }}</span>
+                <span>👁️ {{ item.view_count }} 浏览</span>
+                <span>❤️ {{ item.favorite_count }} 收藏</span>
+              </div>
             </div>
 
-            <!-- 标签 -->
-            <n-space>
-              <n-tag type="success">{{ currentItem.category }}</n-tag>
-              <n-tag type="info">{{ currentItem.condition }}</n-tag>
-              <n-tag :type="currentItem.status === 'available' ? 'warning' : 'error'">
-                {{ currentItem.status === 'available' ? '在售' : currentItem.status === 'sold' ? '已售出' : currentItem.status }}
-              </n-tag>
-            </n-space>
+            <!-- 价格区域 -->
+            <div class="bg-gray-50 rounded-2xl p-8 mb-8 border border-gray-100">
+              <div class="flex items-baseline gap-4 mb-2">
+                <span class="text-gray-400 text-xs font-bold uppercase tracking-widest">现价 Price</span>
+                <span class="text-4xl font-black text-dark tracking-tighter">¥{{ item.price }}</span>
+                <span v-if="item.originalPrice" class="text-gray-400 line-through text-lg">¥{{ item.originalPrice }}</span>
+              </div>
+              <p class="text-primary text-[10px] font-black uppercase tracking-widest">
+                <span class="mr-2">✓</span> 原厂品质保证 <span class="mx-2">|</span> <span class="mr-2">✓</span> 极速发货
+              </p>
+            </div>
 
             <!-- 卖家信息 -->
-            <n-card size="small" title="卖家信息" class="mt-4">
-              <n-space align="center">
-                <n-avatar :src="currentItem.seller?.avatar" size="large" />
-                <div>
-                  <div style="font-weight: bold; font-size: 16px">
-                    {{ currentItem.seller?.username || currentItem.seller_name }}
-                  </div>
-                  <n-space :size="8">
-                    <n-rate :value="currentItem.seller?.rating || 5" readonly size="small" />
-                    <span style="font-size: 12px; color: #999">
-                      {{ currentItem.seller?.totalSales || 0 }} 笔交易
-                    </span>
-                  </n-space>
-                  <div style="font-size: 12px; color: #666; margin-top: 4px">
-                    📍 {{ currentItem.seller?.campus || '校园用户' }} | 回复率 {{ currentItem.seller?.responseRate || 95 }}%
-                  </div>
-                </div>
-              </n-space>
-            </n-card>
+            <div class="flex items-center gap-4 p-6 rounded-2xl border border-gray-100 mb-8 hover:bg-gray-50 transition-colors cursor-pointer">
+              <n-avatar round size="large" :src="`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.seller_id}`" />
+              <div class="flex-1">
+                <h4 class="text-dark font-black tracking-tighter uppercase">{{ item.seller_name }}</h4>
+                <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">认证商户 · 信用极好</p>
+              </div>
+              <n-button secondary round size="small" class="font-black text-[10px] tracking-widest uppercase">查看店铺</n-button>
+            </div>
 
-            <!-- 操作按钮组 -->
-            <div class="space-y-3 mt-4">
-              <!-- 立即购买/联系卖家 -->
-              <n-button 
-                type="warning" 
-                size="large" 
-                block 
-                @click="handleWantToBuy()"
-                strong
-              >
-                💬 我想要 - 联系卖家
-              </n-button>
-              
-              <!-- 加入购物车 -->
+            <!-- 操作按钮 -->
+            <div class="grid grid-cols-2 gap-4 mb-12">
               <n-button 
                 type="primary" 
                 size="large" 
-                block 
-                @click="handleAddToCart(currentItem)"
-                strong
+                strong 
+                round 
+                class="h-14 uppercase font-black tracking-widest text-xs"
+                @click="handleAddToCart(item)"
               >
-                🛒 加入购物车
+                加入采购车
               </n-button>
-              
-              <!-- 收藏 -->
               <n-button 
+                secondary 
                 size="large" 
-                block 
-                ghost
-                :type="currentItem?.isFavorited ? 'error' : 'default'"
-                @click="handleToggleFavorite(currentItem)"
+                strong 
+                round 
+                class="h-14 uppercase font-black tracking-widest text-xs"
+                @click="handleWantToBuy"
               >
-                {{ currentItem?.isFavorited ? '❤️ 已收藏' : '🤍 收藏' }}
+                立即咨询
               </n-button>
             </div>
-            
-            <!-- 交易提示 -->
-            <n-alert type="warning" class="mt-4">
-              <template #header>
-                ⚠️ 交易流程说明
-              </template>
-              <ol class="list-decimal list-inside text-sm space-y-1">
-                <li>点击"我想要"后，在评论区留言沟通</li>
-                <li>双方达成一致后，平台提供联系方式</li>
-                <li>线下当面交易，验货后付款</li>
-                <li>交易完成后，商品自动下架</li>
-              </ol>
-              <p class="text-red-500 font-bold mt-2">❌ 禁止线上支付！违规将封号处理！</p>
-            </n-alert>
+
+            <!-- 详情页签 -->
+            <n-tabs type="line" animated>
+              <n-tab-pane name="desc" tab="零件详情 DESCRIPTION">
+                <div class="py-6 text-gray-600 leading-relaxed text-sm whitespace-pre-wrap">
+                  {{ item.description || '暂无详细描述' }}
+                </div>
+                <div class="grid grid-cols-2 gap-y-4 py-6 border-t border-gray-100">
+                  <div v-if="item.location" class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">发货地 Location</span>
+                    <span class="text-sm font-bold text-dark">{{ item.location }}</span>
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-[10px] font-black uppercase tracking-widest text-gray-400">发布时间 Posted</span>
+                    <span class="text-sm font-bold text-dark">{{ formatDate(item.created_at) }}</span>
+                  </div>
+                </div>
+              </n-tab-pane>
+              <n-tab-pane name="comments" :tab="`评价 REVIEWS (${comments.length})` ">
+                <!-- 评论列表 -->
+                <div class="py-6 space-y-8">
+                  <div v-for="comment in comments" :key="comment.id" class="flex gap-4">
+                    <n-avatar round size="small" :src="comment.user.avatar" />
+                    <div class="flex-1">
+                      <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs font-black uppercase tracking-widest text-dark">{{ comment.user.username }}</span>
+                        <span class="text-[10px] text-gray-400">{{ formatDate(comment.created_at) }}</span>
+                      </div>
+                      <n-rate readonly :default-value="comment.rating" size="small" class="mb-2" />
+                      <p class="text-sm text-gray-600">{{ comment.content }}</p>
+                    </div>
+                  </div>
+                  <n-empty v-if="comments.length === 0" description="暂无评价" />
+                </div>
+              </n-tab-pane>
+            </n-tabs>
           </div>
-        </n-spin>
-      </template>
-    </n-dialog>
+        </div>
+      </div>
+    </n-spin>
   </div>
 </template>
 
@@ -889,7 +806,7 @@ onMounted(async () => {
   color: #999;
 }
 
-/* 新增：商品详情弹窗样式 */
+/* 新增：零件详情弹窗样式 */
 .n-dialog {
   max-width: 900px;
 }
@@ -920,5 +837,101 @@ onMounted(async () => {
 
 .n-dialog .similar-item-img {
   height: 150px;
+}
+
+/* 专业汽车配件平台风格 */
+.item-detail-view {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px;
+}
+
+.item-detail-view h1 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 16px;
+}
+
+.item-detail-view h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.item-detail-view p {
+  font-size: 16px;
+  color: #555;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.item-detail-view .price-section {
+  background: #f9f9f9;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.item-detail-view .current-price {
+  font-size: 32px;
+  font-weight: 700;
+  color: #e63946;
+}
+
+.item-detail-view .original-price {
+  font-size: 18px;
+  color: #999;
+  text-decoration: line-through;
+}
+
+.item-detail-view .description {
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: #333;
+}
+
+.item-detail-view .comment-item {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.item-detail-view .similar-item {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.item-detail-view .similar-item:hover {
+  transform: translateY(-4px);
+}
+
+.item-detail-view .similar-item-img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.item-detail-view .similar-item-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-detail-view .similar-item-price {
+  color: #e63946;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.item-detail-view .similar-item-seller {
+  font-size: 12px;
+  color: #999;
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="admin-performance-container">
     <!-- 顶部标题栏 -->
     <div class="header-bar">
-      <h1>📊 数据库性能监控中心</h1>
+      <h1>📊 系统性能监控中心</h1>
       <n-space>
         <n-button type="primary" @click="refreshAllData">
           🔄 刷新所有数据
@@ -25,8 +25,8 @@
         </n-statistic>
       </n-card>
 
-      <n-card title="📦 商品统计" :bordered="false" class="metric-card">
-        <n-statistic label="在售商品" :value="stats.availableItems">
+      <n-card title="📦 零件统计" :bordered="false" class="metric-card">
+        <n-statistic label="在售零件" :value="stats.availableItems">
           <template #suffix>件</template>
         </n-statistic>
         <n-divider />
@@ -56,8 +56,8 @@
       </n-card>
     </div>
 
-    <!-- 四库同步状态 -->
-    <n-card title="🔄 四数据库同步状态" class="sync-status-card">
+    <!-- 数据库健康状态 -->
+    <n-card title="�️ 数据库健康状态" class="sync-status-card">
       <n-table :bordered="false" :single-line="false">
         <thead>
           <tr>
@@ -65,8 +65,7 @@
             <th>连接状态</th>
             <th>延迟</th>
             <th>记录数</th>
-            <th>同步版本</th>
-            <th>最后同步</th>
+            <th>最后检查</th>
             <th>操作</th>
           </tr>
         </thead>
@@ -75,16 +74,14 @@
             <td><strong>{{ db.name }}</strong></td>
             <td>
               <n-tag :type="db.status === 'online' ? 'success' : 'error'" size="small">
-                {{ db.status === 'online' ? '✅ 在线' : '❌ 离线' }}
+                {{ db.status === 'online' ? '✅ 正常' : '❌ 异常' }}
               </n-tag>
             </td>
             <td>{{ db.latency }}ms</td>
             <td>{{ db.recordCount.toLocaleString() }}</td>
-            <td>v{{ db.syncVersion }}</td>
             <td>{{ db.lastSync }}</td>
             <td>
               <n-space>
-                <n-button size="small" @click="syncDatabase(db)">同步</n-button>
                 <n-button size="small" type="primary" @click="viewDbDetails(db)">详情</n-button>
               </n-space>
             </td>
@@ -134,43 +131,13 @@
 
     <!-- 数据库连接池状态 -->
     <div class="pool-grid">
-      <n-card title="🏊 MySQL 连接池" size="small">
-        <n-progress type="line" :percentage="mysqlPool.usage" :color="getPoolColor(mysqlPool.usage)" />
+      <n-card title="🏊 凤凰汽配主数据库连接池" size="small">
+        <n-progress type="line" :percentage="mainPool.usage" :color="getPoolColor(mainPool.usage)" />
         <n-descriptions :column="2" size="small" style="margin-top: 10px;">
-          <n-descriptions-item label="活跃连接">{{ mysqlPool.active }}/{{ mysqlPool.max }}</n-descriptions-item>
-          <n-descriptions-item label="空闲连接">{{ mysqlPool.idle }}</n-descriptions-item>
-          <n-descriptions-item label="等待队列">{{ mysqlPool.waiting }}</n-descriptions-item>
-          <n-descriptions-item label="超时次数">{{ mysqlPool.timeouts }}</n-descriptions-item>
-        </n-descriptions>
-      </n-card>
-
-      <n-card title="🏊 PostgreSQL 连接池" size="small">
-        <n-progress type="line" :percentage="postgresPool.usage" :color="getPoolColor(postgresPool.usage)" />
-        <n-descriptions :column="2" size="small" style="margin-top: 10px;">
-          <n-descriptions-item label="活跃连接">{{ postgresPool.active }}/{{ postgresPool.max }}</n-descriptions-item>
-          <n-descriptions-item label="空闲连接">{{ postgresPool.idle }}</n-descriptions-item>
-          <n-descriptions-item label="等待队列">{{ postgresPool.waiting }}</n-descriptions-item>
-          <n-descriptions-item label="超时次数">{{ postgresPool.timeouts }}</n-descriptions-item>
-        </n-descriptions>
-      </n-card>
-
-      <n-card title="🏊 MariaDB 连接池" size="small">
-        <n-progress type="line" :percentage="mariadbPool.usage" :color="getPoolColor(mariadbPool.usage)" />
-        <n-descriptions :column="2" size="small" style="margin-top: 10px;">
-          <n-descriptions-item label="活跃连接">{{ mariadbPool.active }}/{{ mariadbPool.max }}</n-descriptions-item>
-          <n-descriptions-item label="空闲连接">{{ mariadbPool.idle }}</n-descriptions-item>
-          <n-descriptions-item label="等待队列">{{ mariadbPool.waiting }}</n-descriptions-item>
-          <n-descriptions-item label="超时次数">{{ mariadbPool.timeouts }}</n-descriptions-item>
-        </n-descriptions>
-      </n-card>
-
-      <n-card title="🏊 SQLite 连接" size="small">
-        <n-progress type="line" :percentage="sqlitePool.usage" :color="getPoolColor(sqlitePool.usage)" />
-        <n-descriptions :column="2" size="small" style="margin-top: 10px;">
-          <n-descriptions-item label="活跃连接">{{ sqlitePool.active }}/{{ sqlitePool.max }}</n-descriptions-item>
-          <n-descriptions-item label="锁等待">{{ sqlitePool.waiting }}</n-descriptions-item>
-          <n-descriptions-item label="写入队列">{{ sqlitePool.writeQueue ?? 0 }}</n-descriptions-item>
-          <n-descriptions-item label="WAL大小">{{ Number(sqlitePool.walSize ?? 0).toFixed(1) }}MB</n-descriptions-item>
+          <n-descriptions-item label="活跃连接">{{ mainPool.active }}/{{ mainPool.max }}</n-descriptions-item>
+          <n-descriptions-item label="空闲连接">{{ mainPool.idle }}</n-descriptions-item>
+          <n-descriptions-item label="等待队列">{{ mainPool.waiting }}</n-descriptions-item>
+          <n-descriptions-item label="超时次数">{{ mainPool.timeouts }}</n-descriptions-item>
         </n-descriptions>
       </n-card>
     </div>
@@ -224,9 +191,9 @@
               <div class="text">{{ getHealthLabel(systemHealth) }}</div>
             </div>
           </n-progress>
-          <n-alert type="info" style="margin-top: 12px;" :bordered="false">
-            评分基于：数据库连接(30%) + 查询速度(30%) + 同步一致性(30%) + 资源使用(10%)
-          </n-alert>
+          <div class="text-xs text-slate-400 mt-2">
+            评分基于：数据库连接(30%) + 查询速度(30%) + 数据一致性(30%) + 资源使用(10%)
+          </div>
         </div>
         <n-divider />
         <n-space vertical>
@@ -243,9 +210,9 @@
             </n-tag>
           </div>
           <div class="health-item">
-            <span>同步一致性</span>
-            <n-tag :type="healthMetrics.syncConsistency > 95 ? 'success' : 'error'">
-              {{ healthMetrics.syncConsistency }}%
+            <span>数据一致性</span>
+            <n-tag :type="healthMetrics.dataConsistency > 95 ? 'success' : 'error'">
+              {{ healthMetrics.dataConsistency }}%
             </n-tag>
           </div>
           <div class="health-item">
@@ -261,7 +228,7 @@
     <n-modal
       v-model:show="dbLogsModalVisible"
       preset="card"
-      :title="`${currentDbTitle} 同步日志`"
+      :title="`${currentDbTitle} 检查日志`"
       style="width: 640px"
     >
       <n-table v-if="currentDbLogs.length" size="small">
@@ -316,7 +283,6 @@ interface DatabaseRow {
   status: 'online' | 'offline'
   latency: number
   recordCount: number
-  syncVersion: number
   lastSync: string
 }
 
@@ -349,10 +315,7 @@ interface DbLogRow {
 const message = useMessage()
 
 const DATABASES = [
-  { key: 'mysql', label: 'MySQL' },
-  { key: 'postgres', label: 'PostgreSQL' },
-  { key: 'mariadb', label: 'MariaDB' },
-  { key: 'sqlite', label: 'SQLite' }
+  { key: 'mysql', label: '凤凰汽配主数据库' }
 ]
 
 const makeEmptyPool = (): PoolSnapshot => ({ active: 0, idle: 0, max: 0, waiting: 0, timeouts: 0, usage: 0 })
@@ -372,15 +335,12 @@ const databases = ref<DatabaseRow[]>([])
 const slowQueries = ref<SlowQueryRow[]>([])
 const runningQueries = ref<RunningQueryRow[]>([])
 
-const mysqlPool = ref<PoolSnapshot>(makeEmptyPool())
-const postgresPool = ref<PoolSnapshot>(makeEmptyPool())
-const mariadbPool = ref<PoolSnapshot>(makeEmptyPool())
-const sqlitePool = ref<PoolSnapshot>(makeEmptyPool())
+const mainPool = ref<PoolSnapshot>(makeEmptyPool())
 
 const healthMetrics = ref({
   dbConnection: 0,
   querySpeed: 0,
-  syncConsistency: 0,
+  dataConsistency: 0,
   resourceUsage: 0,
   score: 0
 })
@@ -391,7 +351,7 @@ const systemHealth = computed(() => {
   return Math.round(
     metrics.dbConnection * 0.3 +
     metrics.querySpeed * 0.3 +
-    metrics.syncConsistency * 0.3 +
+    metrics.dataConsistency * 0.3 +
     (100 - metrics.resourceUsage) * 0.1
   )
 })
@@ -415,10 +375,7 @@ const formatDateTime = (value?: string | null) => {
 }
 
 const applyConnectionPools = (poolData: Record<string, PoolSnapshot>) => {
-  mysqlPool.value = poolData.mysql ?? makeEmptyPool()
-  postgresPool.value = poolData.postgres ?? makeEmptyPool()
-  mariadbPool.value = poolData.mariadb ?? makeEmptyPool()
-  sqlitePool.value = poolData.sqlite ?? makeEmptyPool()
+  mainPool.value = poolData.mysql ?? makeEmptyPool()
 }
 
 const estimateLatency = (pool: PoolSnapshot) => {
@@ -426,46 +383,25 @@ const estimateLatency = (pool: PoolSnapshot) => {
   return Math.max(1, Math.round((pool.active / pool.max) * 20))
 }
 
-const fetchLatestLogsByTarget = async () => {
-  try {
-    const { data } = await api.get('/sync/logs', { params: { page: 1, page_size: 40 } })
-    const map = new Map<string, any>()
-    for (const log of data.logs || []) {
-      const target = log.stats?.target
-      if (target && !map.has(target)) {
-        map.set(target, log)
-      }
-    }
-    return map
-  } catch (error) {
-    handleError(error, '无法获取同步日志')
-    return new Map<string, any>()
-  }
-}
-
 const refreshDatabases = async (
   statusPayload: any,
   poolData: Record<string, PoolSnapshot>
 ) => {
-  const logsMap = await fetchLatestLogsByTarget()
   const dbList: any[] = statusPayload?.databases || []
   databases.value = DATABASES.map((descriptor) => {
     const statusItem = dbList.find((item) => (item.name || '').includes(descriptor.key))
     const pool = poolData[descriptor.key] ?? makeEmptyPool()
-    const latestLog = logsMap.get(descriptor.key)
-    const recordCount = Number(latestLog?.stats?.records || latestLog?.stats?.record_count || 0)
-    const syncVersion = Number(latestLog?.stats?.version || latestLog?.stats?.sync_version || 0)
-    const lastSync = latestLog
-      ? formatDateTime(latestLog.completed_at || latestLog.started_at)
+    const lastCheck = statusItem?.last_checked_at 
+      ? formatDateTime(statusItem.last_checked_at) 
       : (statusItem?.last_sync ? formatDateTime(statusItem.last_sync) : '未知')
+    
     return {
       key: descriptor.key,
       name: statusItem?.label || descriptor.label,
       status: statusItem?.status === 'error' ? 'offline' : 'online',
       latency: statusItem?.latency ?? estimateLatency(pool),
-      recordCount,
-      syncVersion,
-      lastSync
+      recordCount: statusItem?.record_count ?? 0,
+      lastSync: lastCheck
     }
   })
 }
@@ -502,7 +438,7 @@ const refreshAllData = async () => {
         healthMetrics.value = {
           dbConnection: perf.health.dbConnection ?? healthMetrics.value.dbConnection,
           querySpeed: perf.health.querySpeed ?? healthMetrics.value.querySpeed,
-          syncConsistency: perf.health.syncConsistency ?? healthMetrics.value.syncConsistency,
+          dataConsistency: perf.health.dataConsistency ?? healthMetrics.value.dataConsistency,
           resourceUsage: perf.health.resourceUsage ?? healthMetrics.value.resourceUsage,
           score: perf.health.score ?? systemHealth.value
         }
@@ -549,15 +485,6 @@ const getHealthLabel = (score: number) => {
   if (score >= 70) return '一般'
   if (score >= 60) return '较差'
   return '危险'
-}
-
-const syncDatabase = async (db: DatabaseRow) => {
-  try {
-    await api.post(`/admin/operations/databases/${db.key}/sync`)
-    message.success(`${db.name} 同步任务已触发`)
-  } catch (error) {
-    handleError(error, `${db.name} 同步失败`)
-  }
 }
 
 const viewDbDetails = async (db: DatabaseRow) => {

@@ -1,110 +1,80 @@
 <template>
   <div class="marketplace-view">
-    <!-- 搜索栏 -->
-    <div class="search-bar bg-gradient-to-r from-orange-400 to-orange-500 p-4 rounded-lg mb-4">
-      <div class="flex items-center gap-4 max-w-4xl mx-auto">
-        <div class="flex-1">
-          <n-auto-complete
+    <!-- Hero Section / Banner -->
+    <div class="relative bg-dark overflow-hidden mb-8 rounded-xl">
+      <div class="max-w-7xl mx-auto px-8 py-16 flex flex-col md:flex-row items-center justify-between relative z-10">
+        <div class="text-white max-w-xl">
+          <h2 class="text-primary font-black tracking-widest uppercase text-sm mb-4">Phoenix Exclusive Offer</h2>
+          <h1 class="text-5xl md:text-6xl font-black tracking-tighter mb-6 leading-none">
+            PHOENIX-BC86 <br/>
+            <span class="text-primary">BRAKE CALIPER</span> <br/>
+            <span class="text-yellow-400">KILLER PRICE</span>
+          </h1>
+          <p class="text-gray-400 text-lg mb-8 font-medium">
+            原厂品质制动钳，限时 8 折优惠。为您的行车安全保驾护航。
+          </p>
+          <div class="flex gap-4">
+            <n-button type="primary" size="large" strong round>
+              立即抢购
+            </n-button>
+            <n-button ghost color="#ffffff" size="large" strong round>
+              了解更多
+            </n-button>
+          </div>
+        </div>
+        <div class="mt-12 md:mt-0 relative">
+          <div class="absolute inset-0 bg-primary/20 blur-3xl rounded-full"></div>
+          <img 
+            src="https://images.unsplash.com/photo-1486262715619-67b85e0b08d3?auto=format&fit=crop&q=80&w=600" 
+            alt="Brake Caliper" 
+            class="relative z-10 w-full max-w-md drop-shadow-2xl rotate-12 hover:rotate-0 transition-transform duration-500"
+          />
+        </div>
+      </div>
+      <!-- Background Pattern -->
+      <div class="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-primary/10 to-transparent"></div>
+    </div>
+
+    <!-- 搜索栏 (更专业的设计) -->
+    <div class="bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
+      <div class="flex flex-col md:flex-row items-center gap-4 max-w-5xl mx-auto">
+        <div class="flex-1 w-full">
+          <n-input
             v-model:value="searchKeyword"
-            :options="autocompleteOptions"
-            :loading="searchLoading"
-            placeholder="搜索宝贝、店铺..."
+            placeholder="输入零件名称、OEM编号或品牌..."
             size="large"
+            round
             clearable
-            @select="handleSelect"
-            @update:value="handleInput"
             @keyup.enter="handleSearch"
           >
             <template #prefix>
-              <span>🔍</span>
+              <span class="text-gray-400">🔍</span>
             </template>
-          </n-auto-complete>
-
-          <!-- 热门搜索下拉面板 -->
-          <transition name="fade">
-            <div v-if="showHotSearches && !searchKeyword" class="hot-searches-panel">
-              <div class="panel-header">
-                <n-space justify="space-between">
-                  <span class="title">🔥 热门搜索</span>
-                  <n-button text size="small" @click="showHotSearches = false">
-                    <template #icon>
-                      <n-icon><CloseOutline /></n-icon>
-                    </template>
-                  </n-button>
-                </n-space>
-              </div>
-              <div class="panel-content">
-                <n-space>
-                  <n-tag
-                    v-for="(item, index) in hotSearches"
-                    :key="index"
-                    :type="getTrendType(item.trend)"
-                    :bordered="false"
-                    style="cursor: pointer"
-                    @click="selectHotSearch(item.keyword)"
-                  >
-                    {{ item.keyword }}
-                  </n-tag>
-                </n-space>
-              </div>
-            </div>
-          </transition>
-
-          <!-- 搜索历史下拉面板 -->
-          <transition name="fade">
-            <div v-if="showSearchHistory && !searchKeyword" class="search-history-panel">
-              <div class="panel-header">
-                <n-space justify="space-between">
-                  <span class="title">🕒 搜索历史</span>
-                  <n-space>
-                    <n-button text size="small" @click="clearSearchHistory">
-                      清空
-                    </n-button>
-                    <n-button text size="small" @click="showSearchHistory = false">
-                      <template #icon>
-                        <n-icon><CloseOutline /></n-icon>
-                      </template>
-                    </n-button>
-                  </n-space>
-                </n-space>
-              </div>
-              <div class="panel-content">
-                <n-list hoverable clickable>
-                  <n-list-item
-                    v-for="(item, index) in searchHistory"
-                    :key="index"
-                    @click="selectHistoryItem(item)"
-                  >
-                    <n-space>
-                      <n-icon><TimeOutline /></n-icon>
-                      <span>{{ item }}</span>
-                    </n-space>
-                  </n-list-item>
-                </n-list>
-              </div>
-            </div>
-          </transition>
+          </n-input>
         </div>
-        <n-button type="warning" size="large" @click="handleSearch">
-          搜索
+        <n-button type="primary" size="large" strong round class="px-10" @click="handleSearch">
+          搜索零件
         </n-button>
         <n-button 
           v-if="authStore.isAuthenticated"
           type="primary" 
+          ghost
           size="large" 
+          strong
+          round
           @click="showPublishModal = true"
         >
-          ✏️ 我要卖
+          发布供应
         </n-button>
       </div>
       
       <!-- 热门搜索 -->
-      <div class="flex items-center gap-2 mt-2 max-w-4xl mx-auto text-white text-sm">
-        <span>热门:</span>
+      <div class="flex items-center gap-3 mt-4 max-w-5xl mx-auto text-xs font-bold uppercase tracking-wider text-gray-400">
+        <span class="text-dark">热门搜索:</span>
         <span 
-          v-for="keyword in ['iPhone', '自行车', '教材', '显示器', '二手书']" 
+          v-for="keyword in ['刹车片', '火花塞', '机油滤清器', '雨刮片', '蓄电池']" 
           :key="keyword"
-          class="cursor-pointer hover:underline"
+          class="cursor-pointer hover:text-primary transition-colors"
           @click="searchKeyword = keyword; handleSearch()"
         >
           {{ keyword }}
@@ -112,22 +82,27 @@
       </div>
     </div>
 
-    <!-- 分类导航 -->
-    <div class="categories-bar bg-white p-4 rounded-lg mb-4 shadow-sm">
-      <div class="flex flex-wrap gap-2">
-        <n-button
-          v-for="cat in categories"
+    <!-- 分类导航 (更现代的图标按钮) -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-black tracking-tighter text-dark uppercase">零件分类 <span class="text-primary">Categories</span></h3>
+        <n-button text type="primary" size="small">查看全部</n-button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div
+          v-for="cat in categories.slice(0, 8)"
           :key="cat.id ?? 'all'"
-          :type="selectedCategory === cat.id ? 'warning' : 'default'"
-          :tertiary="selectedCategory !== cat.id"
-          round
+          class="group cursor-pointer"
           @click="selectCategory(cat.id)"
         >
-          {{ cat.icon }} {{ cat.name }}
-          <n-tag v-if="cat.count > 0" size="small" round class="ml-1">
-            {{ cat.count }}
-          </n-tag>
-        </n-button>
+          <div 
+            class="h-20 rounded-xl flex flex-col items-center justify-center transition-all border-2"
+            :class="selectedCategory === cat.id ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'bg-white border-gray-100 text-gray-500 hover:border-primary hover:text-primary'"
+          >
+            <span class="text-2xl mb-1 group-hover:scale-110 transition-transform">{{ cat.icon }}</span>
+            <span class="text-[10px] font-black uppercase tracking-widest">{{ cat.name }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -185,92 +160,74 @@
       </div>
     </div>
 
-    <!-- 商品列表 -->
+    <!-- 零件列表 -->
     <n-spin :show="loading">
-      <div v-if="items.length > 0" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-        <n-card
+      <div v-if="items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div
           v-for="item in items"
           :key="item.id"
-          hoverable
-          class="item-card cursor-pointer"
+          class="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-2xl hover:shadow-primary/10 transition-all duration-500 flex flex-col"
           @click="goToItemDetail(item.id)"
         >
-          <!-- 商品图片 -->
-          <div class="relative">
+          <!-- 零件图片 -->
+          <div class="relative aspect-square overflow-hidden bg-gray-50">
             <img
               :src="getItemImageUrl(item.images, item.id)"
               :alt="item.title"
-              class="w-full h-48 object-cover rounded-t-lg"
+              class="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-700"
               loading="lazy"
             />
+            <!-- 悬浮操作 -->
+            <div class="absolute inset-0 bg-dark/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+              <n-button circle type="primary" @click.stop="handleAddToCart(item)">
+                <template #icon>🛒</template>
+              </n-button>
+              <n-button circle @click.stop="goToItemDetail(item.id)">
+                <template #icon>👁️</template>
+              </n-button>
+            </div>
             <!-- 标签 -->
-            <div class="absolute top-2 left-2 flex gap-1">
-              <n-tag v-if="item.condition_type === '全新'" type="success" size="small">全新</n-tag>
-              <n-tag v-if="item.is_shipped" type="info" size="small">包邮</n-tag>
-            </div>
-            <!-- 图片数量 -->
-            <div v-if="Array.isArray(item.images) && item.images.length > 1" class="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded">
-              📷 {{ item.images.length }}
+            <div class="absolute top-4 left-4 flex flex-col gap-2">
+              <span v-if="item.condition_type === '全新'" class="bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">New</span>
+              <span v-if="item.is_shipped" class="bg-dark text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-lg">Free Shipping</span>
             </div>
           </div>
 
-          <!-- 商品信息 -->
-          <div class="p-3">
-            <!-- 价格 -->
-            <div class="flex items-baseline gap-2 mb-2">
-              <span class="text-red-500 text-xl font-bold">¥{{ item.price }}</span>
-              <span v-if="item.original_price && item.original_price > item.price" class="text-gray-400 text-sm line-through">
-                ¥{{ item.original_price }}
-              </span>
+          <!-- 零件信息 -->
+          <div class="p-6 flex-1 flex flex-col">
+            <div class="mb-auto">
+              <h3 class="text-dark font-black tracking-tighter text-lg mb-1 line-clamp-1 group-hover:text-primary transition-colors">
+                {{ item.title }}
+              </h3>
+              <p class="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                OEM: {{ item.id.toString().padStart(8, '0') }} | {{ item.seller_name }}
+              </p>
             </div>
 
-            <!-- 标题 -->
-            <h3 class="text-sm font-medium mb-2 line-clamp-2">
-              {{ item.emoji }} {{ item.title }}
-            </h3>
-
-            <!-- 标签 -->
-            <div class="flex flex-wrap gap-1 mb-2">
-              <n-tag v-for="tag in item.tags?.slice(0, 3)" :key="tag" size="small" round>
-                {{ tag }}
-              </n-tag>
-            </div>
-
-            <!-- 卖家和统计 -->
-            <div class="flex items-center justify-between text-xs text-gray-500">
-              <span>👤 {{ item.seller_name }}</span>
-              <span>👁️ {{ item.view_count }}</span>
-            </div>
-            
-            <!-- 位置和时间 -->
-            <div class="flex items-center justify-between text-xs text-gray-400 mt-1">
-              <span v-if="item.location">📍 {{ item.location }}</span>
-              <span>{{ formatTime(item.created_at) }}</span>
+            <div class="flex items-center justify-between pt-4 border-t border-gray-50">
+              <div class="flex flex-col">
+                <span class="text-gray-400 text-[10px] font-bold uppercase tracking-widest">价格 Price</span>
+                <span class="text-dark font-black text-xl tracking-tighter">¥{{ item.price }}</span>
+              </div>
+              <n-button 
+                strong 
+                secondary 
+                round
+                size="small"
+                :type="item.isFavorited ? 'primary' : 'default'"
+                class="uppercase text-[10px] tracking-widest font-black"
+                @click.stop="handleToggleFavorite(item)"
+              >
+                <template #icon>{{ item.isFavorited ? '❤️' : '🤍' }}</template>
+                LIKE
+              </n-button>
             </div>
           </div>
-
-          <!-- 快捷操作 -->
-          <div class="px-3 pb-3 flex gap-2">
-            <n-button 
-              size="small" 
-              type="primary"
-              @click.stop="handleAddToCart(item)"
-            >
-              🛒 加购
-            </n-button>
-            <n-button 
-              size="small"
-              :type="item.isFavorited ? 'error' : 'default'"
-              @click.stop="handleToggleFavorite(item)"
-            >
-              {{ item.isFavorited ? '❤️' : '🤍' }}
-            </n-button>
-          </div>
-        </n-card>
+        </div>
       </div>
 
       <!-- 空状态 -->
-      <n-empty v-else-if="!loading" description="暂无商品，快来发布第一件吧~">
+      <n-empty v-else-if="!loading" description="暂无零件，快来发布第一件吧~">
         <template #extra>
           <n-button type="primary" @click="showPublishModal = true">
             ✏️ 立即发布
@@ -292,16 +249,16 @@
       />
     </div>
 
-    <!-- 发布商品对话框 -->
+    <!-- 发布零件对话框 -->
     <n-modal 
       v-model:show="showPublishModal" 
       preset="card" 
-      title="📤 发布商品" 
+      title="📤 发布零件" 
       style="width: 600px"
     >
       <n-form :model="newItem" label-placement="left" label-width="80">
-        <n-form-item label="商品名称">
-          <n-input v-model:value="newItem.name" placeholder="例如：二手iPhone 13 Pro" />
+        <n-form-item label="零件名称">
+          <n-input v-model:value="newItem.name" placeholder="例如：零件iPhone 13 Pro" />
         </n-form-item>
         
         <n-form-item label="分类">
@@ -322,7 +279,7 @@
               { label: '99新', value: 'like-new' },
               { label: '95新', value: 'excellent' },
               { label: '9成新', value: 'good' },
-              { label: '二手', value: 'used' }
+              { label: '零件', value: 'used' }
             ]"
           />
         </n-form-item>
@@ -331,12 +288,12 @@
           <n-input
             v-model:value="newItem.description"
             type="textarea"
-            placeholder="详细描述商品情况..."
+            placeholder="详细描述零件情况..."
             :rows="4"
           />
         </n-form-item>
         
-        <n-form-item label="商品图片">
+        <n-form-item label="零件图片">
           <n-upload
             v-model:file-list="newItem.images"
             :max="5"
@@ -377,12 +334,12 @@
       <template #footer>
         <div class="flex justify-end gap-2">
           <n-button @click="showPublishModal = false">取消</n-button>
-          <n-button type="primary" @click="handlePublish">发布商品</n-button>
+          <n-button type="primary" @click="handlePublish">发布零件</n-button>
         </div>
       </template>
     </n-modal>
 
-    <!-- 商品详情对话框 -->
+    <!-- 零件详情对话框 -->
     <n-modal
       v-model:show="showDetailModal"
       preset="card"
@@ -448,7 +405,7 @@
               💬 联系卖家
             </n-button>
             <n-button type="primary" size="large" block @click="handleAddToCart(currentItem!)">
-              🛒 加入购物车
+              🛒 加入采购车
             </n-button>
             <n-button 
               size="large" 
@@ -516,7 +473,7 @@ const currentPage = ref(1)
 const pageSize = ref(20)
 const totalCount = ref(0)
 
-// 商品列表 - 改为响应式数据
+// 零件列表 - 改为响应式数据
 const items = ref<any[]>([])
 const totalItems = ref(0)
 
@@ -532,23 +489,23 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 // 分类数据
 const categories = ref([
   { id: null, name: '全部分类', icon: '🏪', count: 0 },
-  { id: 1, name: '数码产品', icon: '📱', count: 0 },
-  { id: 2, name: '图书教材', icon: '📚', count: 0 },
-  { id: 3, name: '生活用品', icon: '🛋️', count: 0 },
-  { id: 4, name: '运动器材', icon: '⚽', count: 0 },
-  { id: 5, name: '服装鞋包', icon: '👔', count: 0 },
-  { id: 6, name: '美妆护肤', icon: '💄', count: 0 },
-  { id: 7, name: '其他闲置', icon: '📦', count: 0 }
+  { id: 1, name: '发动机系统', icon: '⚙️', count: 0 },
+  { id: 2, name: '传动系统', icon: '�', count: 0 },
+  { id: 3, name: '制动系统', icon: '�', count: 0 },
+  { id: 4, name: '悬挂转向', icon: '⛓️', count: 0 },
+  { id: 5, name: '车身附件', icon: '�', count: 0 },
+  { id: 6, name: '电器仪表', icon: '�', count: 0 },
+  { id: 7, name: '保养滤芯', icon: '🧪', count: 0 }
 ])
 
 // 成色选项
 const conditionOptions = [
   { label: '全部', value: null },
-  { label: '全新', value: '全新' },
-  { label: '99新', value: '99新' },
-  { label: '95新', value: '95新' },
-  { label: '9成新', value: '9成新' },
-  { label: '二手', value: '二手' }
+  { label: '原厂全新', value: '原厂全新' },
+  { label: '品牌件', value: '品牌件' },
+  { label: '拆车件', value: '拆车件' },
+  { label: '翻新件', value: '翻新件' },
+  { label: '副厂件', value: '副厂件' }
 ]
 
 // 排序选项
@@ -584,7 +541,7 @@ const categoryEmojiMap: Record<string, string> = {
 
 // ========== API 调用 ==========
 
-// 加载商品列表
+// 加载零件列表
 const loadItems = async () => {
   loading.value = true
   try {
@@ -637,8 +594,8 @@ const loadItems = async () => {
     }
     
   } catch (error: any) {
-    console.error('加载商品失败:', error)
-    message.error(error.response?.data?.detail || '加载商品失败')
+    console.error('加载零件失败:', error)
+    message.error(error.response?.data?.detail || '加载零件失败')
   } finally {
     loading.value = false
   }
@@ -675,7 +632,7 @@ const checkFavoriteStatus = async () => {
 // 加载分类统计
 const loadCategoryStats = async () => {
   try {
-    // 获取各分类商品数量
+    // 获取各分类零件数量
     for (const cat of categories.value) {
       if (cat.id === null) {
         // 全部分类
@@ -908,7 +865,7 @@ const handlePageSizeChange = (size: number) => {
 // 计算总页数
 const totalPages = computed(() => Math.ceil(totalCount.value / pageSize.value))
 
-// ========== 商品详情弹窗 ==========
+// ========== 零件详情弹窗 ==========
 const showDetailModal = ref(false)
 const currentItem = ref<any | null>(null)
 const currentImageIndex = ref(0)
@@ -919,14 +876,14 @@ const viewItemDetail = (item: any) => {
   showDetailModal.value = true
 }
 
-// 跳转到商品详情页
+// 跳转到零件详情页
 const goToItemDetail = (itemId: number) => {
   router.push(`/item/${itemId}`)
 }
 
-// ========== 购物车 & 收藏 ==========
+// ========== 采购车 & 收藏 ==========
 
-// 加入购物车
+// 加入采购车
 const handleAddToCart = async (item: any) => {
   if (!authStore.isAuthenticated) {
     message.warning('请先登录')
@@ -939,15 +896,15 @@ const handleAddToCart = async (item: any) => {
       item_id: item.id,
       quantity: 1
     })
-    message.success(`"${item.title}" 已加入购物车`)
+    message.success(`"${item.title}" 已加入采购车`)
   } catch (error: any) {
     const detail = error.response?.data?.detail
-    if (detail === '不能购买自己发布的商品') {
-      message.warning('不能购买自己的商品哦~')
+    if (detail === '不能购买自己发布的零件') {
+      message.warning('不能购买自己的零件哦~')
     } else if (detail?.includes('已下架') || detail?.includes('已售出')) {
-      message.warning('该商品已下架或已售出')
+      message.warning('该零件已下架或已售出')
     } else {
-      message.error(detail || '加入购物车失败')
+      message.error(detail || '加入采购车失败')
     }
   }
 }
@@ -985,7 +942,7 @@ const handleContactSeller = (item: any) => {
   router.push(`/messages?userId=${item.seller_id}&itemId=${item.id}`)
 }
 
-// ========== 发布商品弹窗 ==========
+// ========== 发布零件弹窗 ==========
 const showPublishModal = ref(false)
 const newItem = ref({
   name: '',
@@ -1023,7 +980,7 @@ const handlePublish = async () => {
   )
   console.log('已上传图片:', uploadedImages)  // 调试日志
   if (uploadedImages.length === 0) {
-    message.warning('请至少上传一张商品图片')
+    message.warning('请至少上传一张零件图片')
     return
   }
   
@@ -1166,7 +1123,7 @@ const PLACEHOLDER_IMAGES = [
   '/demo-images/placeholder6.jpg',
 ]
 
-// 根据商品ID获取占位图 URL，保证每个商品稳定但又有区分度
+// 根据零件ID获取占位图 URL，保证每个零件稳定但又有区分度
 const getPlaceholderImage = (itemId: number) => {
   if (PLACEHOLDER_IMAGES.length === 0) {
     return ''
@@ -1184,7 +1141,7 @@ const getFullImageUrl = (relativeUrl: string) => {
   return `${serverUrl}${relativeUrl}`
 }
 
-// 获取商品图片URL，支持多图/字符串字段/无图情况
+// 获取零件图片URL，支持多图/字符串字段/无图情况
 const getItemImageUrl = (images: string[] | string | undefined | null, itemId?: number) => {
   if (Array.isArray(images) && images.length > 0) {
     return getFullImageUrl(images[0])

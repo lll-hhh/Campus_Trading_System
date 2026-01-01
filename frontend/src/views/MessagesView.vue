@@ -156,7 +156,7 @@
                         class="message-image"
                       />
                       
-                      <!-- 商品卡片 -->
+                      <!-- 零件卡片 -->
                       <div v-else-if="message.type === 'item' && message.itemData" class="message-item-card">
                         <n-card size="small" hoverable>
                           <template #cover>

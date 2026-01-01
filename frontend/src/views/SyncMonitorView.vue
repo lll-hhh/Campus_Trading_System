@@ -17,6 +17,12 @@
               </template>
               同步修复
             </n-button>
+            <n-button type="warning" @click="handleForceSyncAll" :loading="syncingAll">
+              <template #icon>
+                <n-icon><SyncOutline /></n-icon>
+              </template>
+              全库强制同步
+            </n-button>
           </n-space>
         </template>
       </n-page-header>
@@ -87,6 +93,9 @@
                     <span class="label">最后同步:</span>
                     <span class="value">{{ formatTime(db.last_sync) }}</span>
                   </div>
+                  <n-button size="tiny" quaternary type="primary" @click="handleManualSync(db.name)">
+                    立即同步
+                  </n-button>
                 </div>
               </n-space>
             </n-space>
@@ -300,10 +309,12 @@ import { useMessage, NButton, NTag, NSpace } from 'naive-ui'
 import {
   RefreshOutline,
   BuildOutline,
-  ServerOutline
+  ServerOutline,
+  SyncOutline
 } from '@vicons/ionicons5'
 import type { DataTableColumns } from 'naive-ui'
 import { useSyncStore } from '@/stores/sync'
+import { http as api } from '@/lib/http'
 
 const message = useMessage()
 const syncStore = useSyncStore()
@@ -313,6 +324,13 @@ const { conflicts, loadingConflicts, resolvingConflictId, conflictMeta } = store
 const loading = ref(false)
 const logLoading = ref(false)
 const repairLoading = ref(false)
+const syncingAll = ref(false)
+
+const handleError = (error: any, fallback: string) => {
+  console.error(error)
+  const detail = error.response?.data?.detail
+  message.error(typeof detail === 'string' ? detail : fallback)
+}
 
 // 统计数据
 const stats = ref({
@@ -358,7 +376,7 @@ const databases = ref([
     name: 'sqlite',
     label: 'SQLite',
     type: 'SQLite 3',
-    host: 'campus_swap.db',
+    host: 'phoenix_parts.db',
     status: 'healthy',
     sync_progress: 100,
     latency: 2,
@@ -735,6 +753,29 @@ const handleSyncRepair = async () => {
     message.error('修复失败')
   } finally {
     repairLoading.value = false
+  }
+}
+
+const handleForceSyncAll = async () => {
+  syncingAll.value = true
+  try {
+    await api.post('/sync/trigger-all')
+    message.success('全库同步任务已触发')
+    refreshData()
+  } catch (error: any) {
+    handleError(error, '触发全库同步失败')
+  } finally {
+    syncingAll.value = false
+  }
+}
+
+const handleManualSync = async (dbName: string) => {
+  try {
+    await api.post(`/sync/trigger/${dbName}`)
+    message.success(`${dbName} 同步任务已触发`)
+    refreshData()
+  } catch (error: any) {
+    handleError(error, `触发 ${dbName} 同步失败`)
   }
 }
 

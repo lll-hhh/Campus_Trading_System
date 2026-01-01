@@ -17,9 +17,8 @@ const breadcrumbs = computed(() => {
   const routeNameMap: Record<string, string> = {
     'dashboard': '📊 数据仪表盘',
     'analytics': '📈 数据分析',
-    'console': '🔄 四库同步',
     'performance': '⚡ 性能监控',
-    'operations': '⚙️ 高级操作',
+    'operations': '⚙️ 系统运维',
     'tables': '📋 表格管理',
     'users': '👥 用户管理',
     'settings': '🔧 系统设置'

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">时序图 - 报表导出流程 (Report Export)</text>
+  
+  <!-- Lifelines -->
+  <line x1="100" y1="80" x2="100" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="300" y1="80" x2="300" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="500" y1="80" x2="500" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  
+  <rect x="50" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="100" y="70" font-family="Arial" font-size="12" text-anchor="middle">用户</text>
+  
+  <rect x="250" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="300" y="70" font-family="Arial" font-size="12" text-anchor="middle">报表引擎</text>
+  
+  <rect x="450" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="500" y="70" font-family="Arial" font-size="12" text-anchor="middle">文件存储</text>
+  
+  <!-- Messages -->
+  <line x1="100" y1="120" x2="300" y2="120" stroke="#333" stroke-width="1"/>
+  <polygon points="300,120 290,115 290,125" fill="#333"/>
+  <text x="200" y="115" font-family="Arial" font-size="11" text-anchor="middle">1. 请求导出 Excel</text>
+  
+  <line x1="300" y1="160" x2="300" y2="200" stroke="#333" stroke-width="1"/>
+  <path d="M 300 160 C 340 160 340 200 300 200" fill="none" stroke="#333" stroke-width="1"/>
+  <polygon points="300,200 305,190 295,190" fill="#333"/>
+  <text x="350" y="185" font-family="Arial" font-size="11">2. 聚合数据</text>
+  
+  <line x1="300" y1="240" x2="500" y2="240" stroke="#333" stroke-width="1"/>
+  <polygon points="500,240 490,235 490,245" fill="#333"/>
+  <text x="400" y="235" font-family="Arial" font-size="11" text-anchor="middle">3. 生成并保存文件</text>
+  
+  <line x1="500" y1="280" x2="300" y2="280" stroke="#333" stroke-width="1" stroke-dasharray="5,5"/>
+  <polygon points="300,280 310,275 310,285" fill="#333"/>
+  <text x="400" y="275" font-family="Arial" font-size="11" text-anchor="middle">4. 返回下载链接</text>
+  
+  <line x1="300" y1="320" x2="100" y2="320" stroke="#333" stroke-width="1" stroke-dasharray="5,5"/>
+  <polygon points="100,320 110,315 110,325" fill="#333"/>
+  <text x="200" y="315" font-family="Arial" font-size="11" text-anchor="middle">5. 触发浏览器下载</text>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">类图 - 配件分类层级 (Category Hierarchy)</text>
+  
+  <!-- Category Class -->
+  <rect x="200" y="80" width="200" height="120" fill="#fff" stroke="#28a745" stroke-width="2"/>
+  <line x1="200" y1="110" x2="400" y2="110" stroke="#28a745" stroke-width="2"/>
+  <text x="300" y="100" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle">Category</text>
+  <text x="210" y="130" font-family="Arial" font-size="12">- id: Integer</text>
+  <text x="210" y="145" font-family="Arial" font-size="12">- name: String</text>
+  <text x="210" y="160" font-family="Arial" font-size="12">- parent_id: Integer</text>
+  <text x="210" y="175" font-family="Arial" font-size="12">- description: String</text>
+  
+  <!-- Self-Association -->
+  <path d="M 400 140 L 440 140 L 440 180 L 400 180" fill="none" stroke="#333" stroke-width="1"/>
+  <polygon points="400,180 410,175 410,185" fill="#333"/>
+  <text x="450" y="165" font-family="Arial" font-size="12">parent</text>
+</svg>

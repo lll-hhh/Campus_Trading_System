@@ -1,0 +1,43 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="400" y="40" font-family="Arial" font-size="22" text-anchor="middle" font-weight="bold" fill="#333">系统上下文图 (System Context Diagram)</text>
+
+  <!-- System Boundary -->
+  <rect x="200" y="100" width="400" height="300" rx="20" fill="none" stroke="#1890ff" stroke-width="3" stroke-dasharray="10,5"/>
+  <rect x="250" y="180" width="300" height="140" rx="10" fill="#e6f7ff" stroke="#1890ff" stroke-width="2"/>
+  <text x="400" y="240" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#003a8c">凤凰汽配管理系统</text>
+  <text x="400" y="270" font-family="Arial" font-size="14" text-anchor="middle" fill="#003a8c">(核心业务系统)</text>
+
+  <!-- External Actors -->
+  <!-- Admin -->
+  <circle cx="100" cy="150" r="30" fill="#f0f0f0" stroke="#333" stroke-width="2"/>
+  <text x="100" y="200" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">系统管理员</text>
+  <path d="M 130 150 L 250 200" stroke="#8c8c8c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="170" y="170" font-family="Arial" font-size="11" text-anchor="middle" transform="rotate(20, 170, 170)">配置与监控</text>
+
+  <!-- Staff -->
+  <circle cx="100" cy="350" r="30" fill="#f0f0f0" stroke="#333" stroke-width="2"/>
+  <text x="100" y="400" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">业务人员</text>
+  <path d="M 130 350 L 250 300" stroke="#8c8c8c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="170" y="330" font-family="Arial" font-size="11" text-anchor="middle" transform="rotate(-20, 170, 330)">日常业务操作</text>
+
+  <!-- External Systems -->
+  <!-- Payment Gateway -->
+  <rect x="650" y="120" width="120" height="60" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <text x="710" y="155" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">支付网关</text>
+  <path d="M 550 220 L 650 160" stroke="#8c8c8c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="600" y="180" font-family="Arial" font-size="11" text-anchor="middle" transform="rotate(-30, 600, 180)">支付确认</text>
+
+  <!-- SMS/Email Service -->
+  <rect x="650" y="320" width="120" height="60" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="710" y="355" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">通知服务</text>
+  <path d="M 550 280 L 650 340" stroke="#8c8c8c" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="600" y="320" font-family="Arial" font-size="11" text-anchor="middle" transform="rotate(30, 600, 320)">发送通知</text>
+
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#8c8c8c" />
+    </marker>
+  </defs>
+</svg>

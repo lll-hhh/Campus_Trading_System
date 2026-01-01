@@ -184,23 +184,23 @@ const aiStatus = ref<any>(null)
 // 数据查询快捷功能
 const dataActions: QuickAction[] = [
   { id: 'user-stats', label: '用户统计', icon: '👥', prompt: '请提供最新的用户统计数据，包括总用户数、活跃用户、新增趋势等' },
-  { id: 'item-stats', label: '商品统计', icon: '📦', prompt: '请分析商品数据，包括在售商品数、热门分类、交易趋势等' },
+  { id: 'item-stats', label: '零件统计', icon: '📦', prompt: '请分析零件数据，包括在售零件数、热门分类、交易趋势等' },
   { id: 'transaction-stats', label: '交易统计', icon: '💰', prompt: '请统计交易数据，包括总交易额、交易量、成功率等' },
-  { id: 'conflict-stats', label: '冲突统计', icon: '⚠️', prompt: '请分析数据库同步冲突情况，包括冲突数量、类型分布、解决状态等' },
+  { id: 'anomaly-stats', label: '异常统计', icon: '⚠️', prompt: '请分析系统异常记录，包括错误数量、类型分布、解决状态等' },
 ]
 
 // 系统管理快捷功能
 const systemActions: QuickAction[] = [
-  { id: 'db-status', label: '数据库状态', icon: '💾', prompt: '请检查四个数据库的连接状态、同步延迟和性能指标' },
+  { id: 'db-status', label: '数据库状态', icon: '💾', prompt: '请检查数据库的连接状态、响应延迟和性能指标' },
   { id: 'performance', label: '性能分析', icon: '⚡', prompt: '请分析系统性能，包括响应时间、查询效率、资源使用情况' },
-  { id: 'sync-health', label: '同步健康度', icon: '🔄', prompt: '请评估数据库同步系统的健康状况，提供优化建议' },
+  { id: 'system-health', label: '系统健康度', icon: '�️', prompt: '请评估系统的整体健康状况，提供优化建议' },
   { id: 'error-log', label: '错误日志', icon: '🐛', prompt: '请检查最近的系统错误日志，分析常见问题' },
 ]
 
 // 帮助指南快捷功能
 const helpActions: QuickAction[] = [
   { id: 'optimize-tips', label: '优化建议', icon: '💡', prompt: '基于当前系统状态，请提供性能优化和配置改进建议' },
-  { id: 'best-practice', label: '最佳实践', icon: '⭐', prompt: '请介绍校园交易系统管理的最佳实践和注意事项' },
+  { id: 'best-practice', label: '最佳实践', icon: '⭐', prompt: '请介绍凤凰交易系统管理的最佳实践和注意事项' },
   { id: 'troubleshooting', label: '故障排查', icon: '🔧', prompt: '请提供常见故障的排查流程和解决方案' },
 ]
 
@@ -359,13 +359,13 @@ const generateMockResponse = (question: string): string => {
 3. 建议针对新用户推出引导活动`
   }
   
-  if (lowerQ.includes('商品') && lowerQ.includes('统计')) {
-    return `**商品数据分析报告**
+  if (lowerQ.includes('零件') && lowerQ.includes('统计')) {
+    return `**零件数据分析报告**
 
-📦 **商品概况:**
-- 总商品数: **11,586** 件
-- 在售商品: **11,569** 件
-- 已售商品: **8,234** 件
+📦 **零件概况:**
+- 总零件数: **11,586** 件
+- 在售零件: **11,569** 件
+- 已售零件: **8,234** 件
 - 售罄率: **71.2%**
 
 🏆 **热门分类TOP5:**
@@ -388,7 +388,7 @@ const generateMockResponse = (question: string): string => {
 ✅ **运营建议:**
 1. 电子产品和图书类最受欢迎，可加强推荐
 2. 高售罄率说明供需平衡良好
-3. 建议对滞销商品进行促销活动`
+3. 建议对滞销零件进行促销活动`
   }
   
   if (lowerQ.includes('交易') && lowerQ.includes('统计')) {
@@ -419,56 +419,52 @@ const generateMockResponse = (question: string): string => {
 💡 **优化建议:**
 1. 交易成功率高，系统运行稳定
 2. 晚间交易活跃，可增加客服支持
-3. 退款率低，说明商品质量把控良好
+3. 退款率低，说明零件质量把控良好
 4. 建议在高峰时段推送促销活动`
   }
   
-  if (lowerQ.includes('冲突') || lowerQ.includes('同步')) {
-    return `**数据库同步冲突分析**
+  if (lowerQ.includes('异常') || lowerQ.includes('错误')) {
+    return `**系统异常记录分析**
 
-⚠️ **冲突统计:**
-- 总冲突数: **23** 个
+⚠️ **异常统计:**
+- 总异常数: **23** 个
 - 未解决: **5** 个
 - 已解决: **16** 个
 - 已忽略: **2** 个
 
-🔍 **冲突类型分布:**
-- 版本不匹配: 12个 (52%)
-- 数据不一致: 8个 (35%)
-- 删除冲突: 3个 (13%)
+🔍 **异常类型分布:**
+- 数据库连接超时: 12个 (52%)
+- API 响应异常: 8个 (35%)
+- 权限验证失败: 3个 (13%)
 
 💾 **数据库状态:**
 - MySQL: ✅ 正常 (延迟 12ms)
-- MariaDB: ✅ 正常 (延迟 18ms)
-- PostgreSQL: ✅ 正常 (延迟 15ms)
-- SQLite: ✅ 正常 (延迟 8ms)
+- Redis: ✅ 正常 (延迟 2ms)
 
-📊 **同步效率:**
-- 同步成功率: 98.7%
-- 平均同步时间: 13.5ms
-- 上次全量同步: 2小时前
+📊 **系统效率:**
+- 请求成功率: 99.7%
+- 平均响应时间: 85ms
+- 上次备份时间: 2小时前
 
 🔧 **处理建议:**
-1. 5个未解决冲突需要人工审核
-2. 版本不匹配较多，建议优化时间戳机制
-3. 同步延迟在正常范围内
-4. 建议增加自动冲突解决规则`
+1. 5个未解决异常需要人工排查
+2. 连接超时较多，建议检查网络稳定性
+3. 响应时间在正常范围内
+4. 建议增加自动重试机制`
   }
   
   if (lowerQ.includes('数据库') && lowerQ.includes('状态')) {
     return `**数据库系统状态报告**
 
 💾 **连接状态:**
-- MySQL (主库): ✅ 连接正常 - 142 活跃连接
-- MariaDB: ✅ 连接正常 - 98 活跃连接
-- PostgreSQL: ✅ 连接正常 - 87 活跃连接
-- SQLite: ✅ 连接正常 - 65 活跃连接
+- 主业务数据库: ✅ 连接正常 - 142 活跃连接
+- 库存分析数据库: ✅ 连接正常 - 45 活跃连接
+- 交易日志数据库: ✅ 连接正常 - 28 活跃连接
+- Redis (缓存): ✅ 连接正常 - 98 活跃连接
 
 ⚡ **性能指标:**
-- MySQL: 查询延迟 12ms, 错误率 0.3%
-- MariaDB: 查询延迟 18ms, 错误率 0.5%
-- PostgreSQL: 查询延迟 15ms, 错误率 0.2%
-- SQLite: 查询延迟 8ms, 错误率 0.1%
+- 主业务数据库: 查询延迟 12ms, 错误率 0.01%
+- Redis: 读写延迟 2ms, 命中率 85%
 
 📊 **资源使用:**
 - CPU: 23.5% (正常)
@@ -476,11 +472,11 @@ const generateMockResponse = (question: string): string => {
 - 磁盘I/O: 156 MB/s (正常)
 - 网络带宽: 23.4 MB/s (正常)
 
-✅ **健康评分: 96/100**
+✅ **健康评分: 98/100**
 
 💡 **优化建议:**
 1. 所有数据库运行正常，无需立即处理
-2. MariaDB延迟稍高，可考虑优化索引
+2. 缓存命中率良好，可继续保持
 3. 连接池配置合理，负载均衡良好
 4. 建议定期进行数据备份和清理`
   }
@@ -534,19 +530,19 @@ const generateMockResponse = (question: string): string => {
   }
   
   if (lowerQ.includes('帮助') || lowerQ.includes('指南')) {
-    return `**校园交易系统管理指南**
+    return `**凤凰交易系统管理指南**
 
 📚 **核心功能模块:**
 
 **1. 数据监控 📊**
-- 实时查看用户、商品、交易统计
+- 实时查看用户、零件、交易统计
 - 监控系统性能和资源使用
 - 分析业务趋势和异常情况
 
-**2. 四库同步 🔄**
-- MySQL/MariaDB/PostgreSQL/SQLite 多数据库同步
-- 自动检测和解决数据冲突
-- 查看同步日志和历史记录
+**2. 业务管理 📦**
+- 零件审核与上架管理
+- 交易订单跟踪与处理
+- 分类与库存维护
 
 **3. 用户管理 👥**
 - 用户信息查看和编辑
@@ -555,7 +551,7 @@ const generateMockResponse = (question: string): string => {
 
 **4. 系统配置 ⚙️**
 - 数据库连接配置
-- 同步策略设置
+- 系统参数调整
 - 通知和邮件配置
 
 **5. 安全审计 🔒**
@@ -566,7 +562,7 @@ const generateMockResponse = (question: string): string => {
 🎯 **最佳实践:**
 
 1. **定期检查** - 每日查看系统概况和关键指标
-2. **主动维护** - 及时处理冲突和异常
+2. **主动维护** - 及时处理异常和举报
 3. **数据备份** - 每周进行完整数据备份
 4. **性能优化** - 根据监控数据调整配置
 5. **用户服务** - 快速响应用户反馈和投诉
@@ -578,7 +574,7 @@ const generateMockResponse = (question: string): string => {
 - 定期查看审计日志
 
 💡 **常见问题:**
-- 同步冲突如何处理？→ 查看冲突详情，根据策略选择
+- 发现异常如何处理？→ 查看异常详情，根据类型排查
 - 如何优化性能？→ 分析慢查询，添加索引
 - 用户投诉怎么办？→ 查看交易记录，公正处理
 
@@ -590,7 +586,7 @@ const generateMockResponse = (question: string): string => {
 
 作为管理员AI助手，我可以帮您：
 
-🔍 **数据分析** - 提供用户、商品、交易等统计数据
+🔍 **数据分析** - 提供用户、零件、交易等统计数据
 💾 **系统监控** - 检查数据库状态和性能指标  
 ⚙️ **配置优化** - 给出系统优化和改进建议
 🔧 **问题诊断** - 分析系统错误和故障原因

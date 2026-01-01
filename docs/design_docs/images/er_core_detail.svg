@@ -1,0 +1,73 @@
+<svg width="1000" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold" fill="#333">实体关系图 (ER Diagram) - 核心基础数据</text>
+
+  <!-- Entity: Part -->
+  <rect x="400" y="300" width="200" height="180" rx="10" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <text x="500" y="330" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Part (配件)</text>
+  <line x1="400" y1="340" x2="600" y2="340" stroke="#ffa940" stroke-width="2"/>
+  <text x="410" y="360" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="410" y="380" font-family="Arial" font-size="12">part_code (U)</text>
+  <text x="410" y="400" font-family="Arial" font-size="12">name</text>
+  <text x="410" y="420" font-family="Arial" font-size="12">FK: category_id</text>
+  <text x="410" y="440" font-family="Arial" font-size="12">FK: supplier_id</text>
+  <text x="410" y="460" font-family="Arial" font-size="12">base_price</text>
+
+  <!-- Entity: Category -->
+  <rect x="400" y="50" width="200" height="120" rx="10" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="80" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Category (分类)</text>
+  <line x1="400" y1="90" x2="600" y2="90" stroke="#52c41a" stroke-width="2"/>
+  <text x="410" y="110" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="410" y="130" font-family="Arial" font-size="12">name (U)</text>
+  <text x="410" y="150" font-family="Arial" font-size="12">parent_id (FK)</text>
+
+  <!-- Entity: Supplier -->
+  <rect x="50" y="300" width="200" height="140" rx="10" fill="#e6fffb" stroke="#13c2c2" stroke-width="2"/>
+  <text x="150" y="330" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Supplier (供应商)</text>
+  <line x1="50" y1="340" x2="250" y2="340" stroke="#13c2c2" stroke-width="2"/>
+  <text x="60" y="360" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="60" y="380" font-family="Arial" font-size="12">name</text>
+  <text x="60" y="400" font-family="Arial" font-size="12">contact_person</text>
+  <text x="60" y="420" font-family="Arial" font-size="12">phone</text>
+
+  <!-- Entity: Inventory -->
+  <rect x="750" y="300" width="200" height="140" rx="10" fill="#fff1f0" stroke="#ff4d4f" stroke-width="2"/>
+  <text x="850" y="330" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">Inventory (库存)</text>
+  <line x1="750" y1="340" x2="950" y2="340" stroke="#ff4d4f" stroke-width="2"/>
+  <text x="760" y="360" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="760" y="380" font-family="Arial" font-size="12">FK: part_id (U)</text>
+  <text x="760" y="400" font-family="Arial" font-size="12">quantity</text>
+  <text x="760" y="420" font-family="Arial" font-size="12">location</text>
+
+  <!-- Entity: StockLog -->
+  <rect x="750" y="550" width="200" height="160" rx="10" fill="#fff1f0" stroke="#ff4d4f" stroke-width="2"/>
+  <text x="850" y="580" font-family="Arial" font-size="18" text-anchor="middle" font-weight="bold">StockLog (出入库)</text>
+  <line x1="750" y1="590" x2="950" y2="590" stroke="#ff4d4f" stroke-width="2"/>
+  <text x="760" y="610" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="760" y="630" font-family="Arial" font-size="12">FK: part_id</text>
+  <text x="760" y="650" font-family="Arial" font-size="12">change_qty</text>
+  <text x="760" y="670" font-family="Arial" font-size="12">type (IN/OUT)</text>
+  <text x="760" y="690" font-family="Arial" font-size="12">operator_id (FK)</text>
+
+  <!-- Relationships -->
+  <!-- Category to Part -->
+  <line x1="500" y1="170" x2="500" y2="300" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="510" y="235" font-family="Arial" font-size="12">1 : N</text>
+  <path d="M 495 290 L 500 300 L 505 290" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+
+  <!-- Supplier to Part -->
+  <line x1="250" y1="370" x2="400" y2="370" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="325" y="365" font-family="Arial" font-size="12" text-anchor="middle">1 : N</text>
+  <path d="M 390 365 L 400 370 L 390 375" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+
+  <!-- Part to Inventory -->
+  <line x1="600" y1="370" x2="750" y2="370" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="675" y="365" font-family="Arial" font-size="12" text-anchor="middle">1 : 1</text>
+  <circle cx="745" cy="370" r="3" fill="#8c8c8c"/>
+
+  <!-- Part to StockLog -->
+  <path d="M 500 480 L 500 630 L 750 630" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="625" y="625" font-family="Arial" font-size="12" text-anchor="middle">1 : N</text>
+  <path d="M 740 625 L 750 630 L 740 635" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+
+</svg>

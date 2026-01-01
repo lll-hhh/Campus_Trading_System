@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <rect x="10" y="10" width="580" height="380" fill="#f9f9f9" stroke="#333" stroke-width="2"/>
+  <text x="300" y="40" font-family="Arial" font-size="18" font-weight="bold" text-anchor="middle">时序图 - 库存调整流程 (Stock Adjustment)</text>
+  
+  <!-- Lifelines -->
+  <line x1="100" y1="80" x2="100" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="300" y1="80" x2="300" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <line x1="500" y1="80" x2="500" y2="350" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  
+  <rect x="50" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="100" y="70" font-family="Arial" font-size="12" text-anchor="middle">仓库管理员</text>
+  
+  <rect x="250" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="300" y="70" font-family="Arial" font-size="12" text-anchor="middle">库存服务</text>
+  
+  <rect x="450" y="50" width="100" height="30" fill="#eee" stroke="#333"/>
+  <text x="500" y="70" font-family="Arial" font-size="12" text-anchor="middle">审计服务</text>
+  
+  <!-- Messages -->
+  <line x1="100" y1="120" x2="300" y2="120" stroke="#333" stroke-width="1"/>
+  <polygon points="300,120 290,115 290,125" fill="#333"/>
+  <text x="200" y="115" font-family="Arial" font-size="11" text-anchor="middle">1. 提交盘点差异</text>
+  
+  <line x1="300" y1="160" x2="500" y2="160" stroke="#333" stroke-width="1"/>
+  <polygon points="500,160 490,155 490,165" fill="#333"/>
+  <text x="400" y="155" font-family="Arial" font-size="11" text-anchor="middle">2. 记录审计日志</text>
+  
+  <line x1="300" y1="200" x2="300" y2="240" stroke="#333" stroke-width="1"/>
+  <path d="M 300 200 C 340 200 340 240 300 240" fill="none" stroke="#333" stroke-width="1"/>
+  <polygon points="300,240 305,230 295,230" fill="#333"/>
+  <text x="350" y="225" font-family="Arial" font-size="11">3. 更新库存表</text>
+  
+  <line x1="300" y1="280" x2="100" y2="280" stroke="#333" stroke-width="1" stroke-dasharray="5,5"/>
+  <polygon points="100,280 110,275 110,285" fill="#333"/>
+  <text x="200" y="275" font-family="Arial" font-size="11" text-anchor="middle">4. 调整成功通知</text>
+</svg>

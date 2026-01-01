@@ -22,22 +22,12 @@ const menuOptions = [
     path: '/admin/analytics'
   },
   {
-    label: '🔄 四库同步',
-    key: 'admin-console',
-    path: '/admin/console'
-  },
-  {
-    label: '🔍 同步监控',
-    key: 'sync-monitor',
-    path: '/admin/sync-monitor'
-  },
-  {
     label: '⚡ 性能监控',
     key: 'admin-performance',
     path: '/admin/performance'
   },
   {
-    label: '⚙️ 高级操作',
+    label: '⚙️ 系统运维',
     key: 'admin-operations',
     path: '/admin/operations'
   },
@@ -110,8 +100,8 @@ const handleLogout = () => {
     <div class="sider-content">
       <!-- Logo -->
       <div class="admin-logo">
-        <span class="logo-icon">🎓</span>
-        <span v-show="!collapsed" class="logo-text">管理后台</span>
+        <span class="logo-icon">🔥</span>
+        <span v-show="!collapsed" class="logo-text">凤凰汽配管理</span>
       </div>
 
       <!-- 用户信息 -->
@@ -129,7 +119,7 @@ const handleLogout = () => {
 
       <!-- 导航菜单 -->
       <n-menu
-        v-model:value="activeKey"
+        :value="activeKey"
         :collapsed="collapsed"
         :collapsed-width="64"
         :collapsed-icon-size="22"

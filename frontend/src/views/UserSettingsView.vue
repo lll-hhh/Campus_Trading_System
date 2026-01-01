@@ -25,11 +25,11 @@ const message = useMessage()
 const profileForm = ref({
   username: '张三',
   email: 'zhangsan@example.com',
-  student_id: 'S10001',
+  license_id: 'S10001',
   phone: '',
   bio: '',
   display_name: '',
-  campus: ''
+  region: ''
 })
 
 // 密码修改
@@ -67,11 +67,11 @@ const loadUserProfile = async () => {
     profileForm.value = {
       username: '当前用户', // 出于安全考虑不显示真实用户名
       email: '已登录用户', // 出于安全考虑不显示真实邮箱
-      student_id: '已认证', // 出于安全考虑不显示真实学号
+      license_id: '已认证', // 出于安全考虑不显示真实执照号
       phone: profile.phone || '',
       bio: profile.bio || '',
       display_name: profile.display_name || '',
-      campus: profile.campus || ''
+      region: profile.region || ''
     }
     
     avatarUrl.value = profile.avatar_url || ''
@@ -149,7 +149,7 @@ const updateProfile = async () => {
     await api.put('/auth/profile', {
       display_name: profileForm.value.display_name,
       phone: profileForm.value.phone,
-      campus: profileForm.value.campus,
+      region: profileForm.value.region,
       bio: profileForm.value.bio
     })
     message.success('个人信息更新成功')
@@ -238,16 +238,16 @@ onMounted(() => {
                 <n-input v-model:value="profileForm.display_name" placeholder="请输入显示名称" />
               </n-form-item>
 
-              <n-form-item label="校区" path="campus">
-                <n-input v-model:value="profileForm.campus" placeholder="请输入校区" />
+              <n-form-item label="区域" path="region">
+                <n-input v-model:value="profileForm.region" placeholder="请输入区域" />
               </n-form-item>
 
               <n-form-item label="邮箱" path="email">
                 <n-input v-model:value="profileForm.email" placeholder="请输入邮箱" disabled />
               </n-form-item>
 
-              <n-form-item label="学号" path="student_id">
-                <n-input v-model:value="profileForm.student_id" placeholder="请输入学号" disabled />
+              <n-form-item label="执照号" path="license_id">
+                <n-input v-model:value="profileForm.license_id" placeholder="请输入执照号" disabled />
               </n-form-item>
 
               <n-form-item label="手机号" path="phone">
@@ -386,7 +386,7 @@ onMounted(() => {
             <div>
               <h3 style="margin-bottom: 8px">导出数据</h3>
               <p style="color: #666; margin-bottom: 16px">
-                您可以导出您的个人数据，包括发布的商品、交易记录、消息等。
+                您可以导出您的个人数据，包括发布的零件、交易记录、消息等。
               </p>
               <n-button>导出我的数据</n-button>
             </div>

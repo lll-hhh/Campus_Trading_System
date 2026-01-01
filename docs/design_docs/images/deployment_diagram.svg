@@ -1,0 +1,53 @@
+<svg width="800" height="500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#f8f9fa"/>
+  
+  <!-- Client -->
+  <rect x="50" y="200" width="120" height="80" rx="10" fill="#e9ecef" stroke="#343a40" stroke-width="2"/>
+  <text x="110" y="245" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">浏览器 (Client)</text>
+  
+  <!-- Internet -->
+  <path d="M 170 240 L 250 240" stroke="#adb5bd" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="210" y="230" font-family="Arial" font-size="12" text-anchor="middle">HTTPS (443)</text>
+  
+  <!-- Cloud Server Boundary -->
+  <rect x="250" y="50" width="500" height="400" rx="15" fill="none" stroke="#007bff" stroke-width="2" stroke-dasharray="5,5"/>
+  <text x="500" y="40" font-family="Arial" font-size="16" text-anchor="middle" fill="#007bff" font-weight="bold">云服务器 (Docker 宿主机)</text>
+  
+  <!-- Nginx -->
+  <rect x="280" y="180" width="100" height="120" rx="5" fill="#28a745" fill-opacity="0.1" stroke="#28a745" stroke-width="2"/>
+  <text x="330" y="245" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Nginx</text>
+  
+  <!-- Frontend -->
+  <rect x="420" y="80" width="120" height="60" rx="5" fill="#17a2b8" fill-opacity="0.1" stroke="#17a2b8" stroke-width="2"/>
+  <text x="480" y="115" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">前端容器 (Vue3)</text>
+  
+  <!-- Backend -->
+  <rect x="420" y="210" width="120" height="60" rx="5" fill="#6610f2" fill-opacity="0.1" stroke="#6610f2" stroke-width="2"/>
+  <text x="480" y="245" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">后端容器 (FastAPI)</text>
+  
+  <!-- Redis -->
+  <rect x="600" y="150" width="100" height="50" rx="5" fill="#dc3545" fill-opacity="0.1" stroke="#dc3545" stroke-width="2"/>
+  <text x="650" y="180" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">Redis</text>
+  
+  <!-- MySQL -->
+  <rect x="600" y="270" width="100" height="50" rx="5" fill="#ffc107" fill-opacity="0.1" stroke="#ffc107" stroke-width="2"/>
+  <text x="650" y="300" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">MySQL 8.0</text>
+  
+  <!-- Celery -->
+  <rect x="420" y="340" width="120" height="60" rx="5" fill="#fd7e14" fill-opacity="0.1" stroke="#fd7e14" stroke-width="2"/>
+  <text x="480" y="375" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">Celery Worker</text>
+  
+  <!-- Connections -->
+  <line x1="380" y1="210" x2="420" y2="120" stroke="#adb5bd" stroke-width="1.5"/>
+  <line x1="380" y1="240" x2="420" y2="240" stroke="#adb5bd" stroke-width="1.5"/>
+  <line x1="540" y1="230" x2="600" y2="180" stroke="#adb5bd" stroke-width="1.5"/>
+  <line x1="540" y1="250" x2="600" y2="290" stroke="#adb5bd" stroke-width="1.5"/>
+  <line x1="480" y1="270" x2="480" y2="340" stroke="#adb5bd" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <line x1="540" y1="370" x2="600" y2="310" stroke="#adb5bd" stroke-width="1.5"/>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="0" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#adb5bd" />
+    </marker>
+  </defs>
+</svg>

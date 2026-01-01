@@ -1,0 +1,67 @@
+<svg width="1000" height="800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">核心业务类图 - 零件与库存模块 (Class Diagram - Inventory)</text>
+
+  <!-- Part Class -->
+  <rect x="50" y="60" width="250" height="220" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 50 90 L 300 90" stroke="#52c41a" stroke-width="2"/>
+  <text x="175" y="82" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Part (零件实体)</text>
+  <text x="60" y="110" font-family="Arial" font-size="11">+ id: int</text>
+  <text x="60" y="125" font-family="Arial" font-size="11">+ oe_number: string (OE号)</text>
+  <text x="60" y="140" font-family="Arial" font-size="11">+ name: string</text>
+  <text x="60" y="155" font-family="Arial" font-size="11">+ brand: string</text>
+  <text x="60" y="170" font-family="Arial" font-size="11">+ category_id: int</text>
+  <text x="60" y="185" font-family="Arial" font-size="11">+ current_stock: int</text>
+  <text x="60" y="200" font-family="Arial" font-size="11">+ min_stock_level: int</text>
+  <path d="M 50 210 L 300 210" stroke="#52c41a" stroke-width="1"/>
+  <text x="60" y="230" font-family="Arial" font-size="11">+ update_stock(change: int)</text>
+  <text x="60" y="245" font-family="Arial" font-size="11">+ is_low_stock(): bool</text>
+
+  <!-- Category Class -->
+  <rect x="400" y="60" width="200" height="120" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 400 90 L 600 90" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="82" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Category (分类)</text>
+  <text x="410" y="110" font-family="Arial" font-size="11">+ id: int</text>
+  <text x="410" y="125" font-family="Arial" font-size="11">+ name: string</text>
+  <text x="410" y="140" font-family="Arial" font-size="11">+ parent_id: int</text>
+
+  <!-- Compatibility Class -->
+  <rect x="400" y="220" width="200" height="120" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 400 250 L 600 250" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="242" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Compatibility (适配性)</text>
+  <text x="410" y="270" font-family="Arial" font-size="11">+ part_id: int</text>
+  <text x="410" y="285" font-family="Arial" font-size="11">+ car_model_id: int</text>
+  <text x="410" y="300" font-family="Arial" font-size="11">+ years: string</text>
+
+  <!-- InventoryLog Class -->
+  <rect x="50" y="350" width="250" height="180" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <path d="M 50 380 L 300 380" stroke="#52c41a" stroke-width="2"/>
+  <text x="175" y="372" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">InventoryLog (库存流水)</text>
+  <text x="60" y="400" font-family="Arial" font-size="11">+ id: int</text>
+  <text x="60" y="415" font-family="Arial" font-size="11">+ part_id: int</text>
+  <text x="60" y="430" font-family="Arial" font-size="11">+ type: enum (IN/OUT/ADJ)</text>
+  <text x="60" y="445" font-family="Arial" font-size="11">+ quantity: int</text>
+  <text x="60" y="460" font-family="Arial" font-size="11">+ operator_id: int</text>
+  <text x="60" y="475" font-family="Arial" font-size="11">+ remark: string</text>
+  <text x="60" y="490" font-family="Arial" font-size="11">+ created_at: datetime</text>
+
+  <!-- Supplier Class -->
+  <rect x="700" y="60" width="220" height="150" fill="#fff7e6" stroke="#ffa940" stroke-width="2"/>
+  <path d="M 700 90 L 920 90" stroke="#ffa940" stroke-width="2"/>
+  <text x="810" y="82" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Supplier (供应商)</text>
+  <text x="710" y="110" font-family="Arial" font-size="11">+ id: int</text>
+  <text x="710" y="125" font-family="Arial" font-size="11">+ name: string</text>
+  <text x="710" y="140" font-family="Arial" font-size="11">+ contact_person: string</text>
+  <text x="710" y="155" font-family="Arial" font-size="11">+ phone: string</text>
+  <text x="710" y="170" font-family="Arial" font-size="11">+ address: string</text>
+
+  <!-- Relationships -->
+  <line x1="300" y1="120" x2="400" y2="120" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="350" y="115" font-family="Arial" font-size="10" text-anchor="middle">n..1</text>
+  
+  <line x1="300" y1="250" x2="400" y2="250" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="350" y="245" font-family="Arial" font-size="10" text-anchor="middle">1..n</text>
+  
+  <line x1="175" y1="280" x2="175" y2="350" stroke="#8c8c8c" stroke-width="1.5"/>
+  <text x="185" y="315" font-family="Arial" font-size="10">1..n</text>
+</svg>

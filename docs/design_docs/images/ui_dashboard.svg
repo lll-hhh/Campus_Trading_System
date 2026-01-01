@@ -1,0 +1,64 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Browser Frame -->
+  <rect width="1000" height="600" rx="10" fill="#ffffff" stroke="#dee2e6" stroke-width="2"/>
+  <rect width="1000" height="40" rx="10" fill="#f8f9fa" stroke="#dee2e6" stroke-width="1"/>
+  <circle cx="20" cy="20" r="6" fill="#ff5f56"/>
+  <circle cx="40" cy="20" r="6" fill="#ffbd2e"/>
+  <circle cx="60" cy="20" r="6" fill="#27c93f"/>
+  <rect x="100" y="10" width="800" height="20" rx="10" fill="#ffffff" stroke="#dee2e6"/>
+  <text x="500" y="25" font-family="Arial" font-size="12" text-anchor="middle" fill="#6c757d">https://admin.phoenix-parts.com/dashboard</text>
+
+  <!-- Sidebar -->
+  <rect x="0" y="40" width="200" height="560" fill="#001529"/>
+  <text x="100" y="80" font-family="Arial" font-size="18" text-anchor="middle" fill="#ffffff" font-weight="bold">凤凰汽配管理</text>
+  
+  <rect x="10" y="120" width="180" height="40" rx="5" fill="#1890ff"/>
+  <text x="40" y="145" font-family="Arial" font-size="14" fill="#ffffff">📊 仪表盘</text>
+  
+  <text x="40" y="195" font-family="Arial" font-size="14" fill="#a6adb4">📦 零件管理</text>
+  <text x="40" y="245" font-family="Arial" font-size="14" fill="#a6adb4">🛒 采购入库</text>
+  <text x="40" y="295" font-family="Arial" font-size="14" fill="#a6adb4">🧾 销售订单</text>
+  <text x="40" y="345" font-family="Arial" font-size="14" fill="#a6adb4">👥 用户管理</text>
+  <text x="40" y="395" font-family="Arial" font-size="14" fill="#a6adb4">⚙️ 系统设置</text>
+
+  <!-- Header -->
+  <rect x="200" y="40" width="800" height="60" fill="#ffffff" stroke="#f0f0f0" stroke-width="1"/>
+  <text x="230" y="78" font-family="Arial" font-size="16" fill="#333333" font-weight="bold">业务概览</text>
+  <text x="950" y="78" font-family="Arial" font-size="14" text-anchor="end" fill="#666666">管理员 (Admin) ▼</text>
+
+  <!-- Content Area -->
+  <rect x="200" y="100" width="800" height="500" fill="#f0f2f5"/>
+  
+  <!-- Stats Cards -->
+  <rect x="220" y="120" width="175" height="100" rx="5" fill="#ffffff" stroke="#f0f0f0"/>
+  <text x="240" y="150" font-family="Arial" font-size="14" fill="#999999">今日销售额</text>
+  <text x="240" y="190" font-family="Arial" font-size="24" fill="#333333" font-weight="bold">¥ 12,840</text>
+  
+  <rect x="415" y="120" width="175" height="100" rx="5" fill="#ffffff" stroke="#f0f0f0"/>
+  <text x="435" y="150" font-family="Arial" font-size="14" fill="#999999">待处理订单</text>
+  <text x="435" y="190" font-family="Arial" font-size="24" fill="#1890ff" font-weight="bold">15</text>
+  
+  <rect x="610" y="120" width="175" height="100" rx="5" fill="#ffffff" stroke="#f0f0f0"/>
+  <text x="630" y="150" font-family="Arial" font-size="14" fill="#999999">库存预警</text>
+  <text x="630" y="190" font-family="Arial" font-size="24" fill="#ff4d4f" font-weight="bold">8</text>
+  
+  <rect x="805" y="120" width="175" height="100" rx="5" fill="#ffffff" stroke="#f0f0f0"/>
+  <text x="825" y="150" font-family="Arial" font-size="14" fill="#999999">新增零件</text>
+  <text x="825" y="190" font-family="Arial" font-size="24" fill="#52c41a" font-weight="bold">124</text>
+
+  <!-- Chart Placeholder -->
+  <rect x="220" y="240" width="760" height="340" rx="5" fill="#ffffff" stroke="#f0f0f0"/>
+  <text x="240" y="270" font-family="Arial" font-size="16" fill="#333333" font-weight="bold">销售趋势 (最近7天)</text>
+  <polyline points="250,530 350,480 450,500 550,420 650,450 750,380 850,400" fill="none" stroke="#1890ff" stroke-width="3"/>
+  <circle cx="250" cy="530" r="4" fill="#1890ff"/>
+  <circle cx="350" cy="480" r="4" fill="#1890ff"/>
+  <circle cx="450" cy="500" r="4" fill="#1890ff"/>
+  <circle cx="550" cy="420" r="4" fill="#1890ff"/>
+  <circle cx="650" cy="450" r="4" fill="#1890ff"/>
+  <circle cx="750" cy="380" r="4" fill="#1890ff"/>
+  <circle cx="850" cy="400" r="4" fill="#1890ff"/>
+  
+  <!-- AI Assistant Bubble -->
+  <circle cx="950" cy="550" r="30" fill="#1890ff" stroke="#ffffff" stroke-width="2"/>
+  <text x="950" y="555" font-family="Arial" font-size="20" text-anchor="middle" fill="#ffffff">🤖</text>
+</svg>

@@ -1,0 +1,53 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">ER 图 - 权限管理模块 (ER Diagram: RBAC Module)</text>
+
+  <!-- Table: users -->
+  <rect x="50" y="80" width="200" height="180" rx="10" fill="#e6f7ff" stroke="#1890ff" stroke-width="2"/>
+  <text x="150" y="110" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">users</text>
+  <line x1="50" y1="120" x2="250" y2="120" stroke="#1890ff" stroke-width="2"/>
+  <text x="60" y="140" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="60" y="160" font-family="Arial" font-size="12">username (U)</text>
+  <text x="60" y="180" font-family="Arial" font-size="12">hashed_password</text>
+  <text x="60" y="200" font-family="Arial" font-size="12">email</text>
+  <text x="60" y="220" font-family="Arial" font-size="12">is_active</text>
+
+  <!-- Table: roles -->
+  <rect x="400" y="80" width="200" height="140" rx="10" fill="#f6ffed" stroke="#52c41a" stroke-width="2"/>
+  <text x="500" y="110" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">roles</text>
+  <line x1="400" y1="120" x2="600" y2="120" stroke="#52c41a" stroke-width="2"/>
+  <text x="410" y="140" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="410" y="160" font-family="Arial" font-size="12">name (U)</text>
+  <text x="410" y="180" font-family="Arial" font-size="12">code (U)</text>
+
+  <!-- Table: user_roles -->
+  <rect x="225" y="320" width="150" height="100" rx="5" fill="#fff7e6" stroke="#ffa940" stroke-width="1"/>
+  <text x="300" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">user_roles</text>
+  <line x1="225" y1="355" x2="375" y2="355" stroke="#ffa940" stroke-width="1"/>
+  <text x="235" y="375" font-family="Arial" font-size="11">FK: user_id</text>
+  <text x="235" y="395" font-family="Arial" font-size="11">FK: role_id</text>
+
+  <!-- Table: permissions -->
+  <rect x="750" y="80" width="200" height="160" rx="10" fill="#fffbe6" stroke="#faad14" stroke-width="2"/>
+  <text x="850" y="110" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">permissions</text>
+  <line x1="750" y1="120" x2="950" y2="120" stroke="#faad14" stroke-width="2"/>
+  <text x="760" y="140" font-family="Arial" font-size="12" font-weight="bold">PK: id</text>
+  <text x="760" y="160" font-family="Arial" font-size="12">name</text>
+  <text x="760" y="180" font-family="Arial" font-size="12">code</text>
+  <text x="760" y="200" font-family="Arial" font-size="12">FK: resource_id</text>
+
+  <!-- Table: role_permissions -->
+  <rect x="575" y="320" width="150" height="100" rx="5" fill="#fff7e6" stroke="#ffa940" stroke-width="1"/>
+  <text x="650" y="345" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">role_perms</text>
+  <line x1="575" y1="355" x2="725" y2="355" stroke="#ffa940" stroke-width="1"/>
+  <text x="585" y="375" font-family="Arial" font-size="11">FK: role_id</text>
+  <text x="585" y="395" font-family="Arial" font-size="11">FK: perm_id</text>
+
+  <!-- Relationships -->
+  <path d="M 150 260 L 150 370 L 225 370" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+  <path d="M 500 220 L 500 370 L 375 370" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+  
+  <path d="M 500 220 L 500 370 L 575 370" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+  <path d="M 850 240 L 850 370 L 725 370" fill="none" stroke="#8c8c8c" stroke-width="1.5"/>
+
+</svg>

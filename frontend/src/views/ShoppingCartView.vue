@@ -55,7 +55,7 @@ const allChecked = computed({
   get: () => cartItems.value.length > 0 && cartItems.value.every(item => item.checked),
   set: (value: boolean) => {
     cartItems.value.forEach(item => {
-      // 只勾选可购买的商品
+      // 只勾选可购买的零件
       if (item.item_status === 'available') {
         item.checked = value
       }
@@ -63,7 +63,7 @@ const allChecked = computed({
   },
 })
 
-// ✅ 已选商品
+// ✅ 已选零件
 const checkedItems = computed(() => cartItems.value.filter(item => item.checked))
 
 // ✅ 总价
@@ -79,7 +79,7 @@ const conditionTypeMap: Record<string, string> = {
   fair: '一般',
 }
 
-// ✅ 加载购物车 - 调用后端 API
+// ✅ 加载采购车 - 调用后端 API
 const loadCartItems = async () => {
   loading.value = true
   try {
@@ -90,14 +90,14 @@ const loadCartItems = async () => {
       checked: false  // 默认不选中
     }))
   } catch (error: any) {
-    console.error('加载购物车失败:', error)
-    message.error(error.response?.data?.detail || '加载购物车失败')
+    console.error('加载采购车失败:', error)
+    message.error(error.response?.data?.detail || '加载采购车失败')
   } finally {
     loading.value = false
   }
 }
 
-// ✅ 删除商品 - 调用后端 API
+// ✅ 删除零件 - 调用后端 API
 const removeItem = async (id: number) => {
   try {
     await http.delete(`/cart/${id}`)
@@ -106,7 +106,7 @@ const removeItem = async (id: number) => {
     if (index > -1) {
       cartItems.value.splice(index, 1)
     }
-    message.success('已从购物车移除')
+    message.success('已从采购车移除')
   } catch (error: any) {
     message.error(error.response?.data?.detail || '移除失败')
   }
@@ -127,11 +127,11 @@ const updateQuantity = async (item: CartItem, quantity: number) => {
   }
 }
 
-// ✅ 删除选中商品 - 调用后端 API
+// ✅ 删除选中零件 - 调用后端 API
 const removeCheckedItems = async () => {
   const ids = checkedItems.value.map(item => item.id)
   if (ids.length === 0) {
-    message.warning('请先选择要删除的商品')
+    message.warning('请先选择要删除的零件')
     return
   }
   
@@ -139,18 +139,18 @@ const removeCheckedItems = async () => {
     await http.post('/cart/batch-delete', { cart_item_ids: ids })
     // 从本地列表移除
     cartItems.value = cartItems.value.filter(item => !item.checked)
-    message.success('已删除选中商品')
+    message.success('已删除选中零件')
   } catch (error: any) {
     message.error(error.response?.data?.detail || '删除失败')
   }
 }
 
-// ✅ 清空购物车 - 调用后端 API
+// ✅ 清空采购车 - 调用后端 API
 const clearCart = async () => {
   try {
     await http.delete('/cart')
     cartItems.value = []
-    message.success('购物车已清空')
+    message.success('采购车已清空')
   } catch (error: any) {
     message.error(error.response?.data?.detail || '清空失败')
   }
@@ -159,14 +159,14 @@ const clearCart = async () => {
 // ✅ 结算/联系卖家
 const checkout = async () => {
   if (checkedItems.value.length === 0) {
-    message.warning('请先选择要结算的商品')
+    message.warning('请先选择要结算的零件')
     return
   }
   
-  // 检查是否有不可购买的商品
+  // 检查是否有不可购买的零件
   const unavailable = checkedItems.value.filter(item => item.item_status !== 'available')
   if (unavailable.length > 0) {
-    message.warning('部分商品已下架或已售出，请取消选择后重试')
+    message.warning('部分零件已下架或已售出，请取消选择后重试')
     return
   }
   
@@ -189,17 +189,17 @@ const checkout = async () => {
   }
 }
 
-// ✅ 跳转到商品详情
+// ✅ 跳转到零件详情
 const goToItem = (itemId: number) => {
   router.push(`/item/${itemId}`)
 }
 
-// ✅ 获取商品图片，没有则使用随机占位图
+// ✅ 获取零件图片，没有则使用随机占位图
 const getItemImage = (item: any) => {
   if (item.item_image) {
     return item.item_image
   }
-  // 使用 picsum.photos 作为占位图，item_id 保证同一商品图片一致
+  // 使用 picsum.photos 作为占位图，item_id 保证同一零件图片一致
   return `https://picsum.photos/80/80?random=${item.item_id}`
 }
 
@@ -209,171 +209,128 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="cart-page">
-    <n-card title="购物车">
-      <template #header-extra>
-        <n-space>
-          <span style="color: #666">共 {{ cartItems.length }} 件商品</span>
-        </n-space>
-      </template>
+  <div class="shopping-cart min-h-screen bg-[#f4f4f4]">
+    <!-- Header Section -->
+    <div class="bg-[#2e3235] text-white py-8 mb-8">
+      <div class="max-w-7xl mx-auto px-4">
+        <h1 class="text-3xl font-black tracking-tighter uppercase italic">
+          Procurement <span class="text-primary">Cart</span>
+          <span class="block text-sm font-normal tracking-widest mt-1 opacity-60 italic">PHOENIX AUTO PARTS / ORDER PREPARATION</span>
+        </h1>
+      </div>
+    </div>
 
-      <!-- 加载状态 -->
+    <div class="max-w-7xl mx-auto px-4 pb-12">
       <n-spin :show="loading">
-        <n-empty v-if="!loading && cartItems.length === 0" description="购物车是空的">
-          <template #extra>
-            <n-button @click="router.push('/marketplace')">去逛逛</n-button>
-          </template>
-        </n-empty>
+        <div v-if="cartItems.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <!-- Cart Items List -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="bg-white border border-gray-200 p-4 flex items-center justify-between mb-4">
+              <n-checkbox v-model:checked="allChecked" class="font-bold uppercase tracking-tighter">
+                Select All Parts
+              </n-checkbox>
+              <n-button quaternary type="error" size="small" @click="removeCheckedItems" class="uppercase font-bold italic">
+                Remove Selected
+              </n-button>
+            </div>
 
-        <div v-else-if="cartItems.length > 0">
-          <!-- 全选 -->
-          <div class="cart-header">
-            <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
-            <span style="margin-left: auto">商品信息</span>
-            <span style="width: 120px; text-align: center">单价</span>
-            <span style="width: 100px; text-align: center">数量</span>
-            <span style="width: 120px; text-align: center">小计</span>
-            <span style="width: 80px; text-align: center">操作</span>
-          </div>
+            <div v-for="item in cartItems" :key="item.id" 
+                 class="bg-white border border-gray-200 p-4 flex gap-6 items-center group hover:border-primary transition-colors">
+              <n-checkbox v-model:checked="item.checked" :disabled="item.item_status !== 'available'" />
+              
+              <div class="w-32 h-32 bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-100">
+                <img :src="getItemImage(item)" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+              </div>
 
-          <n-divider style="margin: 12px 0" />
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start mb-2">
+                  <div>
+                    <div class="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Seller: {{ item.seller_name }}</div>
+                    <h3 class="font-black text-lg uppercase italic truncate cursor-pointer hover:text-primary transition-colors" @click="goToItem(item.item_id)">
+                      {{ item.item_title }}
+                    </h3>
+                  </div>
+                  <n-button quaternary circle type="error" @click="removeItem(item.id)">
+                    <template #icon>🗑️</template>
+                  </n-button>
+                </div>
 
-          <!-- 商品列表 -->
-          <div class="cart-items">
-            <div 
-              v-for="item in cartItems" 
-              :key="item.id" 
-              class="cart-item"
-              :class="{ 'unavailable': item.item_status !== 'available' }"
-            >
-              <n-checkbox 
-                v-model:checked="item.checked" 
-                :disabled="item.item_status !== 'available'"
-              />
-
-              <div class="item-info" @click="goToItem(item.item_id)" style="cursor: pointer;">
-                <n-image
-                  :src="getItemImage(item)"
-                  width="80"
-                  height="80"
-                  object-fit="cover"
-                  style="border-radius: 4px"
-                  preview-disabled
-                />
-                <div class="item-detail">
-                  <div class="item-title">{{ item.item_title }}</div>
-                  <div class="item-meta">
-                    <n-tag v-if="item.item_condition" size="small" type="info">
-                      {{ conditionTypeMap[item.item_condition] || item.item_condition }}
-                    </n-tag>
-                    <span style="margin-left: 8px; color: #666">卖家: {{ item.seller_name }}</span>
-                    <!-- 商品状态标签 -->
-                    <n-tag 
-                      v-if="item.item_status !== 'available'" 
-                      size="small" 
-                      type="error"
-                      style="margin-left: 8px"
-                    >
-                      {{ item.item_status === 'sold' ? '已售出' : '已下架' }}
-                    </n-tag>
+                <div class="flex items-center justify-between mt-4">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-2xl font-black text-[#2e3235]">¥{{ item.item_price }}</span>
+                    <span v-if="item.item_status !== 'available'" class="text-xs font-bold text-red-500 uppercase tracking-tighter bg-red-50 px-2 py-0.5 border border-red-100">
+                      Unavailable
+                    </span>
+                  </div>
+                  
+                  <div class="flex items-center gap-4">
+                    <n-input-number 
+                      v-model:value="item.quantity" 
+                      :min="1" 
+                      size="small"
+                      @update:value="(val) => updateQuantity(item, val || 1)"
+                      class="w-24"
+                    />
                   </div>
                 </div>
               </div>
-
-              <div class="item-price">
-                <div style="color: #f56c6c; font-weight: bold; font-size: 16px">
-                  ¥{{ item.item_price.toLocaleString() }}
-                </div>
-              </div>
-
-              <div class="item-quantity">
-                <n-input-number
-                  v-model:value="item.quantity"
-                  :min="1"
-                  :max="99"
-                  size="small"
-                  :disabled="item.item_status !== 'available'"
-                  @update:value="(val) => val && updateQuantity(item, val)"
-                  style="width: 80px"
-                />
-              </div>
-
-              <div class="item-subtotal">
-                <span style="color: #f56c6c; font-weight: bold; font-size: 18px">
-                  ¥{{ (item.item_price * item.quantity).toLocaleString() }}
-                </span>
-              </div>
-
-              <div class="item-actions">
-                <n-popconfirm @positive-click="removeItem(item.id)">
-                  <template #trigger>
-                    <n-button text type="error">删除</n-button>
-                  </template>
-                  确定要从购物车移除此商品吗？
-                </n-popconfirm>
-              </div>
             </div>
           </div>
 
-          <n-divider style="margin: 24px 0" />
-
-          <!-- 结算区域 -->
-          <div class="cart-footer">
-            <div class="footer-left">
-              <n-checkbox v-model:checked="allChecked">全选</n-checkbox>
-              <n-button text type="error" style="margin-left: 16px" @click="removeCheckedItems">
-                删除选中商品
-              </n-button>
-              <n-popconfirm @positive-click="clearCart">
-                <template #trigger>
-                  <n-button text type="warning" style="margin-left: 16px">清空购物车</n-button>
-                </template>
-                确定要清空购物车吗？
-              </n-popconfirm>
-            </div>
-
-            <div class="footer-right">
-              <div class="price-info">
-                <div class="price-row">
-                  <span>已选商品:</span>
-                  <span style="font-size: 18px; font-weight: bold">{{ checkedItems.length }} 件</span>
+          <!-- Order Summary -->
+          <div class="lg:col-span-1">
+            <div class="bg-[#2e3235] text-white p-6 sticky top-24">
+              <h2 class="text-xl font-black uppercase italic tracking-tighter mb-6 border-b border-white/10 pb-4">
+                Order <span class="text-primary">Summary</span>
+              </h2>
+              
+              <div class="space-y-4 mb-8">
+                <div class="flex justify-between text-sm font-bold uppercase tracking-widest opacity-60">
+                  <span>Selected Parts</span>
+                  <span>{{ checkedItems.length }}</span>
                 </div>
-                <div class="price-row total">
-                  <span>合计:</span>
-                  <span class="total-price">¥{{ totalPrice.toLocaleString() }}</span>
+                <div class="flex justify-between text-sm font-bold uppercase tracking-widest opacity-60">
+                  <span>Total Quantity</span>
+                  <span>{{ checkedItems.reduce((s, i) => s + i.quantity, 0) }}</span>
+                </div>
+                <div class="pt-4 border-t border-white/10 flex justify-between items-baseline">
+                  <span class="text-lg font-black uppercase italic">Total</span>
+                  <span class="text-3xl font-black text-primary">¥{{ totalPrice.toFixed(2) }}</span>
                 </div>
               </div>
 
-              <n-button
-                type="primary"
-                size="large"
+              <n-button 
+                type="primary" 
+                block 
+                size="large" 
+                class="h-14 text-lg font-black uppercase italic tracking-widest"
                 :disabled="checkedItems.length === 0"
                 @click="checkout"
-                style="margin-left: 24px"
               >
-                联系卖家 ({{ checkedItems.length }})
+                Proceed to Checkout
               </n-button>
+              
+              <p class="text-[10px] text-center mt-4 opacity-40 font-bold uppercase tracking-widest">
+                Secure Procurement / Phoenix Logistics
+              </p>
             </div>
           </div>
         </div>
-      </n-spin>
-    </n-card>
 
-    <!-- 温馨提示 -->
-    <n-card title="温馨提示" size="small" style="margin-top: 24px">
-      <ul style="color: #666; line-height: 1.8">
-        <li>这是校园二手交易平台，所有交易均为线下当面交易</li>
-        <li>点击"联系卖家"后，系统将为您提供卖家联系方式</li>
-        <li>请务必当面验货后再付款，切勿提前转账</li>
-        <li>交易时请注意个人财物安全，建议在公共场所进行交易</li>
-        <li>如遇可疑情况，请及时联系平台管理员</li>
-      </ul>
-    </n-card>
+        <div v-else class="bg-white border border-gray-200 py-24 text-center">
+          <div class="text-6xl mb-6 opacity-20">🛒</div>
+          <h2 class="text-2xl font-black uppercase italic tracking-widest text-gray-400 mb-6">Your cart is empty</h2>
+          <n-button type="primary" size="large" class="uppercase font-bold italic" @click="router.push('/marketplace')">
+            Browse Parts Catalog
+          </n-button>
+        </div>
+      </n-spin>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.cart-page {
+.shopping-cart {
   max-width: 1200px;
   margin: 0 auto;
   padding: 24px;
@@ -410,7 +367,7 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(24, 160, 88, 0.1);
 }
 
-/* ✅ 不可购买商品的样式 */
+/* ✅ 不可购买零件的样式 */
 .cart-item.unavailable {
   opacity: 0.6;
   background: #f5f5f5;
@@ -536,5 +493,391 @@ onMounted(() => {
 
 .placeholder-icon {
   font-size: 32px;
+}
+
+/* 新增样式 */
+.bg-primary {
+  background-color: #18a058;
+}
+
+.text-primary {
+  color: #18a058;
+}
+
+.uppercase {
+  text-transform: uppercase;
+}
+
+.italic {
+  font-style: italic;
+}
+
+.tracking-tighter {
+  letter-spacing: -0.02em;
+}
+
+.tracking-widest {
+  letter-spacing: 0.1em;
+}
+
+.font-black {
+  font-weight: 900;
+}
+
+.font-bold {
+  font-weight: 700;
+}
+
+.font-normal {
+  font-weight: 400;
+}
+
+.text-sm {
+  font-size: 0.875rem;
+}
+
+.text-xs {
+  font-size: 0.75rem;
+}
+
+.text-lg {
+  font-size: 1.125rem;
+}
+
+.text-2xl {
+  font-size: 1.5rem;
+}
+
+.text-3xl {
+  font-size: 1.875rem;
+}
+
+.leading-tight {
+  line-height: 1.2;
+}
+
+.leading-snug {
+  line-height: 1.375;
+}
+
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.mb-8 {
+  margin-bottom: 2rem;
+}
+
+.px-4 {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.pt-4 {
+  padding-top: 1rem;
+}
+
+.pb-4 {
+  padding-bottom: 1rem;
+}
+
+.border-b {
+  border-bottom-width: 1px;
+}
+
+.border-t {
+  border-top-width: 1px;
+}
+
+.border-primary {
+  border-color: #18a058;
+}
+
+.hover\:border-primary:hover {
+  border-color: #18a058;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color;
+}
+
+.transition-transform {
+  transition-property: transform;
+}
+
+.duration-500 {
+  transition-duration: 500ms;
+}
+
+.sticky {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+}
+
+.group {
+  position: relative;
+}
+
+.group-hover\:scale-105:hover {
+  transform: scale(1.05);
+}
+
+.group-hover\:rotate-3:hover {
+  transform: rotate(3deg);
+}
+
+.rotate-3 {
+  transform: rotate(3deg);
+}
+
+.scale-105 {
+  transform: scale(1.05);
+}
+
+.scale-110 {
+  transform: scale(1.1);
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.overflow-hidden {
+  overflow: hidden;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.overflow-scroll {
+  overflow: scroll;
+}
+
+.overscroll-auto {
+  overscroll-behavior: auto;
+}
+
+.overscroll-contain {
+  overscroll-behavior: contain;
+}
+
+.overscroll-none {
+  overscroll-behavior: none;
+}
+
+.min-h-screen {
+  min-height: 100vh;
+}
+
+.h-14 {
+  height: 3.5rem;
+}
+
+.w-24 {
+  width: 6rem;
+}
+
+.max-w-7xl {
+  max-width: 80rem;
+}
+
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.flex {
+  display: flex;
+}
+
+.inline-flex {
+  display: inline-flex;
+}
+
+.block {
+  display: block;
+}
+
+.hidden {
+  display: none;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.items-start {
+  align-items: flex-start;
+}
+
+.items-end {
+  align-items: flex-end;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-start {
+  justify-content: flex-start;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.gap-6 {
+  gap: 1.5rem;
+}
+
+.space-y-4 > :not(template) ~ :not(template) {
+  margin-top: 1rem;
+}
+
+.space-y-8 > :not(template) ~ :not(template) {
+  margin-top: 2rem;
+}
+
+.border {
+  border-width: 1px;
+}
+
+.rounded {
+  border-radius: 0.375rem;
+}
+
+.rounded-md {
+  border-radius: 0.375rem;
+}
+
+.rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.rounded-full {
+  border-radius: 9999px;
+}
+
+.shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.opacity-40 {
+  opacity: 0.4;
+}
+
+.opacity-60 {
+  opacity: 0.6;
+}
+
+.cursor-not-allowed {
+  cursor: not-allowed;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.list-none {
+  list-style-type: none;
+}
+
+.preline {
+  white-space: pre-line;
+}
+
+.break-words {
+  overflow-wrap: break-word;
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leading-relaxed {
+  line-height: 1.625;
+}
+
+.leading-loose {
+  line-height: 2;
+}
+
+.text-red-500 {
+  color: #f56565;
+}
+
+.bg-red-50 {
+  background-color: #fef2f2;
+}
+
+.border-red-100 {
+  border-color: #fed7d7;
+}
+
+.text-green-500 {
+  color: #48bb78;
+}
+
+.bg-green-50 {
+  background-color: #f0fff4;
+}
+
+.border-green-100 {
+  border-color: #c6f6d5;
+}
+
+.text-blue-500 {
+  color: #4299e1;
+}
+
+.bg-blue-50 {
+  background-color: #ebf8ff;
+}
+
+.border-blue-100 {
+  border-color: #bee3f8;
+}
+
+.text-yellow-500 {
+  color: #ecc94b;
+}
+
+.bg-yellow-50 {
+  background-color: #fefcbf;
+}
+
+.border-yellow-100 {
+  border-color: #fefcbf;
 }
 </style>

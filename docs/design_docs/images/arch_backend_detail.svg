@@ -1,0 +1,84 @@
+<svg width="1000" height="700" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#fcfcfc"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">后端架构详细设计 (Backend Architecture Detail)</text>
+  
+  <!-- API Gateway Layer -->
+  <rect x="50" y="60" width="900" height="120" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+  <text x="70" y="85" font-family="Arial" font-size="16" font-weight="bold" fill="#2e7d32">接口网关层 (API Gateway - FastAPI)</text>
+  
+  <rect x="80" y="100" width="200" height="60" rx="5" fill="#fff" stroke="#2e7d32"/>
+  <text x="180" y="125" font-family="Arial" font-size="12" text-anchor="middle">Routers (路由分发)</text>
+  <text x="180" y="145" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">/api/v1/inventory, /api/v1/auth</text>
+  
+  <rect x="300" y="100" width="200" height="60" rx="5" fill="#fff" stroke="#2e7d32"/>
+  <text x="400" y="125" font-family="Arial" font-size="12" text-anchor="middle">Dependencies (依赖注入)</text>
+  <text x="400" y="145" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">get_db, current_user</text>
+  
+  <rect x="520" y="100" width="200" height="60" rx="5" fill="#fff" stroke="#2e7d32"/>
+  <text x="620" y="125" font-family="Arial" font-size="12" text-anchor="middle">Middlewares (中间件)</text>
+  <text x="620" y="145" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">CORS, Gzip, Logging</text>
+  
+  <rect x="740" y="100" width="180" height="60" rx="5" fill="#fff" stroke="#2e7d32"/>
+  <text x="830" y="125" font-family="Arial" font-size="12" text-anchor="middle">Exception Handlers</text>
+  <text x="830" y="145" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">Global Error Mapping</text>
+
+  <!-- Service Layer -->
+  <rect x="50" y="220" width="900" height="180" rx="10" fill="#fffde7" stroke="#fbc02d" stroke-width="2"/>
+  <text x="70" y="245" font-family="Arial" font-size="16" font-weight="bold" fill="#fbc02d">业务逻辑层 (Service Layer)</text>
+  
+  <rect x="80" y="260" width="250" height="120" rx="5" fill="#fff" stroke="#fbc02d"/>
+  <text x="205" y="285" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">Inventory Service</text>
+  <text x="95" y="310" font-family="Arial" font-size="10">- Inbound/Outbound Logic</text>
+  <text x="95" y="325" font-family="Arial" font-size="10">- Stock Alert Calculation</text>
+  <text x="95" y="340" font-family="Arial" font-size="10">- Compatibility Matching</text>
+  <text x="95" y="355" font-family="Arial" font-size="10">- Batch Import Processing</text>
+  
+  <rect x="350" y="260" width="250" height="120" rx="5" fill="#fff" stroke="#fbc02d"/>
+  <text x="475" y="285" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">Trade & Order Service</text>
+  <text x="365" y="310" font-family="Arial" font-size="10">- Transactional Order Creation</text>
+  <text x="365" y="325" font-family="Arial" font-size="10">- Payment Status Tracking</text>
+  <text x="365" y="340" font-family="Arial" font-size="10">- Refund/Return Workflow</text>
+  <text x="365" y="355" font-family="Arial" font-size="10">- Invoice Generation</text>
+  
+  <rect x="620" y="260" width="250" height="120" rx="5" fill="#fff" stroke="#fbc02d"/>
+  <text x="745" y="285" font-family="Arial" font-size="12" text-anchor="middle" font-weight="bold">AI & Analytics Service</text>
+  <text x="635" y="310" font-family="Arial" font-size="10">- LLM Prompt Engineering</text>
+  <text x="635" y="325" font-family="Arial" font-size="10">- Price Trend Analysis</text>
+  <text x="635" y="340" font-family="Arial" font-size="10">- Sales Forecasting</text>
+  <text x="635" y="355" font-family="Arial" font-size="10">- Report Data Aggregation</text>
+
+  <!-- Data Access Layer -->
+  <rect x="50" y="440" width="900" height="120" rx="10" fill="#fce4ec" stroke="#c2185b" stroke-width="2"/>
+  <text x="70" y="465" font-family="Arial" font-size="16" font-weight="bold" fill="#c2185b">数据访问层 (Data Access Layer - SQLAlchemy)</text>
+  
+  <rect x="80" y="480" width="250" height="60" rx="5" fill="#fff" stroke="#c2185b"/>
+  <text x="205" y="505" font-family="Arial" font-size="12" text-anchor="middle">ORM Models</text>
+  <text x="205" y="525" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">Declarative Base, Mapped Types</text>
+  
+  <rect x="350" y="480" width="250" height="60" rx="5" fill="#fff" stroke="#c2185b"/>
+  <text x="475" y="505" font-family="Arial" font-size="12" text-anchor="middle">Repository Pattern</text>
+  <text x="475" y="525" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">Generic CRUD, Complex Joins</text>
+  
+  <rect x="620" y="480" width="250" height="60" rx="5" fill="#fff" stroke="#c2185b"/>
+  <text x="745" y="505" font-family="Arial" font-size="12" text-anchor="middle">Alembic Migrations</text>
+  <text x="745" y="525" font-family="Arial" font-size="10" text-anchor="middle" fill="#666">Version Control for Schema</text>
+
+  <!-- Async Task Layer -->
+  <rect x="50" y="580" width="900" height="80" rx="10" fill="#efebe9" stroke="#5d4037" stroke-width="2"/>
+  <text x="70" y="605" font-family="Arial" font-size="16" font-weight="bold" fill="#5d4037">异步任务层 (Async Tasks - Celery)</text>
+  <text x="200" y="635" font-family="Arial" font-size="12">Email Notifications</text>
+  <text x="400" y="635" font-family="Arial" font-size="12">Daily Report Generation</text>
+  <text x="650" y="635" font-family="Arial" font-size="12">Supplier Price Sync</text>
+  <text x="850" y="635" font-family="Arial" font-size="12">Data Cleanup</text>
+
+  <!-- Arrows -->
+  <path d="M 500 180 L 500 220" stroke="#999" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 500 400 L 500 440" stroke="#999" stroke-width="2" marker-end="url(#arrow)"/>
+  <path d="M 900 310 L 950 310 L 950 620 L 900 620" fill="none" stroke="#999" stroke-width="2" marker-end="url(#arrow)"/>
+  
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#999" />
+    </marker>
+  </defs>
+</svg>

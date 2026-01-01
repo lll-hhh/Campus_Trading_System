@@ -36,8 +36,8 @@ const navigateToLink = (path: string) => {
       <div class="footer-content">
         <div class="footer-section">
           <h4>🎓 CampuSwap</h4>
-          <p>安全、便捷、高效的校园二手交易平台</p>
-          <p style="color: #999; font-size: 12px">让校园资源流动起来</p>
+          <p>安全、便捷、高效的凤凰汽配交易平台</p>
+          <p style="color: #999; font-size: 12px">让凤凰资源流动起来</p>
         </div>
 
         <div class="footer-section">
@@ -57,7 +57,7 @@ const navigateToLink = (path: string) => {
         <div class="footer-section">
           <h4>联系我们</h4>
           <n-space vertical :size="8">
-            <span>📧 support@campus-trade.com</span>
+            <span>📧 support@region-trade.com</span>
             <span>📱 400-123-4567</span>
             <span>🕒 工作时间: 9:00-18:00</span>
           </n-space>

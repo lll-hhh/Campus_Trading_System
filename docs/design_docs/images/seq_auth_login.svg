@@ -1,0 +1,57 @@
+<svg width="1000" height="600" xmlns="http://www.w3.org/2000/svg">
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="500" y="30" font-family="Arial" font-size="20" text-anchor="middle" font-weight="bold" fill="#333">业务流程时序图 - 用户登录与鉴权 (Sequence Diagram: Auth Login)</text>
+
+  <!-- Lifelines -->
+  <line x1="100" y1="80" x2="100" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="50" y="50" width="100" height="30" fill="#f0f0f0" stroke="#333"/>
+  <text x="100" y="70" font-family="Arial" font-size="12" text-anchor="middle">用户</text>
+
+  <line x1="300" y1="80" x2="300" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="250" y="50" width="100" height="30" fill="#e6f7ff" stroke="#1890ff"/>
+  <text x="300" y="70" font-family="Arial" font-size="12" text-anchor="middle">前端 (Vue)</text>
+
+  <line x1="500" y1="80" x2="500" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="450" y="50" width="100" height="30" fill="#f6ffed" stroke="#52c41a"/>
+  <text x="500" y="70" font-family="Arial" font-size="12" text-anchor="middle">Auth 服务</text>
+
+  <line x1="700" y1="80" x2="700" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="650" y="50" width="100" height="30" fill="#fff1f0" stroke="#ff4d4f"/>
+  <text x="700" y="70" font-family="Arial" font-size="12" text-anchor="middle">数据库</text>
+
+  <line x1="900" y1="80" x2="900" y2="550" stroke="#333" stroke-width="2" stroke-dasharray="5,5"/>
+  <rect x="850" y="50" width="100" height="30" fill="#fff0f6" stroke="#eb2f96"/>
+  <text x="900" y="70" font-family="Arial" font-size="12" text-anchor="middle">Redis (Token)</text>
+
+  <!-- Messages -->
+  <path d="M 100 120 L 300 120" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="200" y="115" font-family="Arial" font-size="11" text-anchor="middle">1. 输入用户名密码</text>
+
+  <path d="M 300 160 L 500 160" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="155" font-family="Arial" font-size="11" text-anchor="middle">2. POST /auth/login</text>
+
+  <path d="M 500 200 L 700 200" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="600" y="195" font-family="Arial" font-size="11" text-anchor="middle">3. 查询用户信息</text>
+
+  <path d="M 700 240 L 500 240" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="600" y="235" font-family="Arial" font-size="11" text-anchor="middle">4. 返回 User 对象</text>
+
+  <path d="M 500 280 L 500 320 L 450 320 L 500 320" fill="none" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="400" y="310" font-family="Arial" font-size="11" text-anchor="middle">5. 校验 Hash 密码</text>
+
+  <path d="M 500 360 L 900 360" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arrow)"/>
+  <text x="700" y="355" font-family="Arial" font-size="11" text-anchor="middle">6. 存储 Session/Token</text>
+
+  <path d="M 500 400 L 300 400" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="400" y="395" font-family="Arial" font-size="11" text-anchor="middle">7. 返回 JWT Token</text>
+
+  <path d="M 300 440 L 100 440" stroke="#333" stroke-width="1.5" stroke-dasharray="3,3" fill="none" marker-end="url(#arrow)"/>
+  <text x="200" y="435" font-family="Arial" font-size="11" text-anchor="middle">8. 登录成功跳转</text>
+
+  <!-- Arrow Marker -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#333" />
+    </marker>
+  </defs>
+</svg>

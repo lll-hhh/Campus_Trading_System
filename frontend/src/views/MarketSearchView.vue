@@ -1,12 +1,12 @@
 <template>
   <div class="space-y-6">
-    <section class="rounded-3xl bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-8 text-white shadow-xl">
+    <section class="rounded-3xl bg-gradient-to-r from-primary to-purple-600 px-6 py-8 text-white shadow-xl">
       <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p class="text-sm tracking-widest uppercase text-white/80">智能检索 · 多源联动</p>
           <h1 class="text-3xl font-semibold">跨平台市场中心</h1>
           <p class="mt-2 max-w-2xl text-white/80">
-            结合 AI 推荐、库存同步与角色权限，为不同用户提供专属的二手交易体验。管理员可快速定位异常，卖家可查看曝光数据，买家可筛选最心仪的物品。
+            结合 AI 推荐、智能搜索与角色权限，为不同用户提供专属的汽配交易体验。管理员可快速定位异常，卖家可查看曝光数据，买家可筛选最心仪的物品。
           </p>
         </div>
         <div class="rounded-2xl bg-white/10 p-4 text-sm">
@@ -25,7 +25,7 @@
           <ul class="mt-3 space-y-2 text-sm text-slate-600">
             <li class="flex items-center justify-between">
               <span>高频曝光</span>
-              <span class="rounded-full bg-indigo-50 px-2 py-0.5 text-indigo-600">实时</span>
+              <span class="rounded-full bg-primary/10 px-2 py-0.5 text-primary">实时</span>
             </li>
             <li class="flex items-center justify-between">
               <span>价格偏高</span>
@@ -69,7 +69,7 @@
               <span>{{ formatDate(item.updated_at) }}</span>
             </div>
             <h3 class="mt-2 text-lg font-semibold text-slate-900">{{ item.title }}</h3>
-            <p class="mt-1 text-2xl font-bold text-indigo-600">
+            <p class="mt-1 text-2xl font-bold text-primary">
               {{ item.price.toFixed(2) }}
               <span class="text-base font-medium text-slate-500">{{ item.currency }}</span>
             </p>
@@ -80,8 +80,8 @@
               </span>
             </div>
             <footer class="mt-4 flex items-center justify-between text-sm text-slate-500">
-              <span>同步版本 {{ item.id }}</span>
-              <button class="text-indigo-600" type="button">查看详情 →</button>
+              <span>库存充足</span>
+              <button class="text-primary" type="button">查看详情 →</button>
             </footer>
           </article>
         </div>

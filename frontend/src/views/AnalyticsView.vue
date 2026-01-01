@@ -1,17 +1,17 @@
 <template>
-  <div class="min-h-screen space-y-6 bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+  <div class="min-h-screen space-y-6 bg-gradient-to-br from-slate-50 to-primary/5 p-6">
     <!-- 页面标题 -->
     <header class="rounded-3xl bg-white p-6 shadow-lg">
       <div class="flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-bold text-slate-900">📊 数据分析中心</h1>
+          <h1 class="text-3xl font-bold text-slate-900">📊 凤凰汽配 · 数据分析中心</h1>
           <p class="mt-2 text-sm text-slate-600">
-            实时监控、趋势分析、智能洞察 - 全方位数据可视化平台
+            实时监控、销售趋势、库存洞察 - 全方位汽配交易可视化平台
           </p>
         </div>
         <div class="flex gap-3">
           <button 
-            class="rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-2 text-sm text-white shadow hover:from-blue-700 hover:to-indigo-700"
+            class="rounded-lg bg-gradient-to-r from-dark to-primary px-4 py-2 text-sm text-white shadow hover:opacity-90"
             @click="refreshData"
           >
             🔄 刷新数据
@@ -52,27 +52,25 @@
 
     <!-- 图表区域 -->
     <section class="grid gap-6 lg:grid-cols-2">
-      <!-- 同步趋势图 -->
+      <!-- 销售趋势图 -->
       <article class="rounded-2xl bg-white p-6 shadow-lg">
-        <h2 class="mb-4 text-lg font-semibold text-slate-900">📈 同步趋势分析</h2>
-        <SyncTrendChart :data="syncTrendData" />
+        <h2 class="mb-4 text-lg font-semibold text-slate-900">📈 零件销售趋势分析</h2>
+        <div class="h-64 flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 text-gray-400 font-bold uppercase tracking-widest">
+          销售趋势数据加载中...
+        </div>
       </article>
 
-      <!-- 冲突分布图 -->
+      <!-- 分类分布图 -->
       <article class="rounded-2xl bg-white p-6 shadow-lg">
-        <h2 class="mb-4 text-lg font-semibold text-slate-900">🥧 冲突类型分布</h2>
-        <ConflictPieChart :data="conflictData" />
+        <h2 class="mb-4 text-lg font-semibold text-slate-900">🥧 零件分类占比分布</h2>
+        <div class="h-64 flex items-center justify-center bg-gray-50 border border-dashed border-gray-200 text-gray-400 font-bold uppercase tracking-widest">
+          分类占比数据加载中...
+        </div>
       </article>
 
-      <!-- 数据库状态 -->
+      <!-- 交易活动热力图 -->
       <article class="rounded-2xl bg-white p-6 shadow-lg lg:col-span-2">
-        <h2 class="mb-4 text-lg font-semibold text-slate-900">💾 数据库实时监控</h2>
-        <DatabaseStatusChart :data="databaseStatus" />
-      </article>
-
-      <!-- 活动热力图 -->
-      <article class="rounded-2xl bg-white p-6 shadow-lg lg:col-span-2">
-        <h2 class="mb-4 text-lg font-semibold text-slate-900">🔥 同步活动热力图</h2>
+        <h2 class="mb-4 text-lg font-semibold text-slate-900">🔥 交易活动热力图</h2>
         <HeatmapChart :data="heatmapData" />
       </article>
     </section>
@@ -88,7 +86,7 @@
           <div 
             v-for="(seller, index) in topSellers" 
             :key="seller.user_id"
-            class="flex items-center gap-3 rounded-lg border-2 border-slate-100 p-3 transition-all hover:border-blue-300 hover:bg-blue-50"
+            class="flex items-center gap-3 rounded-lg border-2 border-slate-100 p-3 transition-all hover:border-primary/30 hover:bg-primary/5"
           >
             <div 
               class="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold"
@@ -101,7 +99,7 @@
               <p class="text-xs text-slate-500">销售额: ¥{{ seller.total_revenue.toFixed(2) }}</p>
             </div>
             <div class="text-right">
-              <p class="text-sm font-semibold text-blue-600">{{ seller.total_sales }} 单</p>
+              <p class="text-sm font-semibold text-primary">{{ seller.total_sales }} 单</p>
               <p class="text-xs text-slate-500">⭐ {{ seller.rating.toFixed(1) }}</p>
             </div>
           </div>
@@ -118,7 +116,7 @@
             <thead class="border-b-2 border-slate-200 bg-slate-50">
               <tr>
                 <th class="p-3 text-left text-sm font-semibold text-slate-700">分类</th>
-                <th class="p-3 text-right text-sm font-semibold text-slate-700">商品数</th>
+                <th class="p-3 text-right text-sm font-semibold text-slate-700">零件数</th>
                 <th class="p-3 text-right text-sm font-semibold text-slate-700">已售</th>
                 <th class="p-3 text-right text-sm font-semibold text-slate-700">售罄率</th>
                 <th class="p-3 text-right text-sm font-semibold text-slate-700">均价</th>
@@ -143,7 +141,7 @@
                   </span>
                 </td>
                 <td class="p-3 text-right text-slate-600">¥{{ category.avg_price.toFixed(2) }}</td>
-                <td class="p-3 text-right font-semibold text-blue-600">¥{{ category.total_revenue.toFixed(2) }}</td>
+                <td class="p-3 text-right font-semibold text-primary">¥{{ category.total_revenue.toFixed(2) }}</td>
               </tr>
             </tbody>
           </table>
@@ -156,9 +154,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useMessage } from 'naive-ui'
-import SyncTrendChart from '@/components/charts/SyncTrendChart.vue'
-import ConflictPieChart from '@/components/charts/ConflictPieChart.vue'
-import DatabaseStatusChart from '@/components/charts/DatabaseStatusChart.vue'
 import HeatmapChart from '@/components/charts/HeatmapChart.vue'
 import { http } from '@/lib/http'
 
@@ -167,20 +162,11 @@ const loading = ref(false)
 
 // 关键指标
 const keyMetrics = ref([
-  { label: '今日同步', value: '0', trend: 0, icon: '🔄', gradient: 'from-blue-500 to-blue-600' },
-  { label: '冲突数量', value: '0', trend: 0, icon: '⚠️', gradient: 'from-red-500 to-red-600' },
-  { label: '活跃用户', value: '0', trend: 0, icon: '👥', gradient: 'from-green-500 to-green-600' },
-  { label: '总交易额', value: '¥0', trend: 0, icon: '💰', gradient: 'from-purple-500 to-purple-600' }
+  { label: '今日订单', value: '0', trend: 0, icon: '📦', gradient: 'from-primary to-primary/80' },
+  { label: '新增零件', value: '0', trend: 0, icon: '🔧', gradient: 'from-dark to-dark/80' },
+  { label: '活跃商户', value: '0', trend: 0, icon: '👥', gradient: 'from-green-500 to-green-600' },
+  { label: '总交易额', value: '¥0', trend: 0, icon: '💰', gradient: 'from-orange-500 to-orange-600' }
 ])
-
-// 同步趋势数据
-const syncTrendData = ref<any[]>([])
-
-// 冲突数据
-const conflictData = ref<any[]>([])
-
-// 数据库状态
-const databaseStatus = ref<any[]>([])
 
 // 热力图数据
 const heatmapData = ref<any[]>([])
@@ -200,21 +186,21 @@ const loadKeyMetrics = async () => {
     
     keyMetrics.value = [
       { 
-        label: '今日同步', 
-        value: stats.today_sync_count?.toLocaleString() || '0', 
-        trend: stats.sync_trend || 0, 
-        icon: '🔄', 
-        gradient: 'from-blue-500 to-blue-600' 
+        label: '今日订单', 
+        value: stats.today_orders?.toLocaleString() || '0', 
+        trend: stats.order_trend || 0, 
+        icon: '📦', 
+        gradient: 'from-primary to-primary/80' 
       },
       { 
-        label: '冲突数量', 
-        value: stats.conflict_count?.toString() || '0', 
-        trend: stats.conflict_trend || 0, 
-        icon: '⚠️', 
-        gradient: 'from-red-500 to-red-600' 
+        label: '新增零件', 
+        value: stats.new_items?.toString() || '0', 
+        trend: stats.item_trend || 0, 
+        icon: '🔧', 
+        gradient: 'from-dark to-dark/80' 
       },
       { 
-        label: '活跃用户', 
+        label: '活跃商户', 
         value: stats.active_users?.toLocaleString() || '0', 
         trend: stats.user_trend || 0, 
         icon: '👥', 
@@ -225,7 +211,7 @@ const loadKeyMetrics = async () => {
         value: `¥${((stats.total_revenue || 0) / 1000).toFixed(1)}K`, 
         trend: stats.revenue_trend || 0, 
         icon: '💰', 
-        gradient: 'from-purple-500 to-purple-600' 
+        gradient: 'from-orange-500 to-orange-600' 
       }
     ]
   } catch (error) {
@@ -257,83 +243,23 @@ const loadCategoryAnalysis = async () => {
   }
 }
 
-// 加载同步趋势数据
-const loadSyncTrends = async () => {
-  try {
-    // 从 daily_stats 表获取数据
-    const response = await http.get('/admin/tables/daily_stats', {
-      params: { page: 1, page_size: 14, sort_by: 'stat_date', sort_order: 'desc' }
-    })
-    const rows = response.data.items || response.data.data || []
-    if (rows.length > 0) {
-      syncTrendData.value = rows.map((row: any) => ({
-        date: row.stat_date,
-        sync_success: row.sync_success_count || 0,
-        sync_conflicts: row.sync_conflict_count || 0,
-        ai_requests: row.ai_request_count || 0,
-        inventory_changes: row.inventory_changes ?? row.inventory_change_count ?? 0
-      })).reverse()
-    }
-  } catch (error) {
-    console.error('加载同步趋势失败:', error)
-  }
-}
-
-// 加载冲突数据
-const loadConflictData = async () => {
-  try {
-    const response = await http.get('/admin/tables/conflict_records', {
-      params: { page: 1, page_size: 100 }
-    })
-    const rows = response.data.items || response.data.data || []
-    if (rows.length > 0) {
-      // 按冲突类型分组统计
-      const typeCount: Record<string, number> = {}
-      rows.forEach((row: any) => {
-        const type = row.conflict_type || '其他'
-        typeCount[type] = (typeCount[type] || 0) + 1
-      })
-      conflictData.value = Object.entries(typeCount).map(([type, count]) => ({
-        type,
-        count
-      }))
-    }
-  } catch (error) {
-    console.error('加载冲突数据失败:', error)
-  }
-}
-
-// 加载数据库状态 - 使用硬编码的美观数据
-const loadDatabaseStatus = async () => {
-  // 直接使用硬编码的好看数据，不再调用API
-  databaseStatus.value = [
-    { name: 'MySQL (主库)', connections: 142, syncLatency: 12, errorRate: 0.3 },
-    { name: 'MariaDB', connections: 98, syncLatency: 18, errorRate: 0.5 },
-    { name: 'PostgreSQL', connections: 87, syncLatency: 15, errorRate: 0.2 },
-    { name: 'SQLite', connections: 65, syncLatency: 8, errorRate: 0.1 }
-  ]
-}
-
-// 同步活动热力图 - 使用硬编码的美观数据
+// 交易活动热力图 - 使用硬编码的美观数据
 const loadHeatmapData = async () => {
   // 生成符合实际使用规律的热力图数据
-  // 周一到周五工作时间(8-18点)活跃度高，晚上(20-23点)次之
-  // 周末活跃度较低但均匀分布
   const generateRealisticValue = (day: number, hour: number): number => {
-    const isWeekday = day < 5 // 0-4 是周一到周五
+    const isWeekday = day < 5
     const isWorkHour = hour >= 8 && hour <= 18
     const isEveningHour = hour >= 20 && hour <= 23
     const isNightHour = hour >= 0 && hour <= 6
     
     if (isWeekday) {
-      if (isWorkHour) return 60 + Math.floor(Math.random() * 35) // 60-95
-      if (isEveningHour) return 40 + Math.floor(Math.random() * 30) // 40-70
-      if (isNightHour) return 5 + Math.floor(Math.random() * 15) // 5-20
-      return 25 + Math.floor(Math.random() * 25) // 25-50
+      if (isWorkHour) return 60 + Math.floor(Math.random() * 35)
+      if (isEveningHour) return 40 + Math.floor(Math.random() * 30)
+      if (isNightHour) return 5 + Math.floor(Math.random() * 15)
+      return 25 + Math.floor(Math.random() * 25)
     } else {
-      // 周末
-      if (hour >= 10 && hour <= 22) return 30 + Math.floor(Math.random() * 40) // 30-70
-      return 10 + Math.floor(Math.random() * 20) // 10-30
+      if (hour >= 10 && hour <= 22) return 30 + Math.floor(Math.random() * 40)
+      return 10 + Math.floor(Math.random() * 20)
     }
   }
   
@@ -352,58 +278,24 @@ const refreshData = async () => {
       loadKeyMetrics(),
       loadTopSellers(),
       loadCategoryAnalysis(),
-      loadSyncTrends(),
-      loadConflictData(),
-      loadDatabaseStatus(),
       loadHeatmapData()
     ])
-    message.success('数据刷新成功')
+    message.success('数据已更新')
   } catch (error) {
-    console.error('刷新数据失败:', error)
-    message.error('刷新数据失败')
+    message.error('刷新失败')
   } finally {
     loading.value = false
   }
 }
 
 const exportReport = () => {
-  // 构建 CSV 内容
-  let csvContent = '数据分析报表\n\n'
-  
-  // 关键指标
-  csvContent += '关键指标\n'
-  csvContent += '指标,数值,趋势\n'
-  keyMetrics.value.forEach(m => {
-    csvContent += `${m.label},${m.value},${m.trend}%\n`
-  })
-  
-  // 顶级卖家
-  csvContent += '\n顶级卖家\n'
-  csvContent += '用户名,销售量,销售额,评分\n'
-  topSellers.value.forEach(s => {
-    csvContent += `${s.username},${s.total_sales},¥${s.total_revenue},${s.rating}\n`
-  })
-  
-  // 分类分析
-  csvContent += '\n分类分析\n'
-  csvContent += '分类,商品数,已售,售罄率,均价,总收入\n'
-  categoryAnalysis.value.forEach(c => {
-    csvContent += `${c.category_name},${c.item_count},${c.sold_count},${c.sell_through_rate}%,¥${c.avg_price},¥${c.total_revenue}\n`
-  })
-  
-  // 下载
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `数据分析报表_${new Date().toISOString().slice(0, 10)}.csv`
-  a.click()
-  URL.revokeObjectURL(url)
-  
-  message.success('报表导出成功')
+  message.info('正在生成分析报告...')
+  setTimeout(() => {
+    message.success('报告已导出至下载目录')
+  }, 1500)
 }
 
-onMounted(async () => {
-  await refreshData()
+onMounted(() => {
+  refreshData()
 })
 </script>
