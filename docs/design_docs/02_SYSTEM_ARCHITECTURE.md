@@ -59,49 +59,49 @@
 - **SQLAlchemy Models**: 定义数据库表结构。
 - **Repository Pattern**: 封装 CRUD 操作，隔离业务逻辑与数据库实现。
 
-### 3.5 核心设计模式应用
+## 4. 核心设计模式应用
 
 凤凰汽配管理系统在开发过程中遵循了多种经典设计模式，以保证代码的可维护性和扩展性：
 
-#### 3.5.1 依赖注入 (Dependency Injection)
+### 4.1 依赖注入 (Dependency Injection)
 在 FastAPI 后端中，广泛使用 `Depends` 进行依赖注入。
 - **应用场景**：数据库会话管理、当前用户身份校验、权限验证。
 - **优点**：解耦了组件之间的依赖，便于进行单元测试（Mock 依赖）。
 
-#### 3.5.2 仓库模式 (Repository Pattern)
+### 4.2 仓库模式 (Repository Pattern)
 虽然 SQLAlchemy 提供了 ORM，但我们在 Service 层之上封装了 Repository 层。
 - **应用场景**：复杂的库存查询、多表关联的报表统计。
 - **优点**：将数据访问逻辑与业务逻辑分离，如果未来更换数据库驱动或 ORM，只需修改 Repository 层。
 
-#### 3.5.3 观察者模式 (Observer Pattern)
+### 4.3 观察者模式 (Observer Pattern)
 利用异步任务队列（Celery）实现。
 - **应用场景**：当订单状态变为“已完成”时，触发库存扣减、发送通知邮件、更新销售统计。
 - **优点**：实现业务流程的异步解耦，提高系统响应速度。
 
-#### 3.5.4 单例模式 (Singleton Pattern)
+### 4.4 单例模式 (Singleton Pattern)
 - **应用场景**：Redis 连接池、配置管理类、日志记录器。
 - **优点**：确保全局只有一个实例，节省系统资源。
 
-### 3.6 系统可扩展性设计 (Scalability)
+## 5. 系统可扩展性设计 (Scalability)
 
 为了应对未来业务增长（如门店增加、零件种类激增），系统设计了以下扩展方案：
 
-#### 3.6.1 水平扩展 (Horizontal Scaling)
+### 5.1 水平扩展 (Horizontal Scaling)
 - **应用层**：后端 API 服务无状态化（Stateless），可以通过 Docker Swarm 或 Kubernetes 轻松增加副本数。
 - **负载均衡**：Nginx 作为反向代理，支持轮询、加权轮询等多种负载均衡算法。
 
-#### 3.6.2 数据库扩展
+### 5.2 数据库扩展
 - **读写分离**：通过配置 SQLAlchemy 的多个 Engine，实现主库写、从库读，提升查询性能。
 - **垂直拆分**：如果业务继续扩大，可以将“订单模块”和“库存模块”拆分为独立的数据库。
 
-#### 3.6.3 缓存策略
+### 5.3 缓存策略
 - **多级缓存**：
     -   **一级缓存**：本地内存缓存（用于存储极少变动的配置信息）。
     -   **二级缓存**：Redis 分布式缓存（用于存储热点零件信息、用户 Session）。
 
-### 3.7 系统交互序列图 (Sequence Diagrams)
+### 2.7 系统交互序列图 (Sequence Diagrams)
 
-#### 3.7.1 零件入库流程
+#### 2.7.1 零件入库流程
 ```mermaid
 sequenceDiagram
     participant U as 仓库管理员
@@ -124,7 +124,7 @@ sequenceDiagram
     C->>U: (可选) 发送低库存通知
 ```
 
-#### 3.7.2 销售订单处理流程
+#### 2.7.2 销售订单处理流程
 ```mermaid
 sequenceDiagram
     participant C as 销售人员
@@ -179,10 +179,10 @@ graph TD
 
 ## 5. 关键设计决策
 
-### 5.1 异步 IO 模型
+### 2.1 异步 IO 模型
 为了应对汽配查询时可能涉及的大量数据计算和外部 AI 接口调用，后端全面采用 `async/await` 异步编程模型。这使得系统在处理长连接（如 AI 流式输出）时不会阻塞主线程，极大地提升了系统的吞吐量。
 
-### 5.2 统一异常处理
+### 2.2 统一异常处理
 系统设计了全局异常捕获机制，所有业务异常（如库存不足、权限缺失）都会被转换为统一格式的 JSON 响应：
 ```json
 {
@@ -192,7 +192,7 @@ graph TD
 }
 ```
 
-### 5.3 数据库连接池优化
+### 2.3 数据库连接池优化
 针对 MySQL 8.0，我们配置了 SQLAlchemy 的异步连接池：
 - `pool_size`: 20 (基础连接数)
 - `max_overflow`: 10 (允许溢出的最大连接数)
@@ -200,17 +200,17 @@ graph TD
 
 ## 6. 性能优化深度指南 (Performance Optimization)
 
-### 6.1 后端性能优化
+### 2.1 后端性能优化
 - **并发处理**：利用 FastAPI 的 `async/await` 特性，非阻塞处理 I/O 密集型任务。
 - **连接池配置**：优化 SQLAlchemy 连接池参数（`pool_size`, `max_overflow`），防止高并发下连接耗尽。
 - **Gzip 压缩**：开启 FastAPI 中间件，对响应数据进行 Gzip 压缩，减少传输带宽。
 
-### 6.2 数据库性能优化
+### 2.2 数据库性能优化
 - **索引精简**：定期清理冗余索引，避免影响写入性能。
 - **分区表设计**：对于订单表、日志表等超大表，考虑按月进行物理分区。
 - **SQL 审计**：禁止在生产环境执行 `SELECT *`，必须指定具体字段。
 
-### 6.3 缓存架构设计
+### 2.3 缓存架构设计
 - **多级缓存**：
   - 一级缓存：本地内存缓存（如 `lru_cache`），存储极高频访问且不常变的数据。
   - 二级缓存：Redis 分布式缓存，存储 Session、配置项、热点零件。
@@ -218,25 +218,25 @@ graph TD
 
 ## 7. 网络拓扑与安全架构 (Network Topology)
 
-### 7.1 网络分层
+### 2.1 网络分层
 - **DMZ 区**：部署 Nginx 反向代理，负责 SSL 卸载和请求分发。
 - **应用区**：部署 Backend 和 Frontend 容器，仅允许 DMZ 区访问。
 - **数据区**：部署 MySQL 和 Redis，仅允许应用区访问，完全隔离公网。
 
-### 7.2 安全防护
+### 2.2 安全防护
 - **防火墙**：仅开放 80/443 端口，SSH 端口仅限特定 IP 访问。
 - **DDoS 防护**：利用云平台（如 Azure Front Door）提供的流量清洗能力。
 - **WAF 策略**：配置 Web 应用防火墙，拦截常见的 SQL 注入和脚本攻击。
 
 ## 8. 可扩展性与高可用设计 (High Availability)
 
-### 8.1 服务无状态化
+### 2.1 服务无状态化
 - 所有后端实例均不存储本地 Session，状态全部保存在 Redis 中，支持随时水平扩容。
 
-### 8.2 数据库高可用
+### 2.2 数据库高可用
 - 采用 **MySQL MGR (Group Replication)** 或 **主从复制 + Orchestrator** 实现秒级故障切换。
 
-### 8.3 负载均衡策略
+### 2.3 负载均衡策略
 - Nginx 使用 `least_conn` 算法，将请求分发到负载最低的后端实例。
 
 ## 9. 监控与可观测性 (Observability)
@@ -246,7 +246,7 @@ graph TD
 
 ## 10. 系统架构图深度解析 (Architecture Diagrams)
 
-### 10.1 逻辑架构图 (Mermaid)
+### 2.1 逻辑架构图 (Mermaid)
 ```mermaid
 graph TD
     subgraph Frontend
@@ -288,7 +288,7 @@ graph TD
     AI --> Redis
 ```
 
-### 10.2 部署架构图 (Mermaid)
+### 2.2 部署架构图 (Mermaid)
 ```mermaid
 graph LR
     User((User)) --> Internet
@@ -306,7 +306,7 @@ graph LR
     end
 ```
 
-### 10.3 数据流向图 (Mermaid)
+### 2.3 数据流向图 (Mermaid)
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -329,25 +329,25 @@ sequenceDiagram
     F-->>U: 渲染列表
 ```
 
-## 3.2 详细架构分解
+## 2.2 详细架构分解
 
-#### 3.2.1 前端架构细节
+#### 2.2.1 前端架构细节
 ![前端架构细节](./images/arch_frontend_detail.svg)
 
-#### 3.2.2 后端架构细节
+#### 2.2.2 后端架构细节
 ![后端架构细节](./images/arch_backend_detail.svg)
 
-### 3.3 核心类图 (Core Class Diagrams)
+### 2.3 核心类图 (Core Class Diagrams)
 
 由于系统功能复杂，类图按功能模块进行拆分展示：
 
-#### 3.3.1 权限与用户模块 (RBAC & User)
+#### 2.3.1 权限与用户模块 (RBAC & User)
 - **用户与角色关联**：展示用户、角色、权限之间的多对多关系。
   ![Class RBAC User Role](./images/class_rbac_user_role.svg)
 - **用户会话管理**：展示用户登录后的会话状态维护。
   ![Class User Session](./images/class_user_session.svg)
 
-#### 3.3.2 库存与配件模块 (Inventory & Part)
+#### 2.3.2 库存与配件模块 (Inventory & Part)
 - **配件基本信息**：展示配件、分类、品牌的核心属性。
   ![Class Inventory Part](./images/class_inventory_part.svg)
 - **配件详情扩展**：展示配件的物理参数、材质等详细信息。
@@ -357,7 +357,7 @@ sequenceDiagram
 - **库存预警规则**：展示库存上下限预警的配置逻辑。
   ![Class Stock Alert](./images/class_stock_alert.svg)
 
-#### 3.3.3 业务与财务模块 (Business & Finance)
+#### 2.3.3 业务与财务模块 (Business & Finance)
 - **销售订单处理**：展示订单、订单项、支付状态的关联。
   ![Class Sales Order](./images/class_sales_order.svg)
 - **供应商管理**：展示供应商信息及其供应记录。
@@ -365,7 +365,7 @@ sequenceDiagram
 - **客户管理**：展示客户等级、折扣率及余额管理。
   ![Class Customer Management](./images/class_customer_management.svg)
 
-#### 3.3.4 系统支撑模块 (System Support)
+#### 2.3.4 系统支撑模块 (System Support)
 - **审计日志**：展示系统操作日志的记录结构。
   ![Class Audit Logs](./images/class_audit_logs.svg)
 - **仓库与库位**：展示仓库物理布局与库位编码。
@@ -375,9 +375,9 @@ sequenceDiagram
 
 ---
 
-### 3.4 业务流程时序图 (Core Sequence Diagrams)
+### 2.4 业务流程时序图 (Core Sequence Diagrams)
 
-#### 3.4.1 认证与安全流程
+#### 2.4.1 认证与安全流程
 - **用户登录验证**：展示从前端提交凭据到 JWT 签发的全过程。
   ![Seq Auth Login](./images/seq_auth_login.svg)
 - **权限拦截校验**：展示 API 请求时的权限动态检查逻辑。
@@ -387,9 +387,9 @@ sequenceDiagram
 - **个人资料更新**：展示用户修改自身信息的处理流程。
   ![Seq Profile Update](./images/seq_profile_update.svg)
 
-#### 3.4.2 核心业务流程
+#### 2.4.2 核心业务流程
 - **销售下单流程**：展示从选择配件到扣减库存、生成订单的事务过程。
-  ![Seq Sales Order](./images/seq_sales_order.svg)
+  ![Seq Sales Order](./images/seq_sales_detail.svg)
 - **采购入库流程**：展示供应商供货后的入库登记与库存增加。
   ![Seq Procurement Flow](./images/seq_procurement_flow.svg)
 - **库存调整流程**：展示手动盘点差异时的审计与更新逻辑。
@@ -397,9 +397,9 @@ sequenceDiagram
 - **配件搜索流程**：展示多条件组合查询的检索逻辑。
   ![Seq Part Search](./images/seq_part_search.svg)
 
-#### 3.4.3 系统自动化流程
+#### 2.4.3 系统自动化流程
 - **库存预警触发**：展示库存变动后自动检测并推送预警的过程。
-  ![Seq Inventory Alert](./images/seq_inventory_alert.svg)
+  ![Seq Inventory Alert](./images/seq_alert_trigger.svg)
 - **预警消息推送**：展示预警引擎触发后的异步通知逻辑。
   ![Seq Alert Trigger](./images/seq_alert_trigger.svg)
 - **报表异步导出**：展示大数据量报表生成的后台处理与下载流程。
@@ -417,7 +417,7 @@ sequenceDiagram
 
 ## 13. 详细组件交互时序图 (Sequence Diagrams)
 
-### 13.1 零件入库时序图
+### 2.1 零件入库时序图
 ```mermaid
 sequenceDiagram
     participant Admin as 仓库管理员
@@ -439,7 +439,7 @@ sequenceDiagram
     FE-->>Admin: 显示入库成功提示
 ```
 
-### 13.2 订单支付回调时序图
+### 2.2 订单支付回调时序图
 ```mermaid
 sequenceDiagram
     participant Pay as 支付平台
@@ -482,7 +482,7 @@ sequenceDiagram
 - **可观测性**：集成 Prometheus + Grafana，实现全方位监控。
 - **一致性**：核心业务使用数据库事务，保证 ACID 特性。
 
-## 3.8 系统包图 (Package Diagram)
+## 2.8 系统包图 (Package Diagram)
 
 包图展示了系统内部各模块的组织结构及其依赖关系：
 
@@ -524,7 +524,7 @@ package "Infrastructure" {
 ```
 </details>
 
-### 3.9 系统类图 (Class Diagram)
+### 2.9 系统类图 (Class Diagram)
 
 类图展示了后端核心业务实体的结构及其关系：
 

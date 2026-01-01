@@ -7,7 +7,7 @@
 
 为了保证数据库设计的严谨性，我们将 ER 图按业务领域进行细化拆分展示：
 
-#### 2.1 权限与安全领域 (Security Domain)
+### 2.1 权限与安全领域 (Security Domain)
 - **RBAC 核心架构**：展示用户、角色、权限点之间的关联。
   ![ER RBAC Schema](./images/er_rbac_schema.svg)
 - **角色权限明细**：展示权限分配的具体多对多关系。
@@ -15,9 +15,9 @@
 - **审计日志关联**：展示用户操作与日志记录的生成关系。
   ![ER Audit Log Relations](./images/er_audit_log_relations.svg)
 
-#### 2.2 库存与配件领域 (Inventory Domain)
+### 2.2 库存与配件领域 (Inventory Domain)
 - **配件核心关联**：展示配件、分类、品牌的基础关系。
-  ![ER Inventory Schema](./images/er_inventory_schema.svg)
+  ![ER Inventory Schema](./images/er_inventory_basic.svg)
 - **配件详情扩展**：展示配件与其物理参数详情的一对一关系。
   ![ER Part Detail Relations](./images/er_part_detail_relations.svg)
 - **仓库布局关联**：展示仓库与库位的层级包含关系。
@@ -25,9 +25,9 @@
 - **预警通知关联**：展示库存预警规则与通知记录的触发关系。
   ![ER Alert Notification Relations](./images/er_alert_notification_relations.svg)
 
-#### 2.3 销售与客户领域 (Sales Domain)
+### 2.3 销售与客户领域 (Sales Domain)
 - **销售订单架构**：展示订单、订单项、配件之间的交易关系。
-  ![ER Sales Schema](./images/er_sales_schema.svg)
+  ![ER Sales Schema](./images/er_sales_core.svg)
 - **客户与销售关联**：展示客户信息与订单下单的归属关系。
   ![ER Customer Sales](./images/er_customer_sales.svg)
 - **供应商与采购关联**：展示供应商与采购入库单的供应关系。
@@ -261,19 +261,19 @@
 
 ## 4. 详细字段说明 (Field Level Details)
 
-### 4.1 零件表字段约束
+### 3.1 零件表字段约束
 - `oem_code`: 必须符合正则表达式 `^[A-Z0-9\-]{5,20}$`。
 - `base_price`: 必须大于 0，且精度为 2 位小数。
 - `image_url`: 必须是合法的 URL 路径或相对路径。
 
-### 4.2 订单状态枚举值说明
+### 3.2 订单状态枚举值说明
 - `pending`: 订单已创建，等待用户支付。
 - `paid`: 用户已完成支付，等待仓库发货。
 - `shipped`: 仓库已发货，物流运输中。
 - `completed`: 用户已确认收货，交易完成。
 - `cancelled`: 订单已取消（用户手动取消或超时自动取消）。
 
-### 4.3 权限列表详细定义
+### 3.3 权限列表详细定义
 - `part:read`: 查看零件列表及详情。
 - `part:write`: 新增、修改零件信息。
 - `part:delete`: 删除零件记录。
@@ -284,30 +284,30 @@
 - `user:admin`: 管理用户账号及权限。
 - `system:config`: 修改系统全局设置。
 
-### 4.6 数据库优化策略
+### 3.6 数据库优化策略
 
 为了应对百万级零件数据和高频交易，系统实施了以下数据库优化措施：
 
-#### 4.6.1 索引优化方案
+#### 3.6.1 索引优化方案
 -   **覆盖索引**：在 `orders` 表的 `(user_id, status, created_at)` 上建立复合索引，加速个人订单列表查询。
 -   **前缀索引**：对 `parts` 表的 `oe_number` 字段建立前缀索引，平衡查询速度与索引空间。
 -   **全文索引**：对零件名称和规格描述字段建立全文索引（MySQL Full-Text Search），支持模糊搜索。
 
-#### 4.6.2 查询性能调优
+#### 3.6.2 查询性能调优
 -   **避免 SELECT ***：在代码中明确指定需要的字段，减少 IO 开销。
 -   **分页优化**：对于大数据量分页，采用“延迟关联”或“基于 ID 的游标分页”技术，避免 `OFFSET` 导致的性能下降。
 -   **批量操作**：入库和盘点时，使用 SQLAlchemy 的 `bulk_insert_mappings` 进行批量插入，减少网络往返。
 
-#### 4.6.3 存储过程与触发器应用
+#### 3.6.3 存储过程与触发器应用
 -   **库存自动更新**：通过触发器在 `inventory_logs` 插入时自动更新 `parts` 表的 `current_stock` 字段，确保数据强一致性。
 -   **复杂报表计算**：使用存储过程预计算每日销售汇总，减少实时查询压力。
 
-#### 4.6.4 数据库维护计划
+#### 3.6.4 数据库维护计划
 -   **定期备份**：每日凌晨 3 点执行全量备份，每小时执行增量备份。
 -   **碎片整理**：每周执行 `OPTIMIZE TABLE` 释放物理空间并重建索引。
 -   **慢查询监控**：开启慢查询日志（Slow Query Log），对执行时间超过 1s 的 SQL 进行专项优化。
 
-### 4.7 数据迁移与初始化
+### 3.7 数据迁移与初始化
 
 系统提供了一套完整的初始化脚本，位于 `backend/sql/init/` 目录下：
 1.  `01_schema.sql`: 基础表结构。
@@ -317,7 +317,7 @@
 
 ## 5. 数据库视图设计 (Views)
 
-### 5.1 零件库存总览视图 (`v_part_inventory_summary`)
+### 3.1 零件库存总览视图 (`v_part_inventory_summary`)
 - **功能**：汇总各零件在所有仓库的总库存、平均进价和最新售价。
 - **SQL**:
   ```sql
@@ -334,7 +334,7 @@
   GROUP BY p.id;
   ```
 
-### 5.2 销售业绩统计视图 (`v_sales_performance`)
+### 3.2 销售业绩统计视图 (`v_sales_performance`)
 - **功能**：按月统计销售额、订单数和利润。
 - **SQL**:
   ```sql
@@ -350,7 +350,7 @@
 
 ## 6. 存储过程与触发器 (Procedures & Triggers)
 
-### 6.1 自动更新库存触发器
+### 3.1 自动更新库存触发器
 - **功能**：当入库单状态变为“已完成”时，自动增加对应仓库的库存。
 - **SQL**:
   ```sql
@@ -365,7 +365,7 @@
   END;
   ```
 
-### 6.2 库存预警存储过程
+### 3.2 库存预警存储过程
 - **功能**：检查所有低于安全库存的零件并插入通知表。
 - **SQL**:
   ```sql
@@ -407,17 +407,17 @@
 
 ## 10. 数据库运维与备份策略 (Maintenance)
 
-### 10.1 备份计划
+### 3.1 备份计划
 - **全量备份**：每日凌晨 2:00 执行 `mysqldump`，保留 30 天。
 - **增量备份**：开启 Binlog，每小时同步至备份服务器。
 - **异地备份**：每周将备份文件上传至云存储 (Azure Blob Storage)。
 
-### 10.2 监控与告警
+### 3.2 监控与告警
 - **连接数监控**：当活跃连接数超过 80% 时触发告警。
 - **慢查询监控**：记录执行时间超过 1s 的 SQL，每周生成优化报告。
 - **磁盘空间**：当数据目录占用超过 85% 时发送预警。
 
-### 10.3 性能调优建议
+### 3.3 性能调优建议
 - **定期分析表**：执行 `ANALYZE TABLE` 更新索引统计信息。
 - **碎片整理**：对于频繁删除的表，定期执行 `OPTIMIZE TABLE`。
 - **参数优化**：根据服务器内存调整 `innodb_buffer_pool_size`。
@@ -666,12 +666,12 @@ CREATE TABLE notifications (
 
 ## 20. 数据归档与清理策略 (Data Archiving)
 
-### 20.1 归档对象
+### 3.1 归档对象
 - **库存日志 (`inventory_logs`)**：保留 1 年内的明细，1 年以上的数据迁移至归档库。
 - **已完成订单 (`sales_orders`)**：保留 2 年内的记录，2 年以上的数据进行压缩存储。
 - **系统审计日志 (`audit_logs`)**：保留 180 天，过期自动删除。
 
-### 20.2 归档流程
+### 3.2 归档流程
 1. **数据导出**：每月 1 号凌晨，将符合归档条件的数据导出为 CSV 文件。
 2. **云端存储**：将 CSV 文件上传至 Azure Blob Storage 或阿里云 OSS。
 3. **物理删除**：确认云端存储成功后，从生产库中删除对应记录。
@@ -732,7 +732,7 @@ CREATE TABLE notifications (
   - 增加 `v_part_inventory_summary` 视图。
   - 优化 `inventory` 表复合索引。
 
-### 4.8 修订记录 (Revision History)
+### 3.8 修订记录 (Revision History)
 
 | 版本 | 日期 | 修订人 | 修订内容说明 |
 | :--- | :--- | :--- | :--- |
@@ -740,31 +740,31 @@ CREATE TABLE notifications (
 | v1.1.0 | 2023-11-10 | DBA | 增加 RBAC 权限管理相关表结构。 |
 | v1.2.0 | 2024-01-05 | DBA | 优化零件搜索索引，增加库存流水触发器。 |
 
-### 4.9 总结
+### 3.9 总结
 
 本数据库设计方案充分考虑了汽配业务的复杂性，通过规范化的表结构设计、严密的权限控制以及多维度的性能优化，为凤凰汽配管理系统构建了坚实的数据底座。
 
-### 4.2 实体关系图 (ER Diagram)
+### 3.2 实体关系图 (ER Diagram)
 
 为了清晰展示系统复杂的数据关系，我们将 ER 图按业务领域进行高度细化。
 
-#### 4.2.1 权限管理 (RBAC) ER 图
+#### 3.2.1 权限管理 (RBAC) ER 图
 展示用户、角色、权限及其多对多关联表。
 ![权限管理ER图](./images/er_rbac_schema.svg)
 
-#### 4.2.2 库存管理 (Inventory) ER 图
+#### 3.2.2 库存管理 (Inventory) ER 图
 分为基础数据（配件、分类、供应商）和动态数据（库存、日志、库位）。
 ![库存基础数据ER图](./images/er_inventory_basic.svg)
 ![库存动态数据ER图](./images/er_inventory_stock.svg)
 
-#### 4.2.3 销售管理 (Sales) ER 图
+#### 3.2.3 销售管理 (Sales) ER 图
 展示客户信息、销售订单、订单详情以及支付发票关联。
 ![销售核心数据ER图](./images/er_sales_core.svg)
 ![销售支付交易ER图](./images/er_sales_payment.svg)
 
-### 4.3 数据库表结构详细说明
+### 3.3 数据库表结构详细说明
 
-#### 4.3.1 用户表 (users)
+#### 3.3.1 用户表 (users)
 - **描述**：存储系统用户信息及认证凭证。
 - **主键**：id
 - **索引**：
@@ -772,12 +772,12 @@ CREATE TABLE notifications (
   - 普通索引：role_id
 - **外键**：role_id 关联 roles(id)
 
-#### 4.3.2 角色表 (roles)
+#### 3.3.2 角色表 (roles)
 - **描述**：定义系统权限角色。
 - **主键**：id
 - **索引**：唯一索引(name)
 
-#### 4.3.3 零件表 (parts)
+#### 3.3.3 零件表 (parts)
 - **描述**：存储汽配零件的核心信息。
 - **主键**：id
 - **索引**：
@@ -785,46 +785,46 @@ CREATE TABLE notifications (
   - 全文索引：name, specification
 - **外键**：category_id 关联 categories(id)
 
-#### 4.3.4 分类表 (categories)
+#### 3.3.4 分类表 (categories)
 - **描述**：零件的多级分类体系。
 - **主键**：id
 - **索引**：唯一索引(name)
 
-#### 4.3.5 库存表 (inventories)
+#### 3.3.5 库存表 (inventories)
 - **描述**：记录零件在不同库位的实时库存。
 - **主键**：id
 - **索引**：复合唯一索引(part_id, warehouse_id)
 
-#### 4.3.6 订单表 (orders)
+#### 3.3.6 订单表 (orders)
 - **描述**：记录交易主信息。
 - **主键**：id
 - **索引**：
   - 唯一索引：order_no
   - 普通索引：user_id, status, created_at
 
-#### 4.3.7 订单项表 (order_items)
+#### 3.3.7 订单项表 (order_items)
 - **描述**：记录订单中的具体零件明细。
 - **主键**：id
 - **外键**：
   - order_id 关联 orders(id)
   - part_id 关联 parts(id)
 
-#### 4.3.8 审计日志表 (audit_logs)
+#### 3.3.8 审计日志表 (audit_logs)
 - **描述**：记录系统关键操作。
 - **主键**：id
 - **外键**：user_id 关联 users(id)
 
-#### 4.3.9 供应商表 (suppliers)
+#### 3.3.9 供应商表 (suppliers)
 - **描述**：存储零件供应商信息。
 - **主键**：id
 - **索引**：唯一索引(name)
 
-#### 4.3.10 仓库表 (warehouses)
+#### 3.3.10 仓库表 (warehouses)
 - **描述**：支持多仓库管理。
 - **主键**：id
 - **外键**：manager_id 关联 users(id)
 
-#### 4.3.11 库存流水表 (stock_logs)
+#### 3.3.11 库存流水表 (stock_logs)
 - **描述**：记录每一笔库存变动。
 - **主键**：id
 - **外键**：
@@ -832,48 +832,48 @@ CREATE TABLE notifications (
   - warehouse_id 关联 warehouses(id)
   - operator_id 关联 users(id)
 
-#### 4.3.12 采购车项表 (cart_items)
+#### 3.3.12 采购车项表 (cart_items)
 - **描述**：存储用户的临时采购需求。
 - **主键**：id
 - **外键**：
   - user_id 关联 users(id)
   - part_id 关联 parts(id)
 
-#### 4.3.13 系统设置表 (system_settings)
+#### 3.3.13 系统设置表 (system_settings)
 - **描述**：存储全局配置参数。
 - **主键**：id
 - **索引**：唯一索引(config_key)
 
-#### 4.3.14 车型品牌表 (car_brands)
+#### 3.3.14 车型品牌表 (car_brands)
 - **描述**：存储汽车品牌信息。
 - **主键**：id
 - **索引**：唯一索引(name)
 
-#### 4.3.15 车系列表 (car_series)
+#### 3.3.15 车系列表 (car_series)
 - **描述**：存储汽车系列信息。
 - **主键**：id
 - **外键**：brand_id 关联 car_brands(id)
 
-#### 4.3.16 车型表 (car_models)
+#### 3.3.16 车型表 (car_models)
 - **描述**：存储汽车具体车型信息。
 - **主键**：id
 - **外键**：series_id 关联 car_series(id)
 
-#### 4.3.17 零件兼容性矩阵表 (part_compatibility)
+#### 3.3.17 零件兼容性矩阵表 (part_compatibility)
 - **描述**：存储零件与车型的兼容性信息。
 - **主键**：id
 - **外键**：
   - part_id 关联 parts(id)
   - model_id 关联 car_models(id)
 
-#### 4.3.18 零件评价表 (part_reviews)
+#### 3.3.18 零件评价表 (part_reviews)
 - **描述**：存储用户对零件的评价信息。
 - **主键**：id
 - **外键**：
   - part_id 关联 parts(id)
   - user_id 关联 users(id)
 
-#### 4.3.19 消息通知表 (notifications)
+#### 3.3.19 消息通知表 (notifications)
 - **描述**：存储系统消息通知。
 - **主键**：id
 - **外键**：user_id 关联 users(id)

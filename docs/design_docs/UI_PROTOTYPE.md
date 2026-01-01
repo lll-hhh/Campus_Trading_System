@@ -34,7 +34,7 @@
 - **快捷入口**：点击统计卡片可直接跳转至对应的管理模块。
 
 > **[UI 截图占位符：系统仪表盘]**
-> ![Dashboard Placeholder](./images/ui_dashboard.png)
+> ![Dashboard Placeholder](./images/ui_dashboard.svg)
 
 ---
 

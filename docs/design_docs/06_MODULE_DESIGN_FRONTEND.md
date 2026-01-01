@@ -55,6 +55,11 @@ src/
   - 饼图：展示零件分类占比。
   - 柱状图：展示库存预警排行。
 
+### 4.4 业务通用组件 (Business Components)
+- **PartSelector (零件选择器)**：支持弹窗搜索、扫码输入，广泛用于入库、销售、盘点页面。
+- **InventoryStatusTag (库存状态标签)**：根据库存数量自动显示“充足”、“预警”、“缺货”样式。
+- **SupplierSelect (供应商下拉框)**：带搜索过滤和远程加载功能。
+
 ## 5. 路由与权限控制
 
 ### 5.1 动态路由
@@ -88,15 +93,6 @@ router.beforeEach((to, from, next) => {
 - **加载状态**：所有异步请求均需展示 `n-spin` 或进度条。
 - **操作提示**：使用 `n-message` 提供即时的成功或失败反馈。
 - **空状态**：列表无数据时展示友好的空状态插画。
-
-### 6.5 核心组件设计规范
-
-前端采用原子化设计思想，将 UI 拆分为可复用的组件：
-
-#### 6.5.1 业务通用组件 (Business Components)
--   **PartSelector (零件选择器)**：支持弹窗搜索、扫码输入，广泛用于入库、销售、盘点页面。
--   **InventoryStatusTag (库存状态标签)**：根据库存数量自动显示“充足”、“预警”、“缺货”样式。
--   **SupplierSelect (供应商下拉框)**：带搜索过滤和远程加载功能。
 
 #### 6.5.2 布局组件 (Layout Components)
 -   **SideMenu**：基于路由配置动态生成，支持多级菜单和权限过滤。
@@ -216,43 +212,43 @@ router.beforeEach((to, from, next) => {
 
 ## 7. 核心组件库说明 (Component Library)
 
-### 7.1 基础组件 (Base Components)
+### 6.1 基础组件 (Base Components)
 - **`AppButton`**：封装 Naive UI 的 `NButton`，统一加载状态和权限控制。
 - **`AppInput`**：封装 `NInput`，集成常用的正则校验（如手机号、金额）。
 - **`AppTable`**：高阶表格组件，支持自动分页、排序、筛选和导出功能。
 
-### 7.2 业务组件 (Business Components)
+### 6.2 业务组件 (Business Components)
 - **`PartSelector`**：零件选择弹窗，支持搜索和分类过滤。
 - **`InventoryStatus`**：库存状态标签，根据数量自动显示不同颜色（充足、预警、缺货）。
 - **`OrderTimeline`**：订单状态时间轴，展示订单从创建到完成的全过程。
 
-### 7.3 布局组件 (Layout Components)
+### 6.3 布局组件 (Layout Components)
 - **`SideMenu`**：动态侧边栏，根据用户权限渲染菜单项。
 - **`Breadcrumb`**：面包屑导航，自动根据路由生成路径。
 
 ## 8. 状态管理模式 (State Management)
 
-### 8.1 User Store
+### 6.1 User Store
 - **State**: `userInfo`, `token`, `permissions`, `roles`.
 - **Actions**: `login`, `logout`, `fetchUserInfo`.
 - **Persist**: 使用 `localStorage` 持久化 Token。
 
-### 8.2 App Store
+### 6.2 App Store
 - **State**: `collapsed` (侧边栏状态), `theme` (主题模式), `language`.
 - **Actions**: `toggleSidebar`, `setTheme`.
 
-### 8.3 Inventory Store
+### 6.3 Inventory Store
 - **State**: `categories`, `warehouses`.
 - **Actions**: `fetchCategories`, `fetchWarehouses`.
 - **Getter**: `getCategoryNameById`.
 
 ## 9. 路由与权限控制 (Routing & Auth)
 
-### 9.1 路由配置
+### 6.1 路由配置
 - **静态路由**：登录页、404 页、首页。
 - **动态路由**：根据后端返回的权限列表，在 `router.beforeEach` 中动态添加。
 
-### 9.2 按钮级权限
+### 6.2 按钮级权限
 - **指令**：`v-permission="'part:delete'"`。
 - **原理**：在组件挂载时检查 `UserStore` 中的权限列表，若无权限则移除 DOM 节点。
 
@@ -269,7 +265,7 @@ router.beforeEach((to, from, next) => {
 
 ## 12. 核心组件 API 详细文档 (Component API)
 
-### 12.1 `PartSelector` 组件
+### 6.1 `PartSelector` 组件
 - **Props**:
   - `multiple`: Boolean - 是否支持多选，默认 `false`。
   - `categoryId`: Number - 初始过滤的分类 ID。
@@ -280,7 +276,7 @@ router.beforeEach((to, from, next) => {
 - **Slots**:
   - `footer`: 自定义底部操作区域。
 
-### 12.2 `InventoryStatus` 组件
+### 6.2 `InventoryStatus` 组件
 - **Props**:
   - `quantity`: Number - 当前库存数量。
   - `minLevel`: Number - 安全库存阈值。
@@ -288,7 +284,7 @@ router.beforeEach((to, from, next) => {
   - `statusType`: 根据数量返回 'success' | 'warning' | 'error'。
   - `statusText`: 返回 '充足' | '预警' | '缺货'。
 
-### 12.3 `AppTable` 组件
+### 6.3 `AppTable` 组件
 - **Props**:
   - `columns`: Array - 列定义，包含 `title`, `key`, `render` 等。
   - `api`: Function - 获取数据的 API 函数。
@@ -336,7 +332,7 @@ router.beforeEach((to, from, next) => {
 
 ## 17. 详细 UI/UX 设计规范 (Design System)
 
-### 17.1 色彩系统 (Color Palette)
+### 6.1 色彩系统 (Color Palette)
 - **主色 (Primary)**: `#18a058` - 象征专业、稳重与成长。
 - **辅助色 (Secondary)**: `#2080f0` - 用于链接、提示和次要按钮。
 - **成功色 (Success)**: `#18a058` - 用于操作成功提示。
@@ -349,7 +345,7 @@ router.beforeEach((to, from, next) => {
   - 边框: `#dbdfe3`
   - 背景: `#f7f8fa`
 
-### 17.2 字体规范 (Typography)
+### 6.2 字体规范 (Typography)
 - **系统字体**: `Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif`。
 - **字号层级**:
   - 一级标题: 24px, Bold
@@ -358,7 +354,7 @@ router.beforeEach((to, from, next) => {
   - 正文: 14px, Regular
   - 辅助文字: 12px, Regular
 
-### 17.3 间距与布局 (Spacing & Layout)
+### 6.3 间距与布局 (Spacing & Layout)
 - **基础间距**: 8px (Grid System)。
 - **页面边距**: 24px。
 - **卡片间距**: 16px。
@@ -367,7 +363,7 @@ router.beforeEach((to, from, next) => {
   - Tablet: 768px - 1024px
   - Desktop: > 1024px
 
-### 17.4 交互原则 (Interaction Principles)
+### 6.4 交互原则 (Interaction Principles)
 1. **即时反馈**：所有点击操作必须有视觉反馈（如按钮加载状态、点击波纹）。
 2. **防错设计**：删除等危险操作必须弹出二次确认框。
 3. **一致性**：全局弹窗样式、表格操作列布局保持高度统一。
@@ -375,21 +371,21 @@ router.beforeEach((to, from, next) => {
 
 ## 18. 核心页面原型描述 (Page Prototypes)
 
-### 18.1 仪表盘 (Dashboard)
+### 6.1 仪表盘 (Dashboard)
 - **顶部**: 四个统计卡片（今日销售额、待处理订单、库存预警数、新增零件数）。
 - **中部左侧**: 销售趋势折线图（近 30 天）。
 - **中部右侧**: 零件分类占比饼图。
 - **底部**: 最近 10 条操作日志列表。
 
-### 18.2 零件列表页 (Part List)
+### 6.2 零件列表页 (Part List)
 - **顶部**: 搜索栏（支持 OEM、名称、分类、品牌）。
 - **中部**: 数据表格，包含零件图片、基本信息、当前总库存、操作按钮（编辑、详情、删除）。
 - **底部**: 分页器。
 
-### 18.3 订单详情页 (Order Detail)
+### 6.3 订单详情页 (Order Detail)
 - **顶部**: 订单状态步骤条（待支付 -> 待发货 -> 已发货 -> 已完成）。
 - **中部**: 客户信息卡片、收货地址卡片。
-- **下部**: 订单商品明细表格，包含单价、数量、小计。
+- **下部**: 订单零件明细表格，包含单价、数量、小计。
 - **底部**: 操作日志（记录状态变更时间及操作人）。
 
 ## 19. 前端工程化目录结构深度解析
@@ -417,28 +413,28 @@ src/
 
 ## 20. 详细组件交互逻辑说明 (Component Interaction)
 
-### 20.1 `PartSelector` 交互流程
+### 6.1 `PartSelector` 交互流程
 1. 用户点击“选择零件”按钮，触发 `PartSelector` 弹窗显示。
 2. 弹窗挂载时，调用 `fetchParts` API 获取初始列表。
 3. 用户在搜索框输入关键词，触发防抖（Debounce）搜索。
 4. 用户勾选零件，组件内部维护 `selectedIds` 状态。
 5. 点击“确定”，将选中的零件对象通过 `emit('select', selectedParts)` 传递给父组件。
 
-### 20.2 `InventoryStatus` 渲染逻辑
+### 6.2 `InventoryStatus` 渲染逻辑
 - **输入**: `quantity` (当前库存), `minLevel` (安全库存)。
 - **逻辑**:
   - `if (quantity <= 0)` -> 返回 `error` 状态，显示“缺货”。
   - `else if (quantity < minLevel)` -> 返回 `warning` 状态，显示“预警”。
   - `else` -> 返回 `success` 状态，显示“充足”。
 
-### 20.3 `AppTable` 自动分页逻辑
+### 6.3 `AppTable` 自动分页逻辑
 - 组件内部监听 `pagination` 状态变化。
 - 当页码或每页条数改变时，自动重新调用 `api` 函数并传入最新的 `skip` 和 `limit` 参数。
 - 加载过程中显示 `loading` 遮罩，防止重复点击。
 
 ## 21. 前端状态管理 (Pinia) 深度解析
 
-### 21.1 `useUserStore`
+### 6.1 `useUserStore`
 - **State**:
   ```typescript
   {
@@ -452,7 +448,7 @@ src/
   - `logout()`: 清除本地存储，重置状态，跳转登录页。
   - `hasPermission(code)`: 检查用户是否拥有特定权限位。
 
-### 21.2 `useInventoryStore`
+### 6.2 `useInventoryStore`
 - **State**:
   ```typescript
   {

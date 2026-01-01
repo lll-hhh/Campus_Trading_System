@@ -106,17 +106,17 @@
   - 常量：`UPPER_SNAKE_CASE`
 - **注释要求**：复杂的业务逻辑必须编写 Docstring，说明参数、返回值和异常。
 
-### 6.2 异常处理规范
+### 5.2 异常处理规范
 - **自定义异常**：继承 `AppException`，定义统一的错误码。
 - **捕获范围**：严禁使用空的 `except: pass`，必须捕获具体异常并记录日志。
 - **返回格式**：所有异常最终由全局异常处理器捕获，返回统一的 JSON 格式。
 
-### 6.3 数据库操作规范
+### 5.3 数据库操作规范
 - **Session 管理**：使用 `Depends(get_db)` 注入数据库会话，确保请求结束自动关闭。
 - **事务控制**：涉及多表更新的操作必须使用 `with db.begin():` 确保原子性。
 - **查询优化**：避免在循环中执行数据库查询（N+1 问题），优先使用 `joinedload`。
 
-### 6.4 Git 提交规范
+### 5.4 Git 提交规范
 - **格式**：`<type>(<scope>): <subject>`
 - **类型**：
   - `feat`: 新功能
@@ -128,9 +128,9 @@
 
 ## 7. 核心业务逻辑流程图 (Logic Flows)
 
-### 7.1 订单创建逻辑
+### 5.1 订单创建逻辑
 1. 校验用户权限。
-2. 校验购物车零件库存是否充足。
+2. 校验采购车零件库存是否充足。
 3. 开启数据库事务。
 4. 扣减库存（行级锁防止超卖）。
 5. 创建订单记录。
@@ -139,7 +139,7 @@
 8. 提交事务。
 9. 异步发送通知。
 
-### 7.2 库存盘点逻辑
+### 5.2 库存盘点逻辑
 1. 生成盘点快照（记录当前账面库存）。
 2. 录入实盘数据。
 3. 计算差异（盈亏）。
@@ -154,13 +154,13 @@
 
 ## 9. 核心服务层实现细节 (Service Layer)
 
-### 9.1 零件服务 (`PartService`)
+### 5.1 零件服务 (`PartService`)
 - **`get_part_by_oem(oem_no)`**:
   - 逻辑：先查 Redis 缓存，未命中则查数据库，并回填缓存。
 - **`update_part_stock(part_id, delta)`**:
   - 逻辑：使用 `SELECT FOR UPDATE` 锁定行，计算新库存，更新并记录日志。
 
-### 9.2 订单服务 (`OrderService`)
+### 5.2 订单服务 (`OrderService`)
 - **`create_order(user_id, items)`**:
   - 逻辑：
     1. 开启事务。
@@ -172,7 +172,7 @@
 - **`cancel_order(order_id)`**:
   - 逻辑：校验订单状态，回滚库存，更新订单状态。
 
-### 9.3 AI 服务 (`AIService`)
+### 5.3 AI 服务 (`AIService`)
 - **`recognize_part_image(image_data)`**:
   - 逻辑：
     1. 图像预处理（缩放、归一化）。
@@ -182,13 +182,13 @@
 
 ## 10. 后端中间件设计 (Middleware)
 
-### 10.1 认证中间件 (`AuthMiddleware`)
+### 5.1 认证中间件 (`AuthMiddleware`)
 - **功能**：解析 Header 中的 JWT Token，校验合法性，并将用户信息注入 `request.state`。
 
-### 10.2 日志中间件 (`LoggingMiddleware`)
+### 5.2 日志中间件 (`LoggingMiddleware`)
 - **功能**：记录每个请求的 URL、方法、耗时、状态码，对于 4xx/5xx 错误记录请求体。
 
-### 10.3 限流中间件 (`RateLimitMiddleware`)
+### 5.3 限流中间件 (`RateLimitMiddleware`)
 - **功能**：基于 Redis 的令牌桶算法，限制每个 IP 的每秒请求数。
 
 ## 11. 异步任务处理 (Celery/BackgroundTasks)
@@ -217,7 +217,7 @@ def test_create_order_insufficient_stock(db_session):
 
 ## 13. 核心业务逻辑深度解析 (Business Logic)
 
-### 13.1 零件搜索算法
+### 5.1 零件搜索算法
 - **多维度匹配**：支持按 `name`, `oem_no`, `brand`, `compatible_models` 进行全文检索。
 - **权重排序**：
   1. OEM 编号精确匹配 (权重 100)。
@@ -226,7 +226,7 @@ def test_create_order_insufficient_stock(db_session):
   4. 适用车型匹配 (权重 30)。
 - **性能优化**：使用 SQLAlchemy 的 `or_` 和 `ilike` 构造查询，并对高频搜索词进行 Redis 缓存。
 
-### 13.2 库存锁定与释放机制
+### 5.2 库存锁定与释放机制
 - **锁定场景**：用户提交订单但未支付。
 - **实现方式**：
   1. 在 `inventory` 表中增加 `locked_quantity` 字段。
@@ -235,7 +235,7 @@ def test_create_order_insufficient_stock(db_session):
   4. 订单取消/超时：`quantity += order_qty`, `locked_quantity -= order_qty`。
 - **一致性保证**：所有操作封装在数据库事务中，并使用行级锁。
 
-### 13.3 报表异步生成流程
+### 5.3 报表异步生成流程
 1. 用户发起报表导出请求。
 2. 后端生成一个唯一的 `task_id` 并返回给前端。
 3. 后端启动 `BackgroundTask` 执行耗时查询和 Excel 生成。
@@ -269,7 +269,7 @@ def test_create_order_insufficient_stock(db_session):
 
 ## 17. 核心算法与逻辑深度解析 (Algorithms)
 
-### 17.1 零件兼容性匹配算法
+### 5.1 零件兼容性匹配算法
 - **输入**：用户车型信息（品牌、车系、年款、排量）。
 - **逻辑**：
   1. 在 `parts` 表的 `compatible_models` JSON 字段中进行模糊匹配。
@@ -285,14 +285,14 @@ def test_create_order_insufficient_stock(db_session):
       return query.all()
   ```
 
-### 17.2 库存周转率计算逻辑
+### 5.2 库存周转率计算逻辑
 - **公式**：`周转率 = (期间出库总量 / 期间平均库存) * 100%`。
 - **实现**：
   1. 从 `inventory_logs` 表中统计指定时间段内的 `type='out'` 的数量总和。
   2. 计算期初库存与期末库存的平均值。
   3. 生成各零件的周转率排名报表。
 
-### 17.3 智能采购建议算法
+### 5.3 智能采购建议算法
 - **逻辑**：
   1. 监控零件的日均销量（Moving Average）。
   2. 结合当前库存和采购提前期（Lead Time）。

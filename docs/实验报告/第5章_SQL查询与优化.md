@@ -2,7 +2,7 @@
 
 ## 5.1 复杂查询设计
 
-本章展示校园二手交易系统中使用的20+个复杂SQL查询，涵盖多表连接、子查询、聚合函数、窗口函数等高级特性。
+本章展示凤凰汽配管理系统中使用的20+个复杂SQL查询，涵盖多表连接、子查询、聚合函数、窗口函数等高级特性。
 
 ### 5.1.1 多表连接查询
 
@@ -38,9 +38,9 @@ ORDER BY u.created_at DESC
 LIMIT 20;
 ```
 
-#### 查询2：商品详情（5表连接）
+#### 查询2：零件详情（5表连接）
 
-**需求：** 查询商品详情，包括卖家信息、分类、图片、收藏数。
+**需求：** 查询零件详情，包括供应商信息、分类、图片、收藏数。
 
 ```sql
 SELECT 
@@ -54,7 +54,7 @@ SELECT
     i.favorite_count,
     i.location,
     i.created_at,
-    -- 卖家信息
+    -- 供应商信息
     u.id AS seller_id,
     u.username AS seller_name,
     u.rating AS seller_rating,
@@ -62,7 +62,7 @@ SELECT
     -- 分类信息
     c.name AS category_name,
     c.parent_id AS parent_category_id,
-    -- 商品图片（第一张）
+    -- 零件图片（第一张）
     (SELECT image_url FROM item_images 
      WHERE item_id = i.id 
      ORDER BY display_order 
@@ -83,7 +83,7 @@ WHERE i.id = :item_id
 
 #### 查询3：交易详情（6表连接）
 
-**需求：** 查询交易详情，包括买卖双方、商品、评价等信息。
+**需求：** 查询交易详情，包括买卖双方、零件、评价等信息。
 
 ```sql
 SELECT 
@@ -93,7 +93,7 @@ SELECT
     t.payment_method,
     t.created_at,
     t.completed_at,
-    -- 商品信息
+    -- 零件信息
     i.id AS item_id,
     i.title AS item_title,
     i.price AS item_price,
@@ -101,12 +101,12 @@ SELECT
      WHERE item_id = i.id 
      ORDER BY display_order 
      LIMIT 1) AS item_image,
-    -- 买家信息
+    -- 采购商信息
     buyer.id AS buyer_id,
     buyer.username AS buyer_name,
     buyer_profile.avatar_url AS buyer_avatar,
     buyer_profile.phone AS buyer_phone,
-    -- 卖家信息
+    -- 供应商信息
     seller.id AS seller_id,
     seller.username AS seller_name,
     seller_profile.avatar_url AS seller_avatar,
@@ -136,9 +136,9 @@ WHERE t.id = :transaction_id;
 
 ### 5.1.2 子查询
 
-#### 查询4：查找热门商品
+#### 查询4：查找热门零件
 
-**需求：** 找出浏览量和收藏量都高于平均值的商品。
+**需求：** 找出浏览量和收藏量都高于平均值的零件。
 
 ```sql
 SELECT 
@@ -159,9 +159,9 @@ ORDER BY (i.view_count + i.favorite_count * 2) DESC
 LIMIT 20;
 ```
 
-#### 查询5：查找活跃卖家
+#### 查询5：查找活跃供应商
 
-**需求：** 找出最近30天发布商品数量最多的卖家。
+**需求：** 找出最近30天发布零件数量最多的供应商。
 
 ```sql
 SELECT 
@@ -254,9 +254,9 @@ GROUP BY DATE(created_at)
 ORDER BY transaction_date DESC;
 ```
 
-#### 查询8：分类商品统计
+#### 查询8：分类零件统计
 
-**需求：** 统计每个分类下的商品数量、平均价格、价格区间。
+**需求：** 统计每个分类下的零件数量、平均价格、价格区间。
 
 ```sql
 SELECT 
@@ -324,16 +324,16 @@ LIMIT 50;
 【截图占位符5-2：聚合查询统计报表】
 展示内容：
 - 每日交易统计表格
-- 分类商品统计柱状图
+- 分类零件统计柱状图
 - 用户行为统计雷达图
 - 数据透视表
 ```
 
 ### 5.1.4 窗口函数
 
-#### 查询10：商品价格排名
+#### 查询10：零件价格排名
 
-**需求：** 计算每个分类内商品的价格排名。
+**需求：** 计算每个分类内零件的价格排名。
 
 ```sql
 SELECT 
@@ -458,7 +458,7 @@ SELECT
     level,
     path,
     REPEAT('  ', level) || name AS indented_name,
-    -- 统计该分类下的商品数
+    -- 统计该分类下的零件数
     (SELECT COUNT(*) FROM items WHERE category_id = category_tree.id) AS item_count
 FROM category_tree
 ORDER BY path;
@@ -507,7 +507,7 @@ ORDER BY rc.level, rc.user_id;
 ```
 【截图占位符5-3：窗口函数与递归查询】
 展示内容：
-- 商品价格排名表（含排名、百分位）
+- 零件价格排名表（含排名、百分位）
 - 用户活跃度趋势折线图
 - 分类树形结构图
 - 推荐关系链可视化
@@ -515,9 +515,9 @@ ORDER BY rc.level, rc.user_id;
 
 ### 5.1.6 全文搜索
 
-#### 查询15：商品全文搜索
+#### 查询15：零件全文搜索
 
-**需求：** 使用全文索引搜索商品标题和描述。
+**需求：** 使用全文索引搜索零件标题和描述。
 
 ```sql
 -- MySQL全文搜索
@@ -551,7 +551,7 @@ ORDER BY score DESC;
 
 #### 查询16：智能搜索推荐
 
-**需求：** 根据用户搜索历史推荐相关商品。
+**需求：** 根据用户搜索历史推荐相关零件。
 
 ```sql
 WITH user_search_keywords AS (
@@ -587,36 +587,6 @@ LIMIT 20;
 ```
 
 ### 5.1.7 时间序列分析
-
-#### 查询17：同步性能分析
-
-**需求：** 分析不同时间段的同步性能指标。
-
-```sql
-SELECT 
-    DATE_FORMAT(started_at, '%Y-%m-%d %H:00:00') AS time_hour,
-    source_db,
-    target_db,
-    table_name,
-    -- 统计指标
-    COUNT(*) AS sync_count,
-    SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) AS success_count,
-    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
-    SUM(conflicts_detected) AS total_conflicts,
-    -- 性能指标
-    AVG(duration_ms) AS avg_duration_ms,
-    MIN(duration_ms) AS min_duration_ms,
-    MAX(duration_ms) AS max_duration_ms,
-    PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY duration_ms) AS p95_duration_ms,
-    -- 数据量
-    SUM(records_synced) AS total_records,
-    AVG(records_synced) AS avg_records_per_sync
-FROM sync_logs
-WHERE started_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
-GROUP BY DATE_FORMAT(started_at, '%Y-%m-%d %H:00:00'),
-         source_db, target_db, table_name
-ORDER BY time_hour DESC, sync_count DESC;
-```
 
 #### 查询18：用户留存分析
 
@@ -682,9 +652,9 @@ ORDER BY uc.cohort_month DESC;
 
 ### 5.1.8 复杂业务查询
 
-#### 查询19：推荐商品算法
+#### 查询19：推荐零件算法
 
-**需求：** 基于用户行为推荐相关商品（协同过滤）。
+**需求：** 基于用户行为推荐相关零件（协同过滤）。
 
 ```sql
 -- 基于用户浏览和收藏行为的推荐
@@ -717,7 +687,7 @@ similar_users AS (
     LIMIT 10
 ),
 recommended_items AS (
-    -- 相似用户喜欢的商品
+    -- 相似用户喜欢的零件
     SELECT 
         i.id,
         i.title,
@@ -1122,7 +1092,7 @@ GROUP BY i.id;
 ### 5.3.1 应用层缓存
 
 ```python
-# Redis缓存商品详情
+# Redis缓存零件详情
 def get_item_with_cache(item_id: int) -> Dict:
     cache_key = f"item:{item_id}"
     
@@ -1162,16 +1132,6 @@ def update_item_invalidate_cache(item_id: int, **kwargs):
 ### 5.3.2 读写分离
 
 ```python
-# 多数据库读写分离配置
-class DatabaseRouter:
-    def db_for_read(self):
-        """读操作路由到从库"""
-        return random.choice(["postgres", "mariadb", "sqlite"])
-    
-    def db_for_write(self):
-        """写操作路由到主库"""
-        return "mysql"
-
 # 使用示例
 def get_items_list(page: int = 1, page_size: int = 20):
     """读操作，使用从库"""
@@ -1201,7 +1161,7 @@ def create_item(item_data: dict):
 
 ## 5.4 本章小结
 
-本章详细介绍了校园二手交易系统的SQL查询技术和优化方法：
+本章详细介绍了凤凰汽配管理系统的SQL查询技术和优化方法：
 
 1. **复杂查询设计（20+个查询）**
    - 多表连接查询（3-6表连接）
@@ -1231,4 +1191,4 @@ def create_item(item_data: dict):
 
 ---
 
-**字数统计：第5章约 600 行（约15000字）**
+**字数统计：第7章约 600 行（约15000字）**

@@ -104,7 +104,7 @@
 
 ## 4. 库存管理接口 (Inventory)
 
-### 4.1 零件入库
+### 7.1 零件入库
 - **Endpoint**: `POST /inventory/inbound`
 - **请求参数**:
   ```json
@@ -116,13 +116,13 @@
   }
   ```
 
-### 4.2 获取库存预警列表
+### 7.2 获取库存预警列表
 - **Endpoint**: `GET /inventory/alerts`
 - **描述**: 返回库存低于安全下限的零件。
 
 ## 5. 订单管理接口 (Orders)
 
-### 5.1 创建订单
+### 7.1 创建订单
 - **Endpoint**: `POST /orders`
 - **请求参数**:
   ```json
@@ -135,7 +135,7 @@
   }
   ```
 
-### 5.2 修改订单状态 (管理员)
+### 7.2 修改订单状态 (管理员)
 - **Endpoint**: `PATCH /orders/{id}/status`
 - **请求参数**:
   ```json
@@ -147,12 +147,12 @@
 
 ## 6. AI 智能接口 (AI)
 
-### 6.1 智能搜索建议
+### 7.1 智能搜索建议
 - **Endpoint**: `POST /ai/search-suggest`
 - **请求参数**: `{"text": "宝马刹车片"}`
 - **响应**: AI 解析后的结构化搜索条件。
 
-### 6.2 智能问答 (Stream)
+### 7.2 智能问答 (Stream)
 - **Endpoint**: `POST /ai/chat`
 - **描述**: SSE 流式接口，返回 AI 的实时回复。
 
@@ -202,7 +202,7 @@
 
 ## 9. 零件分类接口 (Categories)
 
-### 9.1 获取全部分类树
+### 7.1 获取全部分类树
 - **Endpoint**: `GET /categories/tree`
 - **描述**: 返回层级结构的分类树。
 - **响应示例**:
@@ -219,7 +219,7 @@
   ]
   ```
 
-### 9.2 创建分类 (管理员)
+### 7.2 创建分类 (管理员)
 - **Endpoint**: `POST /categories`
 - **请求参数**:
   ```json
@@ -229,7 +229,7 @@
   }
   ```
 
-### 9.3 更新分类 (管理员)
+### 7.3 更新分类 (管理员)
 - **Endpoint**: `PUT /categories/{id}`
 - **请求参数**:
   ```json
@@ -239,12 +239,12 @@
   }
   ```
 
-### 9.4 删除分类 (管理员)
+### 7.4 删除分类 (管理员)
 - **Endpoint**: `DELETE /categories/{id}`
 
 ## 10. 采购车接口 (Cart)
 
-### 10.1 获取采购车内容
+### 7.1 获取采购车内容
 - **Endpoint**: `GET /cart`
 - **响应示例**:
   ```json
@@ -262,7 +262,7 @@
   }
   ```
 
-### 10.2 添加零件到采购车
+### 7.2 添加零件到采购车
 - **Endpoint**: `POST /cart/items`
 - **请求参数**:
   ```json
@@ -272,7 +272,7 @@
   }
   ```
 
-### 10.3 更新采购车项数量
+### 7.3 更新采购车项数量
 - **Endpoint**: `PATCH /cart/items/{part_id}`
 - **请求参数**:
   ```json
@@ -281,19 +281,19 @@
   }
   ```
 
-### 10.4 移除采购车项
+### 7.4 移除采购车项
 - **Endpoint**: `DELETE /cart/items/{part_id}`
 
-### 10.5 清空采购车
+### 7.5 清空采购车
 - **Endpoint**: `DELETE /cart`
 
 ## 11. 用户管理接口 (Users - 管理员)
 
-### 11.1 获取用户列表
+### 7.1 获取用户列表
 - **Endpoint**: `GET /users`
 - **参数**: `page`, `size`, `role_id`
 
-### 11.2 创建用户
+### 7.2 创建用户
 - **Endpoint**: `POST /users`
 - **请求参数**:
   ```json
@@ -305,18 +305,18 @@
   }
   ```
 
-### 11.3 更新用户信息
+### 7.3 更新用户信息
 - **Endpoint**: `PATCH /users/{id}`
 
-### 11.4 禁用/启用用户
+### 7.4 禁用/启用用户
 - **Endpoint**: `POST /users/{id}/toggle-active`
 
 ## 12. 角色与权限接口 (Roles - 管理员)
 
-### 12.1 获取角色列表
+### 7.1 获取角色列表
 - **Endpoint**: `GET /roles`
 
-### 12.2 更新角色权限
+### 7.2 更新角色权限
 - **Endpoint**: `PUT /roles/{id}/permissions`
 - **请求参数**:
   ```json
@@ -327,23 +327,23 @@
 
 ## 13. 统计报表接口 (Reports)
 
-### 13.1 销售趋势报表
+### 7.1 销售趋势报表
 - **Endpoint**: `GET /reports/sales-trend`
 - **参数**: `start_date`, `end_date`, `interval` (day/week/month)
 
-### 13.2 零件销量排行
+### 7.2 零件销量排行
 - **Endpoint**: `GET /reports/top-parts`
 - **参数**: `limit`
 
-### 13.3 库存周转率分析
+### 7.3 库存周转率分析
 - **Endpoint**: `GET /reports/inventory-turnover`
 
 ## 14. 系统配置接口 (Settings)
 
-### 14.1 获取全局配置
+### 7.1 获取全局配置
 - **Endpoint**: `GET /settings`
 
-### 14.2 更新全局配置
+### 7.2 更新全局配置
 - **Endpoint**: `PATCH /settings`
 - **请求参数**:
   ```json
@@ -355,14 +355,14 @@
 
 ## 15. 供应商管理接口 (Suppliers - 管理员)
 
-### 15.1 获取供应商列表
+### 7.1 获取供应商列表
 - **Endpoint**: `GET /suppliers`
 - **参数**: `page`, `size`, `query`
 
-### 15.2 获取供应商详情
+### 7.2 获取供应商详情
 - **Endpoint**: `GET /suppliers/{id}`
 
-### 15.3 创建供应商
+### 7.3 创建供应商
 - **Endpoint**: `POST /suppliers`
 - **请求参数**:
   ```json
@@ -375,18 +375,18 @@
   }
   ```
 
-### 15.4 更新供应商
+### 7.4 更新供应商
 - **Endpoint**: `PUT /suppliers/{id}`
 
-### 15.5 删除供应商
+### 7.5 删除供应商
 - **Endpoint**: `DELETE /suppliers/{id}`
 
 ## 16. 仓库管理接口 (Warehouses - 管理员)
 
-### 16.1 获取仓库列表
+### 7.1 获取仓库列表
 - **Endpoint**: `GET /warehouses`
 
-### 16.2 创建仓库
+### 7.2 创建仓库
 - **Endpoint**: `POST /warehouses`
 - **请求参数**:
   ```json
@@ -397,32 +397,32 @@
   }
   ```
 
-### 16.3 更新仓库
+### 7.3 更新仓库
 - **Endpoint**: `PUT /warehouses/{id}`
 
 ## 17. 库存流水接口 (Stock Logs)
 
-### 17.1 查询库存变动记录
+### 7.1 查询库存变动记录
 - **Endpoint**: `GET /inventory/logs`
 - **参数**: `part_id`, `warehouse_id`, `type`, `start_date`, `end_date`
 
 ## 18. 车型库接口 (Car Models)
 
-### 18.1 获取品牌列表
+### 7.1 获取品牌列表
 - **Endpoint**: `GET /car-brands`
 
-### 18.2 获取车系列表
+### 7.2 获取车系列表
 - **Endpoint**: `GET /car-brands/{brand_id}/series`
 
-### 18.3 获取车型列表
+### 7.3 获取车型列表
 - **Endpoint**: `GET /car-series/{series_id}/models`
 
 ## 19. 零件兼容性接口 (Compatibility)
 
-### 19.1 获取零件适用车型
+### 7.1 获取零件适用车型
 - **Endpoint**: `GET /parts/{id}/compatibility`
 
-### 19.2 批量设置零件兼容性
+### 7.2 批量设置零件兼容性
 - **Endpoint**: `POST /parts/{id}/compatibility`
 - **请求参数**:
   ```json
@@ -433,42 +433,42 @@
 
 ## 20. 审计日志接口 (Audit Logs - 管理员)
 
-### 20.1 查询审计日志
+### 7.1 查询审计日志
 - **Endpoint**: `GET /audit-logs`
 - **参数**: `user_id`, `target_table`, `action`, `start_date`, `end_date`
 
 ## 21. 消息通知接口 (Notifications)
 
-### 21.1 获取未读通知
+### 7.1 获取未读通知
 - **Endpoint**: `GET /notifications/unread`
 
-### 21.2 标记通知为已读
+### 7.2 标记通知为已读
 - **Endpoint**: `POST /notifications/{id}/read`
 
-### 21.3 获取历史通知
+### 7.3 获取历史通知
 - **Endpoint**: `GET /notifications`
 
 ## 22. 文件上传接口 (Upload)
 
-### 22.1 上传零件图片
+### 7.1 上传零件图片
 - **Endpoint**: `POST /upload/part-image`
 - **格式**: `multipart/form-data`
 - **响应**: `{"url": "/static/uploads/parts/abc.jpg"}`
 
-### 22.2 上传用户头像
+### 7.2 上传用户头像
 - **Endpoint**: `POST /upload/avatar`
 
 ## 23. 导出接口 (Export)
 
-### 23.1 导出零件列表 (Excel)
+### 7.1 导出零件列表 (Excel)
 - **Endpoint**: `GET /export/parts`
 
-### 23.2 导出订单报表 (PDF)
+### 7.2 导出订单报表 (PDF)
 - **Endpoint**: `GET /export/orders/report`
 
 ## 24. 数据模型定义 (Schemas)
 
-### 24.1 User Schema
+### 7.1 User Schema
 ```json
 {
   "UserRead": {
@@ -489,7 +489,7 @@
 }
 ```
 
-### 24.2 Part Schema
+### 7.2 Part Schema
 ```json
 {
   "PartRead": {
@@ -515,7 +515,7 @@
 }
 ```
 
-### 24.3 Order Schema
+### 7.3 Order Schema
 ```json
 {
   "OrderRead": {
@@ -535,7 +535,7 @@
 }
 ```
 
-### 24.4 Inventory Schema
+### 7.4 Inventory Schema
 ```json
 {
   "InventoryRead": {
@@ -555,7 +555,7 @@
 }
 ```
 
-### 24.5 AI Schema
+### 7.5 AI Schema
 ```json
 {
   "AIChatRequest": {
@@ -575,19 +575,19 @@
 
 ## 25. 接口调用示例 (cURL)
 
-### 25.1 登录并获取零件
+### 7.1 登录并获取零件
 ```bash
-# 1. 登录
+# 7. 凤凰汽配管理系统 - 接口规范文档
 curl -X POST http://localhost:8000/api/v1/auth/login \
      -H "Content-Type: application/json" \
      -d '{"username": "admin", "password": "password123"}'
 
-# 2. 使用 Token 查询零件
+# 7. 凤凰汽配管理系统 - 接口规范文档
 curl -X GET http://localhost:8000/api/v1/parts?query=刹车片 \
      -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
-### 25.2 提交订单
+### 7.2 提交订单
 ```bash
 curl -X POST http://localhost:8000/api/v1/orders \
      -H "Authorization: Bearer YOUR_TOKEN_HERE" \
@@ -605,7 +605,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
 
 ## 27. 详细错误码与排障指南 (Error Codes & Troubleshooting)
 
-### 27.1 认证类错误 (401xx)
+### 7.1 认证类错误 (401xx)
 | 错误码 | 描述 | 可能原因 | 解决方法 |
 | :--- | :--- | :--- | :--- |
 | 40101 | Token 缺失 | 未在 Header 中携带 Authorization | 检查请求头是否包含 Bearer Token |
@@ -613,14 +613,14 @@ curl -X POST http://localhost:8000/api/v1/orders \
 | 40103 | Token 已过期 | Token 超过了 exp 设定的时间 | 调用刷新 Token 接口或重新登录 |
 | 40104 | 签名验证失败 | 后端密钥变更或 Token 被伪造 | 重新登录获取合法 Token |
 
-### 27.2 权限类错误 (403xx)
+### 7.2 权限类错误 (403xx)
 | 错误码 | 描述 | 可能原因 | 解决方法 |
 | :--- | :--- | :--- | :--- |
 | 40301 | 权限不足 | 用户角色不具备该操作权限 | 联系管理员提升角色等级 |
 | 40302 | 账号被禁用 | 管理员手动封禁了该账号 | 联系系统管理员申诉 |
 | 40303 | IP 被封禁 | 该 IP 触发了频率限制黑名单 | 等待 1 小时后自动解封 |
 
-### 27.3 业务类错误 (400xx)
+### 7.3 业务类错误 (400xx)
 | 错误码 | 描述 | 可能原因 | 解决方法 |
 | :--- | :--- | :--- | :--- |
 | 40001 | 参数校验失败 | 输入数据不符合 Pydantic 模型要求 | 检查 API 文档中的字段类型和长度 |
@@ -628,7 +628,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
 | 40003 | 订单状态非法 | 尝试对已取消的订单进行支付 | 重新发起采购流程 |
 | 40004 | OEM 码重复 | 新增零件时使用了已存在的编码 | 检查零件是否已录入 |
 
-### 27.4 系统类错误 (500xx)
+### 7.4 系统类错误 (500xx)
 | 错误码 | 描述 | 可能原因 | 解决方法 |
 | :--- | :--- | :--- | :--- |
 | 50001 | 数据库连接失败 | MySQL 服务宕机或网络波动 | 检查数据库容器状态 |
@@ -656,7 +656,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
 
 ## 30. 第三方集成指南 (Third-party Integration)
 
-### 30.1 支付系统集成 (Alipay/WeChat)
+### 7.1 支付系统集成 (Alipay/WeChat)
 - **流程说明**：
   1. 后端调用支付平台 API 生成预支付订单。
   2. 返回支付 URL 或二维码给前端。
@@ -665,13 +665,13 @@ curl -X POST http://localhost:8000/api/v1/orders \
   5. 后端校验签名并更新订单状态。
 - **安全要求**：必须校验回调请求的来源 IP，并验证签名。
 
-### 30.2 物流系统集成 (SF Express/Cainiao)
+### 7.2 物流系统集成 (SF Express/Cainiao)
 - **功能**：自动获取物流单号，实时追踪包裹位置。
 - **接口映射**：
   - `POST /logistics/create`: 提交发货信息。
   - `GET /logistics/track/{no}`: 获取轨迹数据。
 
-### 30.3 短信/邮件通知集成
+### 7.3 短信/邮件通知集成
 - **服务商**：阿里云短信 / SendGrid。
 - **模板管理**：在服务商后台配置模板，后端通过模板 ID 调用。
 
@@ -700,7 +700,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
 
 ## 35. 接口详细请求与响应示例 (Detailed API Examples)
 
-### 35.1 认证模块 (Auth)
+### 7.1 认证模块 (Auth)
 #### 登录 (Login)
 - **Request**:
   ```json
@@ -722,7 +722,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.2 零件模块 (Parts)
+### 7.2 零件模块 (Parts)
 #### 获取零件列表 (Get Parts)
 - **Request**: `GET /api/v1/parts?skip=0&limit=10&category_id=5`
 - **Response**:
@@ -749,7 +749,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   ]
   ```
 
-### 35.3 库存模块 (Inventory)
+### 7.3 库存模块 (Inventory)
 #### 入库登记 (Stock In)
 - **Request**:
   ```json
@@ -772,7 +772,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.4 订单模块 (Orders)
+### 7.4 订单模块 (Orders)
 #### 创建订单 (Create Order)
 - **Request**:
   ```json
@@ -796,7 +796,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.5 AI 助手模块 (AI Assistant)
+### 7.5 AI 助手模块 (AI Assistant)
 #### 零件识别 (Part Recognition)
 - **Request**: `POST /api/v1/ai/recognize` (Multipart/form-data)
   - `file`: [Binary Image Data]
@@ -816,7 +816,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.6 供应商模块 (Suppliers)
+### 7.6 供应商模块 (Suppliers)
 #### 获取供应商详情 (Get Supplier)
 - **Request**: `GET /api/v1/suppliers/5`
 - **Response**:
@@ -832,7 +832,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.7 仓库模块 (Warehouses)
+### 7.7 仓库模块 (Warehouses)
 #### 获取仓库库存分布 (Warehouse Stock)
 - **Request**: `GET /api/v1/warehouses/1/stock`
 - **Response**:
@@ -843,7 +843,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   ]
   ```
 
-### 35.8 报表模块 (Reports)
+### 7.8 报表模块 (Reports)
 #### 获取销售统计 (Sales Stats)
 - **Request**: `GET /api/v1/reports/sales?start_date=2023-10-01&end_date=2023-10-31`
 - **Response**:
@@ -862,7 +862,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.9 系统配置模块 (System Config)
+### 7.9 系统配置模块 (System Config)
 #### 获取全局配置 (Get Config)
 - **Request**: `GET /api/v1/config`
 - **Response**:
@@ -875,7 +875,7 @@ curl -X POST http://localhost:8000/api/v1/orders \
   }
   ```
 
-### 35.10 审计日志模块 (Audit Logs)
+### 7.10 审计日志模块 (Audit Logs)
 #### 查询操作日志 (Search Logs)
 - **Request**: `GET /api/v1/audit/logs?user_id=1&module=parts&limit=20`
 - **Response**:
@@ -956,10 +956,10 @@ curl -X POST http://localhost:8000/api/v1/orders \
 
 ## 40. WebSocket 实时通知接口 (WebSocket API)
 
-### 40.1 连接地址
+### 7.1 连接地址
 - `ws://domain.com/ws/notifications/{user_id}`
 
-### 40.2 消息格式
+### 7.2 消息格式
 - **Server to Client**:
   ```json
   {
@@ -988,18 +988,18 @@ curl -X POST http://localhost:8000/api/v1/orders \
 
 ## 43. 接口性能优化深度指南 (API Performance)
 
-### 43.1 查询优化策略
+### 7.1 查询优化策略
 - **字段过滤**：接口支持 `fields` 参数，允许前端指定返回字段，减少数据传输量。
   - 示例：`GET /api/v1/parts?fields=id,name,stock`
 - **分页强制化**：所有列表接口必须强制分页，默认 `limit=20`，最大 `limit=100`。
 - **关联查询优化**：使用 SQLAlchemy 的 `joinedload` (Eager Loading) 解决 N+1 查询问题。
 
-### 43.2 缓存应用规范
+### 7.2 缓存应用规范
 - **热点数据缓存**：零件分类、供应商名录等低频变动数据，在 Redis 中缓存 24 小时。
 - **查询结果缓存**：针对复杂的统计报表，缓存 10 分钟，并在数据更新时通过 Hook 主动失效。
 - **浏览器缓存**：静态资源（图片、JS/CSS）设置长效 `Cache-Control`。
 
-### 43.3 并发处理优化
+### 7.3 并发处理优化
 - **异步 I/O**：充分利用 FastAPI 的异步特性，处理数据库和 Redis 操作。
 - **连接池调优**：
   - `pool_size`: 20
