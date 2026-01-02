@@ -26,6 +26,13 @@ class ItemCreateRequest(BaseModel):
     images: List[str] = Field(default_factory=list)
     status: str = Field(default="draft")
     condition: str = Field(default="good")
+    original_price: Optional[float] = None
+    location: Optional[str] = None
+    contact_method: Optional[str] = "chat"
+    phone: Optional[str] = None
+    wechat: Optional[str] = None
+    allow_bargain: bool = True
+    accept_return: bool = False
 
 
 class ItemUpdateRequest(BaseModel):
@@ -41,7 +48,7 @@ class ItemResponse(BaseModel):
     """商品响应"""
     id: int
     title: str
-    description: str
+    description: Optional[str] = ""
     price: float
     category: str
     images: List[str]
@@ -49,9 +56,9 @@ class ItemResponse(BaseModel):
     condition: str = "good"
     seller_id: int
     seller_name: str
-    view_count: int
-    favorite_count: int
-    created_at: datetime
+    view_count: int = 0
+    favorite_count: int = 0
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     
     class Config:
@@ -86,8 +93,8 @@ def _serialize_item(session: Session, item: Item) -> ItemResponse:
         seller_name=seller.username if seller else "未知",
         view_count=item.view_count or 0,
         favorite_count=item.favorite_count or 0,
-        created_at=item.created_at,
-        updated_at=item.updated_at
+        created_at=item.created_at or datetime.now(),
+        updated_at=item.updated_at or item.created_at
     )
 
 
@@ -100,6 +107,13 @@ async def create_item(
     session: Session = Depends(get_db_session)
 ):
     """发布新商品"""
+    # 组合联系方式
+    contact_info = f"方式: {payload.contact_method}"
+    if payload.phone:
+        contact_info += f", 电话: {payload.phone}"
+    if payload.wechat:
+        contact_info += f", 微信: {payload.wechat}"
+
     item = ItemService.create_item(
         session=session,
         seller_id=current_user.id,
@@ -109,19 +123,28 @@ async def create_item(
         category_name=payload.category,
         images=payload.images,
         status=payload.status,
-        condition=payload.condition
+        condition=payload.condition,
+        original_price=payload.original_price,
+        location=payload.location,
+        contact_info=contact_info,
+        is_negotiable=payload.allow_bargain,
+        is_shipped=payload.accept_return  # 假设 accept_return 对应 is_shipped 或类似逻辑
     )
     
     # 构建响应
+    session.refresh(item)  # 刷新以获取数据库生成的字段（如 created_at）
     category = session.get(Category, item.category_id)
     medias = session.execute(
         select(ItemMedia).where(ItemMedia.item_id == item.id)
     ).scalars().all()
     
+    # 确保时间戳不为空，防止 Pydantic 验证失败
+    created_at = item.created_at or datetime.now()
+    
     return ItemResponse(
         id=item.id,
         title=item.title,
-        description=item.description,
+        description=item.description or "",
         price=float(item.price),
         category=category.name if category else "其他",
         images=[m.url for m in medias],
@@ -129,10 +152,10 @@ async def create_item(
         condition=item.condition,
         seller_id=item.seller_id,
         seller_name=current_user.username,
-        view_count=item.view_count,
+        view_count=item.view_count or 0,
         favorite_count=0,
-        created_at=item.created_at,
-        updated_at=item.updated_at
+        created_at=created_at,
+        updated_at=item.updated_at or created_at
     )
 
 

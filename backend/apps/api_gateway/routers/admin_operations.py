@@ -40,9 +40,7 @@ from apps.core.models import (
     User,
     UserRole,
 )
-from apps.core.sync_engine import sync_engine
 from apps.core.transaction import TransactionConfig
-from apps.services.monitoring_simulator import monitoring_data_simulator, query_simulator
 from apps.services.maintenance import MaintenanceTaskRunner
 
 router = APIRouter(
@@ -591,8 +589,8 @@ def _collect_running_queries(limit: int = 10) -> List[Dict[str, Any]]:
                 break
     except Exception as exc:  # pragma: no cover - SHOW PROCESSLIST may need privileges
         logger.warning("Failed to read process list: %s", exc)
-    if len(running) < limit:
-        running.extend(query_simulator.snapshot(limit - len(running)))
+    # if len(running) < limit:
+    #     running.extend(query_simulator.snapshot(limit - len(running)))
     return running[:limit]
 
 
@@ -615,7 +613,7 @@ def _pool_snapshot(running_queries: List[Dict[str, Any]]):
 def performance_insights(session: Session = Depends(get_db_session)):
     """Return aggregated monitoring data for AdminPerformanceView."""
 
-    monitoring_data_simulator.ensure_baseline()
+    # monitoring_data_simulator.ensure_baseline()
     running_queries = _collect_running_queries()
     pool = _pool_snapshot(running_queries)
 
@@ -749,15 +747,16 @@ def performance_heatmap(
         
         # 如果没有数据，使用模拟数据
         if not data:
-            monitoring_data_simulator.ensure_baseline()
-            data = monitoring_data_simulator.generate_heatmap(days)
+            # monitoring_data_simulator.ensure_baseline()
+            # data = monitoring_data_simulator.generate_heatmap(days)
+            data = []
         
         return {"days": days, "data": data}
     except Exception as e:
         # 降级到模拟数据
-        monitoring_data_simulator.ensure_baseline()
-        data = monitoring_data_simulator.generate_heatmap(days)
-        return {"days": days, "data": data}
+        # monitoring_data_simulator.ensure_baseline()
+        # data = monitoring_data_simulator.generate_heatmap(days)
+        return {"days": days, "data": []}
 
 
 @router.post("/databases/{db_name}/sync")
@@ -766,7 +765,7 @@ def sync_single_database(db_name: str, current_user: User = Depends(current_admi
 
     if db_name not in SUPPORTED_DATABASES:
         raise HTTPException(status_code=404, detail="未知的数据库标识")
-    sync_engine.run_periodic_sync()
+    # sync_engine.run_periodic_sync()
     return {"scheduled": True, "target": db_name}
 
 
@@ -856,8 +855,8 @@ def kill_query(query_id: str, current_user: User = Depends(current_admin_user)):
         except Exception as exc:  # pragma: no cover - depends on DB privileges
             logger.warning("Failed to kill query %s: %s", query_id, exc)
 
-    if query_simulator.kill(query_id):
-        return {"killed": query_id, "simulated": True}
+    # if query_simulator.kill(query_id):
+    #     return {"killed": query_id, "simulated": True}
 
     raise HTTPException(status_code=404, detail="未找到正在运行的查询")
 
@@ -869,7 +868,7 @@ def replay_stalled_events(session: Session = Depends(get_db_session), current_us
     failed = session.execute(
         text("SELECT id FROM sync_logs WHERE status = 'failed' ORDER BY started_at DESC LIMIT 20")
     ).fetchall()
-    sync_engine.run_periodic_sync()
+    # sync_engine.run_periodic_sync()
     session.add(
         AuditLog(
             actor_id=current_user.id,

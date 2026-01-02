@@ -1,1 +1,0 @@
-"""Sync service FastAPI app."""

@@ -4,7 +4,7 @@
 
 set -e
 
-echo "🚀 校园交易系统 Gateway 启动中..."
+echo "🚀 凤凰汽配管理系统 Gateway 启动中..."
 
 # 创建数据目录
 mkdir -p /app/data

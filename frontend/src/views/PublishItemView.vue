@@ -226,7 +226,7 @@ const handlePublish = async () => {
       price: formData.price,
       category: formData.category,
       condition: formData.condition,
-      status: 'pending',
+      status: 'available',
       images: formData.images,
       original_price: formData.originalPrice,
       location: formData.location,

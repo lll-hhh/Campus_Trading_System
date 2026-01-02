@@ -28,13 +28,12 @@ from apps.api_gateway.routers import (
     favorites,
     comments,
     search,
-    sync_api,
     stores,
+    upload,  # 添加这一行
 )
 from apps.services import websocket
 from apps.core.config import get_settings
 from apps.services.db_initializer import initialize_databases
-from apps.services.monitoring_simulator import monitoring_data_simulator
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +82,6 @@ def create_app() -> FastAPI:
     app.include_router(comments.router, prefix=settings.api_v1_prefix)
     app.include_router(search.router, prefix=settings.api_v1_prefix)
     app.include_router(stores.router, prefix=settings.api_v1_prefix)
-    app.include_router(sync_api.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_settings.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_users.router, prefix=settings.api_v1_prefix)
     app.include_router(admin_tables.router, prefix=settings.api_v1_prefix)
@@ -92,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_query.router, prefix=settings.api_v1_prefix)
     app.include_router(ai_chat.router, prefix=settings.api_v1_prefix)
     app.include_router(websocket.router, prefix=settings.api_v1_prefix)
+    app.include_router(upload.router, prefix=settings.api_v1_prefix)  # 添加这一行
 
     @app.on_event("startup")
     async def startup_event():
@@ -107,7 +106,7 @@ def create_app() -> FastAPI:
                 if result['errors']:
                     for error in result['errors'][:3]:
                         logger.warning(f"{db_name} 错误: {error}")
-            monitoring_data_simulator.ensure_baseline(force=True)
+            # monitoring_data_simulator.ensure_baseline(force=True)
         except Exception as e:
             logger.error(f"数据库初始化异常: {e}", exc_info=True)
 

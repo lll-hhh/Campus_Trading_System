@@ -88,6 +88,7 @@ class Message(Base, TimestampMixin):
     receiver_id = Column(BigInteger, nullable=False, comment="接收者ID")
     item_id = Column(BigInteger, comment="关联商品ID")
     content = Column(Text, nullable=False, comment="消息内容")
+    message_type = Column(String(20), default="text", comment="消息类型: text/image/item")
     is_read = Column(Boolean, default=False, comment="是否已读")
     is_deleted_by_sender = Column(Boolean, default=False, comment="发送者是否删除")
     is_deleted_by_receiver = Column(Boolean, default=False, comment="接收者是否删除")

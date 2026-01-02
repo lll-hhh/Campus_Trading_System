@@ -87,15 +87,32 @@ class Item(BaseModel):
     
     @property
     def condition(self) -> str:
-        """兼容旧代码：映射 condition_type 到 condition"""
+        """兼容旧代码：映射 condition_type 到 condition (适配凤凰汽配系统)"""
         mapping = {
             "全新": "new",
-            "99新": "like_new",
-            "95新": "very_good",
+            "99新": "like-new",
+            "95新": "excellent",
             "9成新": "good",
             "二手": "used",
         }
         return mapping.get(self.condition_type or "二手", "used")
+
+    @property
+    def category_name(self) -> str:
+        """兼容旧代码：返回分类名称"""
+        return self.category.name if self.category else "未分类"
+
+    @property
+    def image_url(self) -> Optional[str]:
+        """兼容旧代码：返回封面图 URL"""
+        if self.medias:
+            # 优先返回封面图
+            for media in self.medias:
+                if media.is_cover:
+                    return media.image_url
+            # 否则返回第一张图
+            return self.medias[0].image_url
+        return None
 
     # ✅ 关系定义
     seller: Mapped["User"] = relationship(

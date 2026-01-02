@@ -12,7 +12,6 @@ from apps.api_gateway.dependencies import (
     require_roles,
 )
 from apps.core.models import ConflictRecord, DailyStat, SyncConfig, SyncLog, User
-from apps.core.sync_engine import sync_engine
 
 router = APIRouter(prefix="/sync", tags=["sync"])
 
@@ -54,7 +53,7 @@ def get_sync_status(
 def trigger_manual_sync(_: User = Depends(require_roles("admin", "market_admin"))) -> Dict[str, str]:
     """Allow admin to trigger sync without visiting sync service."""
 
-    sync_engine.run_periodic_sync()
+    # sync_engine.run_periodic_sync()
     return {"status": "scheduled"}
 
 

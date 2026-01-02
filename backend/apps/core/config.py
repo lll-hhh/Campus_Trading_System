@@ -9,8 +9,8 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application runtime settings."""
 
-    app_name: str = "CampuSwap"
-    environment: str = Field("local", alias="CAMPUSWAP_ENV")
+    app_name: str = "Phoenix Auto Parts"
+    environment: str = Field("local", alias="PHOENIX_ENV")
     api_v1_prefix: str = "/api/v1"
     debug: bool = Field(default=True)
 

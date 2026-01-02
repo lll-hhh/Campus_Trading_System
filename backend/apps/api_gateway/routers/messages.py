@@ -100,7 +100,8 @@ async def send_message(
             sender_id=current_user.id,
             receiver_id=payload.receiver_id,
             content=payload.content,
-            item_id=payload.item_id
+            item_id=payload.item_id,
+            message_type=payload.message_type
         )
         session.commit()
         return MessageResponse(**result)

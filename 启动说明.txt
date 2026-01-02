@@ -1,0 +1,65 @@
+凤凰汽配管理系统 - 启动与初始化指南
+
+本系统支持 Docker 一键启动（推荐）和本地手动启动两种方式。
+
+---
+
+### 方式一：Docker 一键启动 (推荐)
+
+这是最简单的方式，会自动处理所有依赖、环境配置及数据库初始化。
+
+1. **环境准备**：确保已安装 Docker 和 Docker Compose。
+2. **启动服务**：在项目根目录下运行：
+   ```bash
+   docker compose up -d --build
+   ```
+3. **数据库初始化**：
+   - Docker 启动时会自动执行 `backend/sql/init/mysql/init.sql` 进行初始化。
+   - 如果需要强制重置数据库，请运行：
+     ```bash
+     docker compose down -v && docker compose up -d
+     ```
+4. **访问系统**：
+   - 前端界面：http://localhost:5173
+   - API 文档：http://localhost:8000/docs
+
+---
+
+### 方式二：本地手动启动 (开发模式)
+
+如果您需要在本地直接运行代码，请按以下步骤操作：
+
+#### 1. 数据库初始化
+1. 确保本地已安装 MySQL 8.0。
+2. 创建数据库 `campuswap`。
+3. 将 `backend/sql/init/mysql/init.sql` 导入到该数据库中。
+4. 确保本地已安装并启动 Redis。
+
+#### 2. 后端启动 (FastAPI)
+1. 进入 `backend` 目录。
+2. 安装依赖：`pip install -r requirements.txt`
+3. 配置环境变量：参考 `.env.example` 创建 `.env` 文件，确保 `MYSQL_DSN` 指向您的本地数据库。
+4. 启动服务：
+   ```bash
+   uvicorn apps.api_gateway.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+
+#### 3. 前端启动 (Vue 3)
+1. 进入 `frontend` 目录。
+2. 安装依赖：`npm install`
+3. 启动开发服务器：
+   ```bash
+   npm run dev
+   ```
+4. 访问地址：http://localhost:5173
+
+---
+
+### 常用管理命令
+- **查看日志**：`docker compose logs -f`
+- **停止系统**：`docker compose down`
+- **清理缓存**：`rm -rf backend/__pycache__ frontend/node_modules/.vite`
+
+### 注意事项
+- **AI 功能**：如需启用 AI 智能定价，请在 `.env` 中配置 `GLM_API_KEY`。
+- **端口占用**：请确保 3306 (MySQL), 6379 (Redis), 8000 (Backend), 5173 (Frontend) 端口未被占用。

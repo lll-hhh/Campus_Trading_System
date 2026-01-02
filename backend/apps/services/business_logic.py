@@ -23,25 +23,37 @@ class ItemService:
         description: str,
         price: float,
         category_name: str,
-        images: List[str],
-        status: str = "pending",
-        condition: str = "good"
+        images: List[str] = None,
+        status: str = "available",
+        condition: str = "used",
+        original_price: Optional[float] = None,
+        location: Optional[str] = None,
+        contact_info: Optional[str] = None,
+        is_negotiable: bool = False,
+        is_shipped: bool = False
     ) -> Item:
-        """创建商品"""
-        # 首先尝试将slug转换为category_name
+        """创建新商品"""
+        # 分类映射 (slug -> name)
         slug_to_name_map = {
             "electronics": "数码产品",
-            "books": "图书教材", 
+            "books": "图书教材",
             "daily": "生活用品",
             "sports": "运动器材",
             "fashion": "服装鞋包",
             "beauty": "美妆护肤",
             "other": "其他闲置",
-            # PublishItemView使用的slug
-            "digital": "数码产品",
-            "clothing": "服装鞋包",
-            "entertainment": "其他闲置",
-            "stationery": "其他闲置",
+            # 凤凰汽配系统分类映射
+            "engine": "发动机系统",
+            "brakes": "制动系统",
+            "filters": "滤清器",
+            "batteries": "蓄电池",
+            "tires": "轮胎轮毂",
+            "lighting": "灯光照明",
+            "suspension": "悬挂系统",
+            "transmission": "传动系统",
+            "body": "车身外观",
+            "interior": "内饰配件",
+            # 兼容前端 slug
             "music": "其他闲置",
             "bicycle": "运动器材"
         }
@@ -49,13 +61,25 @@ class ItemService:
         # 如果输入的是slug，转换为name
         actual_category_name = slug_to_name_map.get(category_name, category_name)
         
-        # 获取或创建分类
+        # 获取或创建分类 (同时检查名称和 slug 以提高鲁棒性)
         category = session.execute(
-            select(Category).where(Category.name == actual_category_name)
+            select(Category).where(
+                (Category.name == actual_category_name) | (Category.slug == category_name)
+            )
         ).scalar_one_or_none()
         
         if not category:
             category_slug = {
+                "发动机系统": "engine",
+                "制动系统": "brakes",
+                "滤清器": "filters",
+                "蓄电池": "batteries",
+                "轮胎轮毂": "tires",
+                "灯光照明": "lighting",
+                "悬挂系统": "suspension",
+                "传动系统": "transmission",
+                "车身外观": "body",
+                "内饰配件": "interior",
                 "数码产品": "electronics",
                 "图书教材": "books",
                 "生活用品": "daily", 
@@ -69,13 +93,16 @@ class ItemService:
             session.add(category)
             session.flush()
         
-        # ✅ 映射 condition 到 condition_type
+        # ✅ 映射 condition 到 condition_type (适配前端 PublishItemView.vue)
         condition_map = {
             "new": "全新",
-            "like_new": "99新",
-            "very_good": "95新",
+            "like-new": "99新",
+            "excellent": "95新",
             "good": "9成新",
             "used": "二手",
+            # 兼容旧代码
+            "like_new": "99新",
+            "very_good": "95新",
         }
         condition_type = condition_map.get(condition, "二手")
         
@@ -86,7 +113,12 @@ class ItemService:
             title=title,
             description=description,
             price=price,
-            condition_type=condition_type,  # ✅ 使用正确的字段名
+            original_price=original_price,
+            condition_type=condition_type,
+            location=location,
+            contact_info=contact_info,
+            is_negotiable=is_negotiable,
+            is_shipped=is_shipped,
             status=status,
             view_count=0
         )
@@ -498,7 +530,8 @@ class MessageService:
         sender_id: int,
         receiver_id: int,
         content: str,
-        item_id: Optional[int] = None
+        item_id: Optional[int] = None,
+        message_type: str = "text"
     ):
         """发送消息"""
         from apps.core.models import Message
@@ -521,6 +554,7 @@ class MessageService:
             receiver_id=receiver_id,
             content=content,
             item_id=item_id,
+            message_type=message_type,
             is_read=False
         )
         session.add(message)
@@ -553,7 +587,7 @@ class MessageService:
             "receiver_name": receiver.username,
             "receiver_avatar": receiver.avatar_url if receiver else None,
             "content": message.content,
-            "message_type": "text",
+            "message_type": message.message_type,
             "item_id": message.item_id,
             "is_read": message.is_read,
             "created_at": message.created_at
@@ -635,8 +669,8 @@ class MessageService:
             ),
             # 排除用户已删除的消息
             or_(
-                and_(Message.sender_id == user_id, not Message.is_deleted_by_sender),
-                and_(Message.receiver_id == user_id, not Message.is_deleted_by_receiver)
+                and_(Message.sender_id == user_id, Message.is_deleted_by_sender == False),
+                and_(Message.receiver_id == user_id, Message.is_deleted_by_receiver == False)
             )
         ).order_by(desc(Message.created_at))
         
@@ -667,10 +701,10 @@ class MessageService:
                 "sender_name": current_user.username if is_sender else (other_user.username if other_user else "未知用户"),
                 "sender_avatar": current_user.avatar_url if is_sender else (other_user.avatar_url if other_user else None),
                 "receiver_id": msg.receiver_id,
-                "receiver_name": other_user.username if is_sender else current_user.username,
-                "receiver_avatar": other_user.avatar_url if is_sender else current_user.avatar_url,
+                "receiver_name": (other_user.username if other_user else "未知用户") if is_sender else current_user.username,
+                "receiver_avatar": (other_user.avatar_url if other_user else None) if is_sender else current_user.avatar_url,
                 "content": msg.content,
-                "message_type": "text",
+                "message_type": msg.message_type or "text",
                 "item_id": msg.item_id,
                 "is_read": msg.is_read,
                 "created_at": msg.created_at
@@ -725,16 +759,16 @@ class MessageService:
                 and_(
                     Message.sender_id == other_user_id,
                     Message.receiver_id == user_id,
-                    not Message.is_read
+                    Message.is_read == False
                 )
             ).values(is_read=True, read_at=now)
         )
         
         # 重置未读计数
         if conv.user1_id == user_id:
-            conv.unread_count_user1 = 0
+            conv.user1_unread_count = 0
         else:
-            conv.unread_count_user2 = 0
+            conv.user2_unread_count = 0
         
         session.flush()
         

@@ -18,10 +18,9 @@ from . import (
     items,
     market,
     messages,
+    upload,
     orders,
     search,
-    sync,
-    sync_api,
 )
 
 __all__ = [
@@ -42,8 +41,7 @@ __all__ = [
     "items",
     "market",
     "messages",
+    "upload",
     "orders",
     "search",
-    "sync",
-    "sync_api",
 ]
