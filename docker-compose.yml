@@ -54,7 +54,7 @@ services:
       dockerfile: Dockerfile
     container_name: campuswap-gateway
     environment:
-      - MYSQL_DSN=mysql+pymysql://root:campuswap_root@mysql:3306/campuswap?charset=utf8mb4
+      - MYSQL_DSN=mysql+pymysql://root:campuswap_root@mysql:3306/campuswap
       - REDIS_URL=redis://redis:6379/0
       - GLM_API_KEY=${GLM_API_KEY:-}
       - GLM_MODEL=${GLM_MODEL:-glm-4-flash}
